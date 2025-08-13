@@ -48,12 +48,27 @@
   align-items: center;
 }
 
+.google-btn {
+  background-color: white;
+  color: #333;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 100%;
+  font-weight: bold;
+}
+
+.google-btn:hover {
+  background-color: #eee9e9;
+}
+
 .form-wrapper {
   background-color: #222;
   padding: 30px;
   border-radius: 8px;
   width: 80%;
-  max-width: 350px;
+  max-width: 400px;
   text-align: center;
 }
 
@@ -70,7 +85,7 @@
   border-radius: 5px;
 }
 
-.form-wrapper button {
+.submit {
   background-color: #19E5D8;
   color: black;
   border: none;
@@ -80,6 +95,9 @@
   width: 100%;
 }
 
-.form-wrapper button:hover {
+.submit:hover {
   background-color: #14bfb5;
+}
+p{
+    color: white;
 }
