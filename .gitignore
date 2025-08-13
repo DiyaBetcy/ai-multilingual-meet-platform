@@ -26,9 +26,3 @@ build/
 # OS files
 .DS_Store
 Thumbs.db
-
-# Temporary files
-*.tmp
-
-# React specific
-*.cache
