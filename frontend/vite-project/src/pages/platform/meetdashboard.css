@@ -28,24 +28,29 @@
   gap: 10px;
 }
 
+/* Big video */
 .main-video {
   flex: 3;
   background-color: #9f9f9f;
   border-radius: 6px;
+  min-height: 600px; /* ensures it doesn’t squash */
 }
 
+/* Side videos */
 .side-videos {
   flex: 1;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  grid-auto-rows: 1fr;
+  grid-template-rows: repeat(3, 1fr);  /* force 3 rows */
   gap: 8px;
+  min-height: 600px; /* same height as big video */
 }
 
 .video-tile {
   background-color: #9f9f9f;
   border-radius: 6px;
 }
+
 
 /* Bottom controls */
 .controls {
