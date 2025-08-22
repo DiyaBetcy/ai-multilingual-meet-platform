@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Signup from "./pages/signup.jsx";
 import Login from "./pages/login.jsx";
 import Dashboard from "./pages/dashboard.jsx";
+import MeetDashboard from "./pages/platform/meetdashboard.jsx";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <BrowserRouter>
@@ -11,6 +12,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <Route path="/" element={<Signup />} />
       <Route path="/login" element={<Login />} />
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/meetdash" element={<MeetDashboard/>}/>
     </Routes>
   </BrowserRouter>
 );
