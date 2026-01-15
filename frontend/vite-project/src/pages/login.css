@@ -20,23 +20,22 @@
 
 .main-content {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 50px;
   flex: 1;
 }
 
 .left-section {
   flex: 1;
+  background-color: black;
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
 .app-title {
-  font-family: "Brush Script MT", cursive;
-  font-size: 50px;
+  font-size: 10rem;
+  font-style: italic;
   color: white;
+  font-weight: bold;
 }
 
 .right-section {

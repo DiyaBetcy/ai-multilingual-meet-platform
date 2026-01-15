@@ -84,6 +84,7 @@
   padding: 10px;
   display: flex;
   flex-direction: column;
+  color: black;
 }
 
 .popup-body label {
