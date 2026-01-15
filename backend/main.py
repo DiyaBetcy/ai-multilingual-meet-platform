@@ -3,6 +3,7 @@ import whisper
 import tempfile
 import os
 from googletrans import Translator
+from gtts import gTTS
 
 app = FastAPI()
 
@@ -20,5 +21,9 @@ async def transcribe(audio: UploadFile=File(...)):
 
     original = result["text"]
     translated = translator.translate(original,dest="ml")
+    tts = gTTS(text=translated.text,lang="ml")
+    tts.save("output.mp3")
 
-    return translated.text
+    return {"original":original,
+            "translated": translated.text,
+            "voice": "output.mp3"}
