@@ -1,6 +1,6 @@
 import "./meetdashboard.css";
 
-export default function MeetDash() {
+export default function MeetDashboard() {
   return (
     <div className="base-container">
       {/* Top Bar */}
