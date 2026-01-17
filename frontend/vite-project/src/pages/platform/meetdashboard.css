@@ -84,3 +84,8 @@
 .control-btn.end:hover {
   background: darkred;
 }
+/* Show OFF state for mic/camera buttons */
+.control-btn.off {
+  opacity: 0.5;
+  background-color: #666;
+}
