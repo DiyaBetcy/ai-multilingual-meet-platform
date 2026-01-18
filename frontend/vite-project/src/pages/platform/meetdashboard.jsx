@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import "./meetdashboard.css";
-
+import Popup from "./popup.jsx";
 export default function MeetDashboard() {
   const localVideoRef = useRef(null);
+const [showPopup, setShowPopup] = useState(false);
 
   const [stream, setStream] = useState(null);
   const [micOn, setMicOn] = useState(true);
@@ -113,13 +114,22 @@ export default function MeetDashboard() {
         <button className="control-btn">
           <img src="/src/assets/share.png" alt="Share" />
         </button>
-        <button className="control-btn">
-          <img src="/src/assets/more.png" alt="More" />
-        </button>
+        <button
+  className="control-btn"
+  onClick={() => setShowPopup(true)}
+>
+  <img src="/src/assets/more.png" alt="More" />
+</button>
+
         <button className="control-btn end">
           <img src="/src/assets/hangup.png" alt="Hang Up" />
         </button>
       </div>
+      <Popup
+  open={showPopup}
+  onClose={() => setShowPopup(false)}
+/>
+
     </div>
   );
 }
