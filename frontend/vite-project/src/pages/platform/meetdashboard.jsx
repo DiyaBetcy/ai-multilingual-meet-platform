@@ -8,6 +8,9 @@ const [showPopup, setShowPopup] = useState(false);
   const [stream, setStream] = useState(null);
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
+  const [isSharing, setIsSharing] = useState(false);
+const cameraStreamRef = useRef(null);
+
 
   useEffect(() => {
     async function startCamera() {
@@ -17,6 +20,7 @@ const [showPopup, setShowPopup] = useState(false);
           audio: true,
         });
         setStream(s);
+        cameraStreamRef.current = s;
 
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = s;
@@ -53,12 +57,47 @@ const [showPopup, setShowPopup] = useState(false);
     videoTrack.enabled = !videoTrack.enabled;
     setCamOn(videoTrack.enabled);
   };
+    const startScreenShare = async () => {
+    try {
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false,
+      });
+        
+
+      // Show screen in main video
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = displayStream;
+      }
+
+      setIsSharing(true);
+
+      // When user stops sharing from browser UI
+      const screenTrack = displayStream.getVideoTracks()[0];
+      screenTrack.onended = () => {
+        stopScreenShare();
+      };
+    } catch (err) {
+      console.error("Screen share failed:", err);
+      alert("Screen sharing cancelled or blocked.");
+    }
+  };
+  const stopScreenShare = () => {
+  const camStream = cameraStreamRef.current;
+
+  if (camStream && localVideoRef.current) {
+    localVideoRef.current.srcObject = camStream;
+  }
+
+  setIsSharing(false);
+};
+
 
   return (
     <div className="base-container">
       {/* Top Bar */}
       <div className="top-bar">
-        <img src="/src/assets/logo.png" alt="Logo" classNameName="logo-image" />
+        <img src="/src/assets/logo.png" alt="Logo" className="logo-image" />
       </div>
 
       {/* Main Content */}
@@ -70,11 +109,14 @@ const [showPopup, setShowPopup] = useState(false);
           muted
           playsInline
           className="main-video"
-          style={{ display: camOn ? "block" : "none" }}
+          style={{ display: (camOn || isSharing) ? "block" : "none" }}
+
         />
 
-        {/* If camera is off, show a placeholder */}
-        {!camOn && <div className="main-video" style={{ display: "block" }} />}
+        {!camOn && !isSharing && (
+  <div className="main-video" style={{ display: "block" }} />
+)}
+
 
         {/* Small videos grid */}
         <div className="side-videos">
@@ -110,6 +152,19 @@ const [showPopup, setShowPopup] = useState(false);
         </button>
         <button className="control-btn">
           <img src="/src/assets/hand.png" alt="Raise Hand" />
+        </button>
+        <button
+  className={`control-btn ${isSharing ? "off" : ""}`}
+  onClick={isSharing ? stopScreenShare : startScreenShare}
+  title={isSharing ? "Stop sharing" : "Share screen"}
+>
+  <img src="/src/assets/share.png" alt="Share" />
+</button>
+
+        
+  
+        <button className="control-btn">
+          <img src="/src/assets/more.png" alt="More" />
         </button>
         <button className="control-btn">
           <img src="/src/assets/share.png" alt="Share" />
