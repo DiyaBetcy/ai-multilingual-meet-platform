@@ -6,6 +6,8 @@ import Login from "./pages/login.jsx";
 import Dashboard from "./pages/dashboard.jsx";
 import MeetDash from "./pages/platform/meetdashboard.jsx"; 
 import Start from "./pages/start.jsx";
+import QAPanel from "./pages/platform/QAPanel.jsx";
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <BrowserRouter>
     <Routes>
@@ -14,6 +16,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/meetdash" element={<MeetDash />}/>
       <Route path ="/start"  element ={<Start />} />
+      <Route path="/qa" element={<QAPanel />} />
+
     </Routes>
   </BrowserRouter>
 );
