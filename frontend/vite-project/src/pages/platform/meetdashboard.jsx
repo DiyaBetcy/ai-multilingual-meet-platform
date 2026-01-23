@@ -9,6 +9,8 @@ const [showPopup, setShowPopup] = useState(false);
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [handRaised, setHandRaised] = useState(false);
+
 const cameraStreamRef = useRef(null);
 
 
@@ -106,6 +108,9 @@ const cameraStreamRef = useRef(null);
   setIsSharing(false);
 };
 
+const toggleHandRaise = () => {
+  setHandRaised((prev) => !prev);
+};
 
   return (
     <div className="base-container">
@@ -164,9 +169,14 @@ const cameraStreamRef = useRef(null);
         <button className="control-btn">
           <img src="/src/assets/cc.png" alt="Captions" />
         </button>
-        <button className="control-btn">
-          <img src="/src/assets/hand.png" alt="Raise Hand" />
-        </button>
+        <button
+  className={`control-btn ${handRaised ? "off" : ""}`}
+  onClick={toggleHandRaise}
+  title={handRaised ? "Lower hand" : "Raise hand"}
+>
+  <img src="/src/assets/hand.png" alt="Raise Hand" />
+</button>
+
         <button
   className={`control-btn ${isSharing ? "off" : ""}`}
   onClick={isSharing ? stopScreenShare : startScreenShare}
