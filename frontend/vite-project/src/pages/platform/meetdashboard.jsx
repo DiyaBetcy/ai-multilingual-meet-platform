@@ -6,38 +6,22 @@ export default function MeetDashboard() {
 
   const [stream, setStream] = useState(null);
   const [micOn, setMicOn] = useState(true);
-  const [camOn, setCamOn] = useState(true);
+  const [camOn, setCamOn] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
 const cameraStreamRef = useRef(null);
 
 
   useEffect(() => {
-    async function startCamera() {
-      try {
-        const s = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
-        setStream(s);
-        cameraStreamRef.current = s;
-
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = s;
-        }
-      } catch (err) {
-        console.error(err);
-        alert("Please allow camera and microphone access");
-      }
+  // Google Meet style: do NOT auto start camera on page load
+  return () => {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
     }
+  };
+}, [stream]);
 
-    startCamera();
 
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, []);
+    
 
   const toggleMic = () => {
     if (!stream) return;
@@ -48,14 +32,44 @@ const cameraStreamRef = useRef(null);
     setMicOn(audioTrack.enabled);
   };
 
-  const toggleCam = () => {
-    if (!stream) return;
+    const startCamera = async () => {
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+
+      setStream(s);
+      cameraStreamRef.current = s;
+
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = s;
+      }
+
+      setCamOn(true);
+      setMicOn(true);
+    } catch (err) {
+      console.error(err);
+      alert("Please allow camera and microphone access");
+    }
+  };
+
+
+    const toggleCam = async () => {
+    // If camera stream is not started yet → start it
+    if (!stream) {
+      await startCamera();
+      return;
+    }
+
+    // If stream exists → just toggle video track
     const videoTrack = stream.getVideoTracks()[0];
     if (!videoTrack) return;
 
     videoTrack.enabled = !videoTrack.enabled;
     setCamOn(videoTrack.enabled);
   };
+
     const startScreenShare = async () => {
     try {
       const displayStream = await navigator.mediaDevices.getDisplayMedia({
