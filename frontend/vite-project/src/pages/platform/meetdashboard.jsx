@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./meetdashboard.css";
 import Popup from "./popup.jsx";
 export default function MeetDashboard() {
   const localVideoRef = useRef(null);
-const [showPopup, setShowPopup] = useState(false);
+  const navigate = useNavigate();
+  const [showPopup, setShowPopup] = useState(false);
+
+
 
   const [stream, setStream] = useState(null);
   const [micOn, setMicOn] = useState(true);
@@ -111,6 +115,34 @@ const cameraStreamRef = useRef(null);
 const toggleHandRaise = () => {
   setHandRaised((prev) => !prev);
 };
+const endMeeting = () => {
+  // Stop screen sharing if active
+  if (isSharing) {
+    stopScreenShare();
+  }
+
+  // Stop camera + mic tracks
+  if (stream) {
+    stream.getTracks().forEach((t) => t.stop());
+  }
+
+  // Reset all states
+  setStream(null);
+  cameraStreamRef.current = null;
+
+  setCamOn(false);
+  setMicOn(false);
+  setIsSharing(false);
+  setHandRaised(false);
+
+  // Clear video preview
+  if (localVideoRef.current) {
+    localVideoRef.current.srcObject = null;
+  }
+
+  // Navigate back to start page (Google Meet style)
+  navigate("/start");   // change if your route is different
+};
 
   return (
     <div className="base-container">
@@ -200,9 +232,14 @@ const toggleHandRaise = () => {
   <img src="/src/assets/more.png" alt="More" />
 </button>
 
-        <button className="control-btn end">
-          <img src="/src/assets/hangup.png" alt="Hang Up" />
-        </button>
+        <button
+  className="control-btn end"
+  onClick={endMeeting}
+  title="Leave call"
+>
+  <img src="/src/assets/hangup.png" alt="Hang Up" />
+</button>
+
       </div>
       <Popup
   open={showPopup}
