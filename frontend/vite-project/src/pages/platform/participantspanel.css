@@ -1,0 +1,101 @@
+.pp-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 9999;
+}
+
+.pp-panel {
+  width: 320px;
+  height: 100%;
+  background: #222;
+  color: #fff;
+  padding: 14px;
+  box-shadow: -8px 0 20px rgba(0,0,0,0.35);
+  display: flex;
+  flex-direction: column;
+}
+
+.pp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+
+.pp-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.pp-subtitle {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-top: 4px;
+}
+
+.pp-close {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.pp-list {
+  margin-top: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pp-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,0.06);
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.pp-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #19E5D8;
+  color: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+
+.pp-info {
+  flex: 1;
+}
+
+.pp-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.pp-you {
+  font-weight: 600;
+  font-size: 12px;
+  opacity: 0.8;
+  margin-left: 6px;
+}
+
+.pp-status {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-top: 3px;
+}
+
+.pp-hand {
+  font-size: 20px;
+}

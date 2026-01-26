@@ -1,9 +1,17 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "./meetdashboard.css";
 import Popup from "./popup.jsx";
+import ParticipantsPanel from "./ParticipantsPanel.jsx";
+
 export default function MeetDashboard() {
   const localVideoRef = useRef(null);
-const [showPopup, setShowPopup] = useState(false);
+  const navigate = useNavigate();
+  const [showPopup, setShowPopup] = useState(false);
+    const [showPeople, setShowPeople] = useState(false);
+
+
+
 
   const [stream, setStream] = useState(null);
   const [micOn, setMicOn] = useState(true);
@@ -111,7 +119,44 @@ const cameraStreamRef = useRef(null);
 const toggleHandRaise = () => {
   setHandRaised((prev) => !prev);
 };
+const endMeeting = () => {
+  // Stop screen sharing if active
+  if (isSharing) {
+    stopScreenShare();
+  }
 
+  // Stop camera + mic tracks
+  if (stream) {
+    stream.getTracks().forEach((t) => t.stop());
+  }
+
+  // Reset all states
+  setStream(null);
+  cameraStreamRef.current = null;
+
+  setCamOn(false);
+  setMicOn(false);
+  setIsSharing(false);
+  setHandRaised(false);
+
+  // Clear video preview
+  if (localVideoRef.current) {
+    localVideoRef.current.srcObject = null;
+  }
+
+  // Navigate back to start page (Google Meet style)
+  navigate("/start");   // change if your route is different
+};
+const participants = [
+  {
+    id: "me",
+    name: "You (Host)",
+    isYou: true,
+    micOn,
+    camOn,
+    handRaised,
+  },
+];
   return (
     <div className="base-container">
       {/* Top Bar */}
@@ -176,7 +221,13 @@ const toggleHandRaise = () => {
 >
   <img src="/src/assets/hand.png" alt="Raise Hand" />
 </button>
-
+<button
+  className="control-btn"
+  onClick={() => setShowPeople(true)}
+  title="People"
+>
+  👥
+</button>
         <button
   className={`control-btn ${isSharing ? "off" : ""}`}
   onClick={isSharing ? stopScreenShare : startScreenShare}
@@ -200,13 +251,23 @@ const toggleHandRaise = () => {
   <img src="/src/assets/more.png" alt="More" />
 </button>
 
-        <button className="control-btn end">
-          <img src="/src/assets/hangup.png" alt="Hang Up" />
-        </button>
+        <button
+  className="control-btn end"
+  onClick={endMeeting}
+  title="Leave call"
+>
+  <img src="/src/assets/hangup.png" alt="Hang Up" />
+</button>
+
       </div>
       <Popup
   open={showPopup}
   onClose={() => setShowPopup(false)}
+/>
+<ParticipantsPanel
+  open={showPeople}
+  onClose={() => setShowPeople(false)}
+  participants={participants}
 />
 
     </div>
