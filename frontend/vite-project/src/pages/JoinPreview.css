@@ -1,0 +1,87 @@
+/* PAGE ROOT */
+.jp-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #0c1116;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+/* TOP BAR */
+.jp-top-bar {
+  height: 60px;
+  background-color: #19e5d8;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+}
+
+.jp-logo {
+  height: 36px;
+}
+
+/* BODY */
+.jp-body {
+  flex: 1;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* THREE DOT MENU */
+.jp-dots {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  font-size: 22px;
+  color: white;
+  cursor: pointer;
+}
+
+/* VIDEO PREVIEW */
+.jp-video-box {
+  width: 80%;
+  max-width: 800px;
+  aspect-ratio: 16 / 9;
+  background-color: #a8a8a8;
+  border-radius: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+
+/* MIC + CAMERA ICONS */
+.jp-controls {
+  display: flex;
+  gap: 22px;
+}
+
+.jp-icon {
+  width: 46px;
+  height: 46px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.jp-icon img {
+  width: 22px;
+  height: 22px;
+}
+
+/* JOIN BUTTON */
+.jp-join-btn {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background-color: #19e5d8;
+  border: none;
+  padding: 10px 28px;
+  border-radius: 20px;
+  font-weight: 600;
+  cursor: pointer;
+}
