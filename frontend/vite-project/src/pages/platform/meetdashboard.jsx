@@ -2,10 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./meetdashboard.css";
 import Popup from "./popup.jsx";
+import ParticipantsPanel from "./ParticipantsPanel.jsx";
+
 export default function MeetDashboard() {
   const localVideoRef = useRef(null);
   const navigate = useNavigate();
   const [showPopup, setShowPopup] = useState(false);
+    const [showPeople, setShowPeople] = useState(false);
+
 
 
 
@@ -143,7 +147,16 @@ const endMeeting = () => {
   // Navigate back to start page (Google Meet style)
   navigate("/start");   // change if your route is different
 };
-
+const participants = [
+  {
+    id: "me",
+    name: "You (Host)",
+    isYou: true,
+    micOn,
+    camOn,
+    handRaised,
+  },
+];
   return (
     <div className="base-container">
       {/* Top Bar */}
@@ -208,7 +221,13 @@ const endMeeting = () => {
 >
   <img src="/src/assets/hand.png" alt="Raise Hand" />
 </button>
-
+<button
+  className="control-btn"
+  onClick={() => setShowPeople(true)}
+  title="People"
+>
+  👥
+</button>
         <button
   className={`control-btn ${isSharing ? "off" : ""}`}
   onClick={isSharing ? stopScreenShare : startScreenShare}
@@ -244,6 +263,11 @@ const endMeeting = () => {
       <Popup
   open={showPopup}
   onClose={() => setShowPopup(false)}
+/>
+<ParticipantsPanel
+  open={showPeople}
+  onClose={() => setShowPeople(false)}
+  participants={participants}
 />
 
     </div>
