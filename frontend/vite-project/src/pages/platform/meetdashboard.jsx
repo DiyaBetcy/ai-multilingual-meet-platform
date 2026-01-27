@@ -308,12 +308,8 @@ const participants = [
 
         
   
-        <button className="control-btn">
-          <img src="/src/assets/more.png" alt="More" />
-        </button>
-        <button className="control-btn">
-          <img src="/src/assets/share.png" alt="Share" />
-        </button>
+        
+          
         <button
   className="control-btn"
   onClick={() => setShowPopup(true)}
