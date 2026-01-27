@@ -3,12 +3,15 @@ import { useNavigate } from "react-router-dom";
 import "./meetdashboard.css";
 import Popup from "./popup.jsx";
 import ParticipantsPanel from "./ParticipantsPanel.jsx";
+import ChatPanel from "./ChatPanel.jsx";
 
 export default function MeetDashboard() {
   const localVideoRef = useRef(null);
   const navigate = useNavigate();
   const [showPopup, setShowPopup] = useState(false);
     const [showPeople, setShowPeople] = useState(false);
+const [showChat, setShowChat] = useState(false);
+const [messages, setMessages] = useState([]);
 
 
 
@@ -119,6 +122,21 @@ const cameraStreamRef = useRef(null);
 const toggleHandRaise = () => {
   setHandRaised((prev) => !prev);
 };
+const sendMessage = (text) => {
+  const now = new Date();
+  const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+  setMessages((prev) => [
+    ...prev,
+    {
+      id: `${Date.now()}`,
+      sender: "You",
+      text,
+      time,
+    },
+  ]);
+};
+
 const endMeeting = () => {
   // Stop screen sharing if active
   if (isSharing) {
@@ -228,6 +246,13 @@ const participants = [
 >
   👥
 </button>
+<button
+  className="control-btn"
+  onClick={() => setShowChat(true)}
+  title="Chat"
+>
+  💬
+</button>
         <button
   className={`control-btn ${isSharing ? "off" : ""}`}
   onClick={isSharing ? stopScreenShare : startScreenShare}
@@ -269,6 +294,14 @@ const participants = [
   onClose={() => setShowPeople(false)}
   participants={participants}
 />
+
+<ChatPanel
+  open={showChat}
+  onClose={() => setShowChat(false)}
+  messages={messages}
+  onSend={sendMessage}
+/>
+
 
     </div>
   );
