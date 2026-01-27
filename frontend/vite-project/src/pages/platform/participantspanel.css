@@ -99,3 +99,7 @@
 .pp-hand {
   font-size: 20px;
 }
+.pp-hand-inline {
+  margin-left: 6px;
+  font-size: 18px;
+}

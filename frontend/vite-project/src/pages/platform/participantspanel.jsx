@@ -28,14 +28,16 @@ export default function ParticipantsPanel({ open, onClose, participants }) {
 
               <div className="pp-info">
                 <div className="pp-name">
-                  {p.name} {p.isYou ? <span className="pp-you">(You)</span> : null}
-                </div>
+  {p.name} {p.isYou ? <span className="pp-you">(You)</span> : null}
+  {p.handRaised && <span className="pp-hand-inline"> ✋</span>}
+</div>
+
                 <div className="pp-status">
                   {p.micOn ? "🎤 On" : "🎤 Off"} • {p.camOn ? "📷 On" : "📷 Off"}
                 </div>
               </div>
 
-              {p.handRaised ? <div className="pp-hand">✋</div> : null}
+              
             </div>
           ))}
         </div>
