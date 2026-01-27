@@ -89,3 +89,22 @@
   opacity: 0.5;
   background-color: #666;
 }
+.chat-btn {
+  position: relative;
+}
+
+.chat-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: red;
+  color: white;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  font-weight: 700;
+}

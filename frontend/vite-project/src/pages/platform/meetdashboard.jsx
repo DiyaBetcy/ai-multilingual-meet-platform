@@ -12,6 +12,7 @@ export default function MeetDashboard() {
     const [showPeople, setShowPeople] = useState(false);
 const [showChat, setShowChat] = useState(false);
 const [messages, setMessages] = useState([]);
+const [unreadCount, setUnreadCount] = useState(0);
 
 
 
@@ -33,6 +34,11 @@ const cameraStreamRef = useRef(null);
     }
   };
 }, [stream]);
+useEffect(() => {
+  if (showChat) {
+    setUnreadCount(0);
+  }
+}, [showChat]);
 
 
     
@@ -135,7 +141,13 @@ const sendMessage = (text) => {
       time,
     },
   ]);
+
+  // ✅ increase unread only if chat is closed
+  if (!showChat) {
+    setUnreadCount((c) => c + 1);
+  }
 };
+
 
 const endMeeting = () => {
   // Stop screen sharing if active
@@ -247,12 +259,14 @@ const participants = [
   👥
 </button>
 <button
-  className="control-btn"
+  className="control-btn chat-btn"
   onClick={() => setShowChat(true)}
   title="Chat"
 >
   💬
+  {unreadCount > 0 && <span className="chat-badge">{unreadCount}</span>}
 </button>
+
         <button
   className={`control-btn ${isSharing ? "off" : ""}`}
   onClick={isSharing ? stopScreenShare : startScreenShare}

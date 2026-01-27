@@ -33,8 +33,15 @@ export default function ParticipantsPanel({ open, onClose, participants }) {
 </div>
 
                 <div className="pp-status">
-                  {p.micOn ? "🎤 On" : "🎤 Off"} • {p.camOn ? "📷 On" : "📷 Off"}
-                </div>
+  <span style={{ color: p.micOn ? "#4caf50" : "red" }}>
+    {p.micOn ? "🎤 On" : "🎤 Muted"}
+  </span>
+  {" • "}
+  <span style={{ color: p.camOn ? "#4caf50" : "#aaa" }}>
+    {p.camOn ? "📷 On" : "📷 Off"}
+  </span>
+</div>
+
               </div>
 
               
