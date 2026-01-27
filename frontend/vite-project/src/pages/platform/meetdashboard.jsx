@@ -13,6 +13,9 @@ export default function MeetDashboard() {
 const [showChat, setShowChat] = useState(false);
 const [messages, setMessages] = useState([]);
 const [unreadCount, setUnreadCount] = useState(0);
+const [meetingSeconds, setMeetingSeconds] = useState(0);
+const [meetingRunning, setMeetingRunning] = useState(true);
+
 
 
 
@@ -34,6 +37,16 @@ const cameraStreamRef = useRef(null);
     }
   };
 }, [stream]);
+useEffect(() => {
+  if (!meetingRunning) return;
+
+  const interval = setInterval(() => {
+    setMeetingSeconds((s) => s + 1);
+  }, 1000);
+
+  return () => clearInterval(interval);
+}, [meetingRunning]);
+
 useEffect(() => {
   if (showChat) {
     setUnreadCount(0);
@@ -150,6 +163,7 @@ const sendMessage = (text) => {
 
 
 const endMeeting = () => {
+  setMeetingRunning(false); 
   // Stop screen sharing if active
   if (isSharing) {
     stopScreenShare();
@@ -177,6 +191,18 @@ const endMeeting = () => {
   // Navigate back to start page (Google Meet style)
   navigate("/start");   // change if your route is different
 };
+const formatTime = (secs) => {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+
+  const hh = String(h).padStart(2, "0");
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+
+  return `${hh}:${mm}:${ss}`;
+};
+
 const participants = [
   {
     id: "me",
@@ -191,8 +217,13 @@ const participants = [
     <div className="base-container">
       {/* Top Bar */}
       <div className="top-bar">
-        <img src="/src/assets/logo.png" alt="Logo" className="logo-image" />
-      </div>
+  <img src="/src/assets/logo.png" alt="Logo" className="logo-image" />
+
+  <div className="meeting-timer">
+    {formatTime(meetingSeconds)}
+  </div>
+</div>
+
 
       {/* Main Content */}
       <div className="main-content">
