@@ -2,100 +2,53 @@ import { useState } from "react";
 import "./start.css";
 
 export default function Start() {
-  const [showCreate, setShowCreate] = useState(false);
-  const [showJoin, setShowJoin] = useState(false);
+  const [mode, setMode] = useState(null); // "create" | "join"
 
   return (
-
-    <div className="base-container">
-      <div className="top-bar">
-        <img src="/src/assets/logo.png" alt="Logo" className="logo-image" />
-      </div>
-    
-
     <div className="start-page">
-      {/* ---------- TOP NAV ---------- */}
+      {/* TOP BAR */}
       <div className="start-top-bar">
-
-        <nav className="start-menu">
-          <a href="#">Home</a>
-          <a href="#">Meetings</a>
-          <a href="#">Settings</a>
-          <a href="#">Profile</a>
-        </nav>
+        <img src="/src/assets/logo.png" className="start-logo" />
+        <div className="start-menu">
+          <span>Home</span>
+          <span>Meetings</span>
+          <span>Settings</span>
+          <span>Profile</span>
+        </div>
       </div>
 
-      {/* ---------- MAIN AREA ---------- */}
+      {/* MAIN */}
       <div className="start-main">
-        {/* Buttons */}
         <div className="start-buttons">
-          <button
-            className="start-btn-primary"
-            onClick={() => {
-              setShowCreate(true);
-              setShowJoin(false);
-            }}
-          >
-            create meeting
+          <button onClick={() => setMode("create")} className="start-btn">
+            Create Meeting
           </button>
-
-          <button
-            className="start-btn-primary"
-            onClick={() => {
-              setShowJoin(true);
-              setShowCreate(false);
-            }}
-          >
-            join meeting
+          <button onClick={() => setMode("join")} className="start-btn">
+            Join Meeting
           </button>
         </div>
 
-        {/* ---------- CREATE BAR ---------- */}
-        {showCreate && (
-          <div className="meeting-bar">
-            <input type="text" placeholder="Meeting ID" />
-            <input type="text" placeholder="Your Name" />
+        {mode && (
+          <div className="start-meeting-bar">
+            <input placeholder={mode === "create" ? "Meeting ID" : "Enter Code"} />
+            <input placeholder="Your Name" />
 
-            <div className="meeting-options">
-              <label>
-                <input type="checkbox" /> Turn off video
-              </label>
-              <label>
-                <input type="checkbox" /> Turn off audio
-              </label>
+            <div className="start-options">
+              <label><input type="checkbox" /> Video Off</label>
+              <label><input type="checkbox" /> Mic Off</label>
             </div>
 
-            <button className="action-btn">START</button>
+            <button className="start-action-btn">
+              {mode === "create" ? "Start" : "Join"}
+            </button>
           </div>
         )}
+      </div>
 
-        {/* ---------- JOIN BAR ---------- */}
-        {showJoin && (
-          <div className="meeting-bar">
-            <input type="text" placeholder="Meeting ID" />
-            <input type="text" placeholder="Your Name" />
-
-            <div className="meeting-options">
-              <label>
-                <input type="checkbox" /> Turn off video
-              </label>
-              <label>
-                <input type="checkbox" /> Turn off audio
-              </label>
-            </div>
-
-            <button className="action-btn">JOIN</button>
-          </div>
-        )}
-
-        {/* ---------- FOOTER OPTION ---------- */}
-        <div className="start-footer">
-          <span>AI Anchor Assistant</span>
-          <input type="checkbox" />
-        </div>
+      {/* FOOTER */}
+      <div className="start-footer">
+        🤖 AI Anchor Assistant
       </div>
     </div>
-</div>
-
-
-    )}
+  );
+}

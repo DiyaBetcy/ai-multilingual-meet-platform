@@ -5,12 +5,14 @@ export default function JoinPreview() {
     <div className="jp-container">
 
       {/* TOP BAR */}
-      <div className="jp-top-bar">
-        <img
-          src="/src/assets/logo.png"
-          alt="Logo"
-          className="jp-logo"
-        />
+       <div className="start-top-bar">
+        <img src="/src/assets/logo.png" className="start-logo" />
+        <div className="start-menu">
+          <span>Home</span>
+          <span>Meetings</span>
+          <span>Settings</span>
+          <span>Profile</span>
+        </div>
       </div>
 
       {/* MAIN BODY */}
@@ -24,10 +26,10 @@ export default function JoinPreview() {
         <div className="jp-video-box">
           <div className="jp-controls">
             <div className="jp-icon">
-              <img src="/src/assets/mic-off.png" alt="Mic off" />
+              <img src="/src/assets/mic-off.jpg" alt="Mic off" />
             </div>
             <div className="jp-icon">
-              <img src="/src/assets/cam-off.png" alt="Camera off" />
+              <img src="/src/assets/cam-off1.jpg" alt="Camera off" />
             </div>
           </div>
         </div>

@@ -1,130 +1,97 @@
-/* PAGE WRAPPER (prevents affecting other pages) */
+/* START PAGE ONLY */
 .start-page {
-  width: 100vw;
   height: 100vh;
-  background: black;
-  overflow: hidden;
-  font-family: "Georgia", serif;
-}
-
-/* REMOVE WHITE LINE ISSUE */
-.start-page * {
-  box-sizing: border-box;
+  background: #0e1419;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  font-family: "Segoe UI", sans-serif;
 }
 
 /* TOP BAR */
-.start-topbar {
-  height: 55px;
-  background: #1fe0d2;
+.start-top-bar {
+  background: #19E5D8;
+  padding: 12px 20px;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  padding-left: 20px;
 }
 
 .start-logo {
-  width: 35px;
-  height: 35px;
-  background: #e6f7f6;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-style: italic;
-  font-weight: bold;
+  height: 38px;
 }
 
-/* MAIN LAYOUT */
-.start-content {
-  display: flex;
-  height: calc(100vh - 55px);
+.start-menu span {
+  margin-left: 22px;
+  color: black;
+  cursor: pointer;
+  font-weight: 500;
 }
 
-/* LEFT SECTION */
-.start-left {
+/* MAIN */
+.start-main {
   flex: 1;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
-}
-
-.start-left h1 {
-  color: white;
-  font-size: 90px;
-  font-style: italic;
-}
-
-/* RIGHT SECTION */
-.start-right {
-  flex: 1;
-  display: flex;
   align-items: center;
-  justify-content: center;
-}
-
-/* SIGNUP CARD */
-.signup-card {
-  width: 380px;
-  background: linear-gradient(#2b2b2b, #1f1f1f);
-  padding: 30px;
-  border-radius: 10px;
-  color: white;
-}
-
-.signup-card h2 {
-  text-align: center;
-  margin-bottom: 20px;
 }
 
 /* BUTTONS */
-.google-btn {
-  width: 100%;
-  padding: 10px;
-  border-radius border-radius: 6px;
-  border: none;
-  margin-bottom: 15px;
-  font-weight: bold;
+.start-buttons {
+  display: flex;
+  gap: 60px;
 }
 
-.signup-btn {
-  width: 100%;
-  padding: 10px;
-  background: #1fe0d2;
+.start-btn {
+  background: #19E5D8;
   border: none;
+  padding: 14px 28px;
+  border-radius: 14px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* MEETING BAR */
+.start-meeting-bar {
+  background: #151c22;
+  margin-top: 30px;
+  padding: 20px;
+  width: 420px;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.start-meeting-bar input {
+  background: #0e1419;
+  border: 1px solid #333;
+  color: white;
+  padding: 8px;
   border-radius: 6px;
-  margin-top: 15px;
-  cursor: pointer;
 }
 
-/* INPUTS */
-.signup-card input {
-  width: 100%;
-  padding: 10px;
-  margin: 8px 0;
-  border-radius: 5px;
+/* OPTIONS */
+.start-options {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+/* ACTION */
+.start-action-btn {
+  align-self: flex-end;
+  background: #19E5D8;
   border: none;
-}
-
-/* TEXTS */
-.or-text {
-  text-align: center;
-  margin: 10px 0;
-}
-
-.otp-link {
-  display: block;
-  color: #2f63ff;
-  font-size: 14px;
-  margin-bottom: 10px;
+  padding: 8px 20px;
+  border-radius: 20px;
   cursor: pointer;
 }
 
-.login-text {
+/* FOOTER */
+.start-footer {
+  padding: 16px;
   text-align: center;
-  margin-top: 15px;
   font-size: 14px;
-}
-
-.login-text span {
-  color: purple;
-  cursor: pointer;
 }
