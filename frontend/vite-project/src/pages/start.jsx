@@ -1,12 +1,14 @@
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import "./start.css";
 
 export default function Start() {
-  const [mode, setMode] = useState(null); // "create" | "join"
-
+  const [mode, setMode] = useState(null); 
+  const navigate = useNavigate();
+  
   return (
     <div className="start-page">
-      {/* TOP BAR */}
+     
       <div className="start-top-bar">
         <img src="/src/assets/logo.png" className="start-logo" />
         <div className="start-menu">
@@ -17,15 +19,19 @@ export default function Start() {
         </div>
       </div>
 
-      {/* MAIN */}
+     
       <div className="start-main">
         <div className="start-buttons">
-          <button onClick={() => setMode("create")} className="start-btn">
-            Create Meeting
-          </button>
-          <button onClick={() => setMode("join")} className="start-btn">
-            Join Meeting
-          </button>
+          <button onClick={() => navigate("/preview/create")} className="start-btn">
+  Create Meeting
+</button>
+
+      
+
+          <button onClick={() => navigate("/preview/join")}className="start-btn">
+  Join Meeting
+</button>
+          
         </div>
 
         {mode && (
@@ -45,10 +51,8 @@ export default function Start() {
         )}
       </div>
 
-      {/* FOOTER */}
-      <div className="start-footer">
-        🤖 AI Anchor Assistant
-      </div>
+      
+    
     </div>
   );
 }

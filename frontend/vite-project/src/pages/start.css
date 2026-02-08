@@ -1,4 +1,4 @@
-/* START PAGE ONLY */
+
 .start-page {
   height: 100vh;
   background: #0e1419;
@@ -8,7 +8,6 @@
   font-family: "Segoe UI", sans-serif;
 }
 
-/* TOP BAR */
 .start-top-bar {
   background: #19E5D8;
   padding: 12px 20px;
@@ -28,7 +27,7 @@
   font-weight: 500;
 }
 
-/* MAIN */
+
 .start-main {
   flex: 1;
   display: flex;
@@ -37,7 +36,7 @@
   align-items: center;
 }
 
-/* BUTTONS */
+
 .start-buttons {
   display: flex;
   gap: 60px;
@@ -52,7 +51,7 @@
   cursor: pointer;
 }
 
-/* MEETING BAR */
+
 .start-meeting-bar {
   background: #151c22;
   margin-top: 30px;
@@ -72,14 +71,14 @@
   border-radius: 6px;
 }
 
-/* OPTIONS */
+
 .start-options {
   display: flex;
   justify-content: space-between;
   font-size: 14px;
 }
 
-/* ACTION */
+
 .start-action-btn {
   align-self: flex-end;
   background: #19E5D8;
@@ -89,7 +88,7 @@
   cursor: pointer;
 }
 
-/* FOOTER */
+
 .start-footer {
   padding: 16px;
   text-align: center;

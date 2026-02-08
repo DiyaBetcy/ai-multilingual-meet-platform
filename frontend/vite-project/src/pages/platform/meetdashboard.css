@@ -7,18 +7,15 @@
   color: white;
 }
 
-/* Top bar */
-.top-bar {
-  background-color: #19E5D8;
-  padding: 8px 16px;
+
+.start-top-bar {
+  background: #19E5D8;
+  padding: 12px 20px;
   display: flex;
+  justify-content: space-between;
   align-items: center;
 }
 
-.logo-image {
-  height: 35px;
-  width: auto;
-}
 
 /* Main content: left = big video, right = small tiles */
 .main-content {

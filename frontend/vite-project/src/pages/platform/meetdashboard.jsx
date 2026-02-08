@@ -216,13 +216,16 @@ const participants = [
   return (
     <div className="base-container">
       {/* Top Bar */}
-      <div className="top-bar">
-  <img src="/src/assets/logo.png" alt="Logo" className="logo-image" />
-
-  <div className="meeting-timer">
-    {formatTime(meetingSeconds)}
-  </div>
-</div>
+      
+      <div className="start-top-bar">
+        <img src="/src/assets/logo.png" className="start-logo" />
+        <div className="start-menu">
+          <span>Home</span>
+          <span>Meetings</span>
+          <span>Settings</span>
+          <span>Profile</span>
+        </div>
+      </div>
 
 
       {/* Main Content */}
