@@ -30,6 +30,7 @@ const [meetingRunning, setMeetingRunning] = useState(true);
 
 const cameraStreamRef = useRef(null);
 const screenStreamRef = useRef(null);
+const micStreamRef = useRef(null);
 
 
   useEffect(() => {
@@ -59,14 +60,32 @@ useEffect(() => {
 
     
 
-  const toggleMic = () => {
-    if (!stream) return;
-    const audioTrack = stream.getAudioTracks()[0];
+  const toggleMic = async () => {
+  try {
+    // If mic stream does not exist → request mic access
+    if (!micStreamRef.current) {
+      const audioStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false,
+      });
+
+      micStreamRef.current = audioStream;
+      setMicOn(true);
+      return;
+    }
+
+    const audioTrack = micStreamRef.current.getAudioTracks()[0];
     if (!audioTrack) return;
 
     audioTrack.enabled = !audioTrack.enabled;
     setMicOn(audioTrack.enabled);
-  };
+
+  } catch (err) {
+    console.error(err);
+    alert("Microphone permission denied");
+  }
+};
+
 
     const startCamera = async () => {
     try {
@@ -190,6 +209,7 @@ const sendMessage = (text) => {
 
 const endMeeting = () => {
   setMeetingRunning(false); 
+
   // Stop screen sharing if active
   if (isSharing) {
     stopScreenShare();
@@ -198,6 +218,12 @@ const endMeeting = () => {
   // Stop camera + mic tracks
   if (stream) {
     stream.getTracks().forEach((t) => t.stop());
+  }
+
+  // ✅ Stop dedicated mic stream
+  if (micStreamRef.current) {
+    micStreamRef.current.getTracks().forEach(t => t.stop());
+    micStreamRef.current = null;
   }
 
   // Reset all states
@@ -214,9 +240,9 @@ const endMeeting = () => {
     localVideoRef.current.srcObject = null;
   }
 
-  // Navigate back to start page (Google Meet style)
-  navigate("/start");   // change if your route is different
+  navigate("/start");
 };
+
 const formatTime = (secs) => {
   const h = Math.floor(secs / 3600);
   const m = Math.floor((secs % 3600) / 60);
