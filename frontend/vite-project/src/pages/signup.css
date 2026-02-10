@@ -4,13 +4,14 @@
   height: 100vh;
 }
 
-/* Top bar now spans full width */
-.top-bar {
-  background-color: #19E5D8;
-  padding: 10px 20px;
+.start-top-bar {
+  background: #19E5D8;
+  padding: 12px 20px;
   display: flex;
+  justify-content: space-between;
   align-items: center;
 }
+
 
 .logo-image {
   height: 40px;
@@ -21,6 +22,7 @@
 .main-content {
   display: flex;
   flex: 1;
+  background-color: black;
 }
 
 /* Left panel */
@@ -98,6 +100,6 @@
 .submit:hover {
   background-color: #14bfb5;
 }
-p{
-    color: white;
+.signup-container p {
+  color: white;
 }

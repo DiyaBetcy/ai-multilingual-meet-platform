@@ -3,8 +3,14 @@ import "./signup.css";
 export default function Signup() {
   return (
     <div className="signup-container">
-      <div className="top-bar">
-        <img src="/src/assets/logo.png" alt="Logo" className="logo-image" />
+      <div className="start-top-bar">
+        <img src="/src/assets/logo.png" className="start-logo" />
+        <div className="start-menu">
+          <span>Home</span>
+          <span>Meetings</span>
+          <span>Settings</span>
+          <span>Profile</span>
+        </div>
       </div>
 
       <div className="main-content">

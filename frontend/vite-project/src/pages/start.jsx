@@ -1,68 +1,58 @@
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import "./start.css";
 
-export default function start() {
-  // state to show/hide popup
-  const [showPopup, setShowPopup] = useState(false);
-
+export default function Start() {
+  const [mode, setMode] = useState(null); 
+  const navigate = useNavigate();
+  
   return (
-    <div className="base-container">
-      
-      <div className="top-bar">
-        <img src="/logo.png" alt="Logo" className="logo-image" />
-        <nav className="menu">
-          <a href="#">Home</a>
-          <a href="#">Meetings</a>
-          <a href="#">Settings</a>
-          <a href="#">Profile</a>
-        </nav>
-      </div>
-
-      {/* ---------- MAIN CONTENT ---------- */}
-      <div className="main-content">
-        <button className="create-btn" onClick={() => setShowPopup(true)}>
-          create meeting
-        </button>
-      </div>
-
-      {/* ---------- POPUP MODAL ---------- */}
-      {showPopup && (
-        <div className="popup-overlay">
-          <div className="popup-box">
-            {/* header with logo + close button */}
-            <div className="popup-header">
-              <span className="popup-logo">M</span>
-              <button className="close-btn" onClick={() => setShowPopup(false)}>
-                X
-              </button>
-            </div>
-
-            {/* popup form */}
-            <div className="popup-body">
-              <label>MEETING CODE :</label>
-              <input type="text" />
-
-              <label>Name:</label>
-              <input type="text" />
-
-              <div className="checkboxes">
-                <label>
-                  <input type="checkbox" /> Turn off my video
-                </label>
-                <label>
-                  <input type="checkbox" /> Turn off mic
-                </label>
-              </div>
-
-              {/* action buttons */}
-              <div className="popup-actions">
-                <button className="cancel-btn" onClick={() => setShowPopup(false)}>CANCEL</button>
-                <button className="start-btn">START</button>
-              </div>
-            </div>
-          </div>
+    <div className="start-page">
+     
+      <div className="start-top-bar">
+        <img src="/src/assets/logo.png" className="start-logo" />
+        <div className="start-menu">
+          <span>Home</span>
+          <span>Meetings</span>
+          <span>Settings</span>
+          <span>Profile</span>
         </div>
-      )}
+      </div>
+
+     
+      <div className="start-main">
+        <div className="start-buttons">
+          <button onClick={() => navigate("/preview/create")} className="start-btn">
+  Create Meeting
+</button>
+
+      
+
+          <button onClick={() => navigate("/preview/join")}className="start-btn">
+  Join Meeting
+</button>
+          
+        </div>
+
+        {mode && (
+          <div className="start-meeting-bar">
+            <input placeholder={mode === "create" ? "Meeting ID" : "Enter Code"} />
+            <input placeholder="Your Name" />
+
+            <div className="start-options">
+              <label><input type="checkbox" /> Video Off</label>
+              <label><input type="checkbox" /> Mic Off</label>
+            </div>
+
+            <button className="start-action-btn">
+              {mode === "create" ? "Start" : "Join"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      
+    
     </div>
   );
 }

@@ -15,7 +15,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <Route path="/" element={<Signup />} />
       <Route path="/login" element={<Login />} />
       <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/JoinPreview" element={<JoinPreview />} />
+      <Route path="/preview/:mode" element={<JoinPreview />} />
       <Route path="/meetdash" element={<MeetDash />}/>
       <Route path ="/start"  element ={<Start />} />
       <Route path="/qa" element={<QAPanel />} />
