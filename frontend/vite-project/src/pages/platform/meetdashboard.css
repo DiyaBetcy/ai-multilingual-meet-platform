@@ -138,3 +138,25 @@
   color: white;
   cursor: pointer;
 }
+.control-btn {
+  position: relative;
+}
+
+/* When mic or camera is OFF */
+.control-btn.off::after {
+  content: "";
+  position: absolute;
+  width: 26px;
+  height: 3px;
+  background: white;
+  transform: rotate(-45deg);
+  top: 50%;
+  left: 50%;
+  transform-origin: center;
+  translate: -50% -50%;
+}
+
+/* Optional: red background when OFF (like Google Meet) */
+.control-btn.off {
+  background-color: #d93025;
+}
