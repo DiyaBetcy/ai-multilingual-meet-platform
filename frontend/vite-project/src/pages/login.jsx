@@ -1,4 +1,5 @@
 import "./login.css";   // ✅ make sure name matches your file
+import { useNavigate } from "react-router-dom";
 
 export default function login() {
   return (
