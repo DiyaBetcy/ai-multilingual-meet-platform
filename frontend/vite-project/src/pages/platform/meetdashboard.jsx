@@ -25,8 +25,11 @@ const [meetingRunning, setMeetingRunning] = useState(true);
   const [camOn, setCamOn] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
+  const [screenWarning, setScreenWarning] = useState(false);
+
 
 const cameraStreamRef = useRef(null);
+const screenStreamRef = useRef(null);
 
 
   useEffect(() => {
@@ -104,39 +107,62 @@ useEffect(() => {
   };
 
     const startScreenShare = async () => {
-    try {
-      const displayStream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: false,
-      });
-        
-
-      // Show screen in main video
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = displayStream;
-      }
-
-      setIsSharing(true);
-
-      // When user stops sharing from browser UI
-      const screenTrack = displayStream.getVideoTracks()[0];
-      screenTrack.onended = () => {
-        stopScreenShare();
-      };
-    } catch (err) {
-      console.error("Screen share failed:", err);
-      alert("Screen sharing cancelled or blocked.");
+  try {
+    // Stop camera preview if running
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach(t => t.stop());
     }
-  };
-  const stopScreenShare = () => {
-  const camStream = cameraStreamRef.current;
 
-  if (camStream && localVideoRef.current) {
-    localVideoRef.current.srcObject = camStream;
+    const displayStream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: false,
+    });
+
+    const track = displayStream.getVideoTracks()[0];
+    const settings = track.getSettings();
+
+    // 🚫 Block Entire Screen
+    if (settings.displaySurface === "monitor") {
+      displayStream.getTracks().forEach(t => t.stop());
+      setScreenWarning(true);
+      return;
+    }
+
+    // ✅ Allow tab / window
+    screenStreamRef.current = displayStream;
+
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = displayStream;
+    }
+
+    setIsSharing(true);
+
+    track.onended = () => {
+      stopScreenShare();
+    };
+
+  } catch (err) {
+    console.error("Screen share failed:", err);
+  }
+};
+
+
+  const stopScreenShare = () => {
+
+  // Stop screen stream
+  if (screenStreamRef.current) {
+    screenStreamRef.current.getTracks().forEach(t => t.stop());
+    screenStreamRef.current = null;
+  }
+
+  // Restore camera
+  if (cameraStreamRef.current && localVideoRef.current) {
+    localVideoRef.current.srcObject = cameraStreamRef.current;
   }
 
   setIsSharing(false);
 };
+
 
 const toggleHandRaise = () => {
   setHandRaised((prev) => !prev);
@@ -306,6 +332,7 @@ const participants = [
   <img src="/src/assets/share.png" alt="Share" />
 </button>
 
+
         
   
         
@@ -342,6 +369,17 @@ const participants = [
   messages={messages}
   onSend={sendMessage}
 />
+{screenWarning && (
+  <div className="screen-warning-popup">
+    <div className="popup-content">
+      <p>
+        ⚠ <strong>Entire Screen sharing is not supported.</strong><br />
+        Please select <strong>Chrome Tab</strong> or <strong>Window</strong>.
+      </p>
+      <button onClick={() => setScreenWarning(false)}>OK</button>
+    </div>
+  </div>
+)}
 
 
     </div>

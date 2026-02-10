@@ -108,3 +108,36 @@
   text-align: center;
   font-weight: 700;
 }
+.screen-warning-popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.popup-content {
+  background: #fff;
+  padding: 20px 24px;
+  border-radius: 10px;
+  text-align: center;
+  width: 320px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.popup-content p {
+  font-size: 14px;
+  margin-bottom: 16px;
+  color: #111;
+}
+
+.popup-content button {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}
