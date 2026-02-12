@@ -1,0 +1,82 @@
+.profile-container {
+  height: 100vh;
+  background-color: #1c1c1c;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-card {
+  background-color: #2a2a2a;
+  width: 450px;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+
+.profile-avatar {
+  margin-bottom: 20px;
+}
+
+.avatar-circle {
+  width: 90px;
+  height: 90px;
+  background-color: #19E5D8;
+  color: #111;
+  font-size: 28px;
+  font-weight: bold;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.profile-details h2 {
+  margin-bottom: 6px;
+}
+
+.email {
+  color: #bbb;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.profile-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.info-box {
+  background-color: #1c1c1c;
+  padding: 15px;
+  border-radius: 8px;
+  width: 30%;
+}
+
+.info-box span {
+  display: block;
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 6px;
+}
+
+.info-box strong {
+  font-size: 18px;
+}
+
+.edit-btn {
+  background: #19E5D8;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.edit-btn:hover {
+  opacity: 0.9;
+}

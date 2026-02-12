@@ -10,6 +10,7 @@ import QAPanel from "./pages/platform/QAPanel.jsx";
 import JoinPreview from "./pages/JoinPreview.jsx";
 import Home from "./pages/platform/Home";
 import Meetings from "./pages/platform/meetings";
+import Profile from "./pages/platform/profile";
 
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -26,6 +27,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <Route path="/qa" element={<QAPanel />} />
       <Route path="/home" element={<Home />} />
       <Route path="/meetings" element={<Meetings />} />
+      <Route path="/profile" element={<Profile />} />
+
 
 
 
