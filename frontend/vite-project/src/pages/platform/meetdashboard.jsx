@@ -272,11 +272,13 @@ const participants = [
       <div className="start-top-bar">
         <img src="/src/assets/logo.png" className="start-logo" />
         <div className="start-menu">
-          <span>Home</span>
-          <span>Meetings</span>
-          <span>Settings</span>
-          <span>Profile</span>
-        </div>
+  <span>Home</span>
+  <span>Meetings</span>
+  <span>Settings</span>
+  <span>Profile</span>
+</div>
+
+
       </div>
 
 

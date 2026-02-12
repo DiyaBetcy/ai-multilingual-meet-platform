@@ -1,0 +1,36 @@
+.settings-container {
+  min-height: 100vh;
+  background-color: #1c1c1c;
+  color: white;
+  padding: 40px;
+}
+
+.settings-container h1 {
+  margin-bottom: 30px;
+}
+
+.settings-card {
+  background-color: #2a2a2a;
+  padding: 30px;
+  border-radius: 10px;
+  max-width: 500px;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.setting-item span {
+  font-size: 16px;
+}
+
+.setting-item select {
+  background-color: #444;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
