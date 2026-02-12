@@ -8,10 +8,14 @@ import MeetDash from "./pages/platform/meetdashboard.jsx";
 import Start from "./pages/start.jsx";
 import QAPanel from "./pages/platform/QAPanel.jsx";
 import JoinPreview from "./pages/JoinPreview.jsx";
+import Home from "./pages/platform/Home";
+
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <BrowserRouter>
     <Routes>
+      <Route path="/" element={<Home />} />
+
       <Route path="/" element={<Signup />} />
       <Route path="/login" element={<Login />} />
       <Route path="/dashboard" element={<Dashboard />} />
@@ -19,6 +23,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <Route path="/meetdash" element={<MeetDash />}/>
       <Route path ="/start"  element ={<Start />} />
       <Route path="/qa" element={<QAPanel />} />
+      <Route path="/home" element={<Home />} />
+
 
     </Routes>
   </BrowserRouter>
