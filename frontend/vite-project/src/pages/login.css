@@ -1,31 +1,30 @@
-.base-container {
-  background-color: #11161d;
-  min-height: 100vh;
+.signup-container {
   display: flex;
   flex-direction: column;
+  height: 100vh;
 }
 
-
-
-.start-top-bar {
-  background: #19E5D8;
-  padding: 12px 20px;
+.top-bar {
+  background-color: #19E5D8;
+  padding: 10px 20px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-}
-.logo-image {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  justify-content: space-between; /* ⭐ THIS PUSHES MENU TO RIGHT */
 }
 
+
+.logo-image {
+  height: 40px;
+}
+
+/* Layout Split */
 .main-content {
   display: flex;
   flex: 1;
 }
 
-.left-section {
+/* LEFT PANEL (MEET TEXT CENTERING) */
+.left-panel {
   flex: 1;
   background-color: black;
   display: flex;
@@ -33,61 +32,73 @@
   align-items: center;
 }
 
-.app-title {
+/* ⭐ THIS CONTROLS MEET SIZE */
+.brand-text {
   font-size: 10rem;
   font-style: italic;
   color: white;
   font-weight: bold;
 }
 
-.right-section {
+/* RIGHT PANEL */
+.right-panel {
   flex: 1;
+  background-color: black;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  max-width: 300px;
+  justify-content: center;
+  align-items: center;
 }
 
-.login-title {
-  font-size: 24px;
+/* ⭐ THIS CONTROLS PANEL SIZE */
+.form-wrapper {
+  background-color: #222;
+  padding: 30px;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.form-wrapper h2 {
   color: white;
   margin-bottom: 20px;
 }
 
-.login-form {
-  display: flex;
-  flex-direction: column;
+.form-wrapper input {
   width: 100%;
-}
-
-.login-form label {
-  color: white;
-  margin: 8px 0 4px;
-}
-
-.login-form input {
-  padding: 8px;
-  border: none;
-  border-radius: 4px;
-  margin-bottom: 10px;
-}
-
-.login-btn {
-  background-color: #35e4d3;
-  border: none;
-  border-radius: 20px;
   padding: 10px;
-  font-weight: bold;
+  margin-bottom: 15px;
+  border-radius: 5px;
+  border: none;
+}
+
+.submit {
+  width: 100%;
+  padding: 10px;
+  background-color: #19E5D8;
+  border: none;
+  border-radius: 5px;
   cursor: pointer;
 }
 
-.signup-text {
-  margin-top: 15px;
-  color: white;
-  font-size: 12px;
+.submit:hover {
+  background-color: #14bfb5;
 }
 
-.signup-text a {
-  color: #35e4d3;
+p {
+  color: white;
+}
+.nav-menu {
+  display: flex;
+  gap: 25px;
+}
+
+.nav-menu a {
   text-decoration: none;
+  color: black;
+  font-weight: 500;
+}
+
+.nav-menu a:hover {
+  text-decoration: underline;
 }
