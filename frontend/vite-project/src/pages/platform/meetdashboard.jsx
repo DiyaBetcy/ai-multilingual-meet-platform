@@ -109,45 +109,36 @@ useEffect(() => {
     }
   };
 
-
-    const toggleCam = async () => {
-    // If camera stream is not started yet → start it
+const toggleCam = async () => {
+  try {
     if (!stream) {
       await startCamera();
       return;
     }
 
-    // If stream exists → just toggle video track
     const videoTrack = stream.getVideoTracks()[0];
     if (!videoTrack) return;
 
-    videoTrack.enabled = !videoTrack.enabled;
-    setCamOn(videoTrack.enabled);
-  };
-
-    const startScreenShare = async () => {
-  try {
-    // Stop camera preview if running
-    if (cameraStreamRef.current) {
-      cameraStreamRef.current.getTracks().forEach(t => t.stop());
+    if (camOn) {
+      // STOP camera completely
+      videoTrack.stop();
+      setCamOn(false);
+    } else {
+      // Restart camera
+      await startCamera();
     }
+  } catch (err) {
+    console.error(err);
+  }
+};
 
+const startScreenShare = async () => {
+  try {
     const displayStream = await navigator.mediaDevices.getDisplayMedia({
       video: true,
       audio: false,
     });
 
-    const track = displayStream.getVideoTracks()[0];
-    const settings = track.getSettings();
-
-    // 🚫 Block Entire Screen
-    if (settings.displaySurface === "monitor") {
-      displayStream.getTracks().forEach(t => t.stop());
-      setScreenWarning(true);
-      return;
-    }
-
-    // ✅ Allow tab / window
     screenStreamRef.current = displayStream;
 
     if (localVideoRef.current) {
@@ -156,7 +147,7 @@ useEffect(() => {
 
     setIsSharing(true);
 
-    track.onended = () => {
+    displayStream.getVideoTracks()[0].onended = () => {
       stopScreenShare();
     };
 
@@ -164,6 +155,7 @@ useEffect(() => {
     console.error("Screen share failed:", err);
   }
 };
+
 
 
   const stopScreenShare = () => {
@@ -272,11 +264,23 @@ const participants = [
       <div className="start-top-bar">
         <img src="/src/assets/logo.png" className="start-logo" />
         <div className="start-menu">
-  <span>Home</span>
-  <span>Meetings</span>
-  <span>Settings</span>
-  <span>Profile</span>
+  <span onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
+    Home
+  </span>
+
+  <span onClick={() => navigate("/meetings")} style={{ cursor: "pointer" }}>
+    Meetings
+  </span>
+
+  <span onClick={() => navigate("/settings")} style={{ cursor: "pointer" }}>
+    Settings
+  </span>
+
+  <span onClick={() => navigate("/profile")} style={{ cursor: "pointer" }}>
+    Profile
+  </span>
 </div>
+
 
 
       </div>
