@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import "./meetdashboard.css";
 import Popup from "./popup.jsx";
 import ParticipantsPanel from "./ParticipantsPanel.jsx";
@@ -8,6 +8,9 @@ import ChatPanel from "./ChatPanel.jsx";
 export default function MeetDashboard() {
   const localVideoRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
+const previewMicOn = location.state?.micOn ?? true;
+const previewCamOn = location.state?.camOn ?? false;
   const [showPopup, setShowPopup] = useState(false);
     const [showPeople, setShowPeople] = useState(false);
 const [showChat, setShowChat] = useState(false);
@@ -21,8 +24,8 @@ const [meetingRunning, setMeetingRunning] = useState(true);
 
 
   const [stream, setStream] = useState(null);
-  const [micOn, setMicOn] = useState(true);
-  const [camOn, setCamOn] = useState(false);
+  const [micOn, setMicOn] = useState(previewMicOn);
+const [camOn, setCamOn] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
   const [screenWarning, setScreenWarning] = useState(false);
@@ -57,7 +60,36 @@ useEffect(() => {
   }
 }, [showChat]);
 
+useEffect(() => {
+  if (!location.state) return;
 
+  const applyPreviewSettings = async () => {
+    try {
+      // Only start camera if previewCamOn is true
+      if (previewCamOn === true) {
+        await startCamera();
+      }
+
+      // Only request mic if previewMicOn is true
+      if (previewMicOn === true) {
+        const audioStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: false,
+        });
+
+        micStreamRef.current = audioStream;
+        setMicOn(true);
+      } else {
+        setMicOn(false);
+      }
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  applyPreviewSettings();
+}, [location.state]);
     
 
   const toggleMic = async () => {
@@ -88,26 +120,25 @@ useEffect(() => {
 
 
     const startCamera = async () => {
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: false, // do NOT request mic here
+    });
 
-      setStream(s);
-      cameraStreamRef.current = s;
+    setStream(s);
+    cameraStreamRef.current = s;
 
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = s;
-      }
-
-      setCamOn(true);
-      setMicOn(true);
-    } catch (err) {
-      console.error(err);
-      alert("Please allow camera and microphone access");
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = s;
     }
-  };
+
+    setCamOn(true);
+
+  } catch (err) {
+    console.error(err);
+  }
+};
 
 const toggleCam = async () => {
   try {
