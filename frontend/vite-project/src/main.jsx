@@ -13,20 +13,109 @@ import Meetings from "./pages/platform/meetings";
 import Profile from "./pages/platform/profile";
 import Settings from "./pages/platform/settings";
 
+import { Navigate } from "react-router-dom";
+
+function ProtectedRoute({ children }) {
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <BrowserRouter>
   <Routes>
-    <Route path="/" element={<Signup />} />
-    <Route path="/login" element={<Login />} />
-    <Route path="/dashboard" element={<Dashboard />} />
-    <Route path="/preview/:mode" element={<JoinPreview />} />
-    <Route path="/meeting/:roomId" element={<MeetDash />} />
-    <Route path="/start" element={<Start />} />
-    <Route path="/qa" element={<QAPanel />} />
-    <Route path="/meetings" element={<Meetings />} />
-    <Route path="/profile" element={<Profile />} />
-    <Route path="/settings" element={<Settings />} />
-  </Routes>
+
+  {/* Default route */}
+  <Route
+    path="/"
+    element={
+      localStorage.getItem("token")
+        ? <Navigate to="/dashboard" replace />
+        : <Navigate to="/login" replace />
+    }
+  />
+
+  {/* Auth routes */}
+  <Route path="/login" element={<Login />} />
+  <Route path="/signup" element={<Signup />} />
+
+  {/* Protected routes */}
+  <Route
+    path="/dashboard"
+    element={
+      <ProtectedRoute>
+        <Dashboard />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/preview/:mode"
+    element={
+      <ProtectedRoute>
+        <JoinPreview />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/meeting/:roomId"
+    element={
+      <ProtectedRoute>
+        <MeetDash />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/start"
+    element={
+      <ProtectedRoute>
+        <Start />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/qa"
+    element={
+      <ProtectedRoute>
+        <QAPanel />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/meetings"
+    element={
+      <ProtectedRoute>
+        <Meetings />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/profile"
+    element={
+      <ProtectedRoute>
+        <Profile />
+      </ProtectedRoute>
+    }
+  />
+
+  <Route
+    path="/settings"
+    element={
+      <ProtectedRoute>
+        <Settings />
+      </ProtectedRoute>
+    }
+  />
+
+</Routes>
 </BrowserRouter>
 );

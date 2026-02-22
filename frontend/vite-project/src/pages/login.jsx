@@ -1,53 +1,56 @@
 import "./login.css";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
+  const navigate = useNavigate();
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+
+    // Temporary login logic
+    localStorage.setItem("token", "demoUser");
+    navigate("/dashboard");
+  };
+
   return (
-    <div className="signup-container">
+  <div className="auth-page">
 
-      {/* Top Bar */}
-      <div className="top-bar">
-  <img src="/src/assets/logo.png" alt="Logo" className="logo-image" />
-
-  <div className="nav-menu">
-    <a href="/">Home</a>
-    <a href="/meetings">Meetings</a>
-    <a href="/settings">Settings</a>
-    <a href="/profile">Profile</a>
-  </div>
-</div>
-
-
-      {/* Main Content */}
-      <div className="main-content">
-
-        {/* LEFT SIDE (MEET TEXT) */}
-        <div className="left-panel">
-          <h1 className="brand-text">Meet</h1>
-        </div>
-
-        {/* RIGHT SIDE (LOGIN CARD) */}
-        <div className="right-panel">
-          <div className="form-wrapper">
-
-            <h2>Log in</h2>
-
-            <form>
-              <input type="text" placeholder="Username or Email" />
-              <input type="password" placeholder="Password" />
-
-              <button className="submit" type="submit">
-                Login
-              </button>
-            </form>
-
-            <p className="already-account">
-              Don’t have an account? <a href="#">Create an account</a>
-            </p>
-
-          </div>
-        </div>
-
-      </div>
+    {/* Top Navbar */}
+    <div className="auth-navbar">
+      <img src="/src/assets/logo.png" alt="Logo" />
     </div>
-  );
+
+    <div className="auth-content">
+
+      {/* Left Side */}
+      <div className="auth-left">
+        <h1>Meet</h1>
+      </div>
+
+      {/* Right Side Login Card */}
+      <div className="auth-right">
+        <div className="auth-card">
+
+          <h2>Sign In</h2>
+
+          <form onSubmit={handleLogin}>
+            <input type="text" placeholder="Username or Email" required />
+            <input type="password" placeholder="Password" required />
+
+            <button type="submit">Login</button>
+          </form>
+
+          <p>
+            Don’t have an account?{" "}
+            <span onClick={() => navigate("/signup")}>
+              Create an account
+            </span>
+          </p>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+);
 }
