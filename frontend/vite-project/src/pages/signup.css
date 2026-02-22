@@ -1,3 +1,7 @@
+/* =========================
+   Signup Page Styles
+   ========================= */
+
 .signup-container {
   display: flex;
   flex-direction: column;
@@ -12,10 +16,28 @@
   align-items: center;
 }
 
+/* Your JSX uses className="start-logo" */
+.start-logo {
+  height: 40px;
+  width: auto;
+}
 
+/* If you ever use logo-image, keep it too */
 .logo-image {
   height: 40px;
   width: auto;
+}
+
+/* Top bar menu */
+.start-menu {
+  display: flex;
+  gap: 18px;
+  font-weight: 600;
+  color: black;
+}
+
+.start-menu span {
+  cursor: pointer;
 }
 
 /* Main content split */
@@ -50,6 +72,32 @@
   align-items: center;
 }
 
+/* Form wrapper */
+.form-wrapper {
+  background-color: #222;
+  padding: 30px;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.form-wrapper h2 {
+  margin-bottom: 20px;
+  color: white;
+}
+
+/* Inputs */
+.form-wrapper input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: none;
+  border-radius: 5px;
+  outline: none;
+}
+
+/* Google button */
 .google-btn {
   background-color: white;
   color: #333;
@@ -65,28 +113,13 @@
   background-color: #eee9e9;
 }
 
-.form-wrapper {
-  background-color: #222;
-  padding: 30px;
-  border-radius: 8px;
-  width: 80%;
-  max-width: 400px;
-  text-align: center;
-}
-
-.form-wrapper h2 {
-  margin-bottom: 20px;
+/* OR text */
+.or-text {
+  margin: 12px 0;
   color: white;
 }
 
-.form-wrapper input {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 15px;
-  border: none;
-  border-radius: 5px;
-}
-
+/* Submit */
 .submit {
   background-color: #19E5D8;
   color: black;
@@ -95,11 +128,55 @@
   border-radius: 5px;
   cursor: pointer;
   width: 100%;
+  font-weight: 700;
 }
 
 .submit:hover {
   background-color: #14bfb5;
 }
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Make all p text white by default */
 .signup-container p {
   color: white;
+}
+
+/* ✅ Send OTP line + button */
+.send-otp {
+  margin: 0 0 12px;
+  text-align: right; /* looks nice under email input */
+}
+
+.send-otp-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: #19E5D8;            /* visible + matches theme */
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.send-otp-btn:hover {
+  opacity: 0.9;
+}
+
+.send-otp-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+/* Login line */
+.already-account {
+  margin-top: 12px;
+}
+
+.already-account a {
+  color: #19E5D8;
+  text-decoration: underline;
 }
