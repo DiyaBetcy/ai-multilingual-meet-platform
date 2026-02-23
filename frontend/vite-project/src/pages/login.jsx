@@ -5,22 +5,21 @@ export default function Login() {
   const navigate = useNavigate();
 
   const handleLogin = (e) => {
-<<<<<<< HEAD
     e.preventDefault();   // prevent page refresh
     navigate("/start");  // go to Start page
-=======
+
     e.preventDefault();
 
     // Temporary login logic
     localStorage.setItem("token", "demoUser");
     navigate("/dashboard");
->>>>>>> 20a0fef140502d0dd65299812818fad7167888ed
+
   };
 
   return (
   <div className="auth-page">
 
-<<<<<<< HEAD
+
       {/* Top Bar */}
       <div className="top-bar">
         <img src="/src/assets/logo.png" alt="Logo" className="logo-image" />
@@ -70,11 +69,10 @@ export default function Login() {
         </div>
 
       </div>
-=======
+
     {/* Top Navbar */}
     <div className="auth-navbar">
       <img src="/src/assets/logo.png" alt="Logo" />
->>>>>>> 20a0fef140502d0dd65299812818fad7167888ed
     </div>
 
     <div className="auth-content">
