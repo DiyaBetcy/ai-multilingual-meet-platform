@@ -34,8 +34,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     path="/"
     element={
       localStorage.getItem("token")
-        ? <Navigate to="/dashboard" replace />
-        : <Navigate to="/login" replace />
+        ? <Navigate to="/login" replace />
+        : <Navigate to="/start" replace />
     }
   />
 
@@ -45,10 +45,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
   {/* Protected routes */}
   <Route
-    path="/dashboard"
+    path="/start"
     element={
       <ProtectedRoute>
-        <Dashboard />
+        <Start />
       </ProtectedRoute>
     }
   />

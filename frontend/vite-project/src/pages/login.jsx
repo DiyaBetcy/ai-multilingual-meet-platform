@@ -9,7 +9,7 @@ export default function Login() {
 
     // Temporary login logic
     localStorage.setItem("token", "demoUser");
-    navigate("/dashboard");
+    navigate("/start");
   };
 
   return (
