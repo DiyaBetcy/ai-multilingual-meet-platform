@@ -1,3 +1,4 @@
+import { io } from "socket.io-client";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./meetdashboard.css";
@@ -6,7 +7,7 @@ import ParticipantsPanel from "./ParticipantsPanel.jsx";
 import ChatPanel from "./ChatPanel.jsx";
 
 export default function MeetDashboard() {
-
+  const socketRef = useRef(null);
   const localVideoRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,6 +38,21 @@ export default function MeetDashboard() {
   const mediaRecorderRef = useRef(null);
 
   const screenStreamRef = useRef(null);
+
+  useEffect(() => {
+
+    socketRef.current = io("http://localhost:5000");
+
+    socketRef.current.on("caption", (text) => {
+      setCaptionText(text);
+    });
+
+    return () => {
+      socketRef.current.disconnect();
+    };
+
+  }, []);
+
 
   /* attach stream to video element */
   useEffect(() => {
@@ -78,6 +94,7 @@ export default function MeetDashboard() {
         mediaRecorderRef.current = null;
         console.log("Recorder stopped");
       }
+      setCaptionText("");
       return;
     }
 
@@ -95,17 +112,13 @@ export default function MeetDashboard() {
 
       if (event.data.size === 0) return;
 
-      console.log("Audio chunk captured:", event.data.size);
+      if (captionsEnabled && socketRef.current?.connected) {
+        socketRef.current.emit("audio-chunk", event.data);
+      }
 
-      setCaptionText(`Chunk size: ${event.data.size}`);
-
-      // DEBUG: play chunk
-      const audioURL = URL.createObjectURL(event.data);
-      const audio = new Audio(audioURL);
-      audio.play();
     };
 
-    recorder.start(1000); // capture every second
+    recorder.start(250);   // improved latency
 
     return () => {
       if (recorder.state !== "inactive") {
@@ -369,7 +382,7 @@ export default function MeetDashboard() {
         </button>
 
         <button
-          className={`control-btn ${captionsEnabled ? "off" : ""}`}
+          className={`control-btn ${!captionsEnabled ? "off" : ""}`}
           onClick={() => setCaptionsEnabled(prev => !prev)}
         >
           <img src="/src/assets/cc.png" alt="Captions" />
