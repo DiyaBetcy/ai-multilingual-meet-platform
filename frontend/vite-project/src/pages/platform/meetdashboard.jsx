@@ -32,6 +32,10 @@ export default function MeetDashboard() {
   const [handRaised, setHandRaised] = useState(false);
   const [screenWarning, setScreenWarning] = useState(false);
 
+  const [captionsEnabled, setCaptionsEnabled] = useState(false);
+  const [captionText, setCaptionText] = useState("");
+  const mediaRecorderRef = useRef(null);
+
   const screenStreamRef = useRef(null);
 
   /* attach stream to video element */
@@ -241,7 +245,7 @@ export default function MeetDashboard() {
     const m = Math.floor((secs % 3600) / 60);
     const s = secs % 60;
 
-    return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
   const participants = [
@@ -303,25 +307,28 @@ export default function MeetDashboard() {
           className={`control-btn ${micOn ? "" : "off"}`}
           onClick={toggleMic}
         >
-          <img src="/src/assets/mic.png" alt="Mic"/>
+          <img src="/src/assets/mic.png" alt="Mic" />
         </button>
 
         <button
           className={`control-btn ${camOn ? "" : "off"}`}
           onClick={toggleCam}
         >
-          <img src="/src/assets/camera.png" alt="Camera"/>
+          <img src="/src/assets/camera.png" alt="Camera" />
         </button>
 
-        <button className="control-btn">
-          <img src="/src/assets/cc.png" alt="Captions"/>
+        <button
+          className={`control-btn ${captionsEnabled ? "off" : ""}`}
+          onClick={() => setCaptionsEnabled(prev => !prev)}
+        >
+          <img src="/src/assets/cc.png" alt="Captions" />
         </button>
 
         <button
           className={`control-btn ${handRaised ? "off" : ""}`}
           onClick={toggleHandRaise}
         >
-          <img src="/src/assets/hand.png" alt="Raise Hand"/>
+          <img src="/src/assets/hand.png" alt="Raise Hand" />
         </button>
 
         <button
@@ -343,21 +350,21 @@ export default function MeetDashboard() {
           className={`control-btn ${isSharing ? "off" : ""}`}
           onClick={isSharing ? stopScreenShare : startScreenShare}
         >
-          <img src="/src/assets/share.png" alt="Share"/>
+          <img src="/src/assets/share.png" alt="Share" />
         </button>
 
         <button
           className="control-btn"
           onClick={() => setShowPopup(true)}
         >
-          <img src="/src/assets/more.png" alt="More"/>
+          <img src="/src/assets/more.png" alt="More" />
         </button>
 
         <button
           className="control-btn end"
           onClick={endMeeting}
         >
-          <img src="/src/assets/hangup.png" alt="Hang Up"/>
+          <img src="/src/assets/hangup.png" alt="Hang Up" />
         </button>
 
       </div>
@@ -381,7 +388,7 @@ export default function MeetDashboard() {
         <div className="screen-warning-popup">
           <div className="popup-content">
             <p>
-              ⚠ <strong>Entire Screen sharing is not supported.</strong><br/>
+              ⚠ <strong>Entire Screen sharing is not supported.</strong><br />
               Please select <strong>Chrome Tab</strong> or <strong>Window</strong>.
             </p>
             <button onClick={() => setScreenWarning(false)}>OK</button>
