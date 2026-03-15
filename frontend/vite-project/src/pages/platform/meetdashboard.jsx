@@ -286,6 +286,12 @@ export default function MeetDashboard() {
           style={{ display: (camOn || isSharing) ? "block" : "none" }}
         />
 
+        {captionsEnabled && (
+          <div className="caption-overlay">
+            {captionText || "Listening..."}
+          </div>
+        )}
+
         {!camOn && !isSharing && (
           <div className="main-video"></div>
         )}

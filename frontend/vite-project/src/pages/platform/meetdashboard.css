@@ -30,7 +30,8 @@
   flex: 3;
   background-color: #9f9f9f;
   border-radius: 6px;
-  min-height: 600px; /* ensures it doesn’t squash */
+  min-height: 600px;
+  /* ensures it doesn’t squash */
 }
 
 /* Side videos */
@@ -38,9 +39,11 @@
   flex: 1;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(3, 1fr);  /* force 3 rows */
+  grid-template-rows: repeat(3, 1fr);
+  /* force 3 rows */
   gap: 8px;
-  min-height: 600px; /* same height as big video */
+  min-height: 600px;
+  /* same height as big video */
 }
 
 .video-tile {
@@ -81,11 +84,13 @@
 .control-btn.end:hover {
   background: darkred;
 }
+
 /* Show OFF state for mic/camera buttons */
 .control-btn.off {
   opacity: 0.5;
   background-color: #666;
 }
+
 .chat-btn {
   position: relative;
 }
@@ -105,6 +110,7 @@
   text-align: center;
   font-weight: 700;
 }
+
 .screen-warning-popup {
   position: fixed;
   inset: 0;
@@ -121,7 +127,7 @@
   border-radius: 10px;
   text-align: center;
   width: 320px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
 .popup-content p {
@@ -138,6 +144,7 @@
   color: white;
   cursor: pointer;
 }
+
 .control-btn {
   position: relative;
 }
@@ -159,4 +166,16 @@
 /* Optional: red background when OFF (like Google Meet) */
 .control-btn.off {
   background-color: #d93025;
+}
+
+.caption-overlay {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 18px;
 }
