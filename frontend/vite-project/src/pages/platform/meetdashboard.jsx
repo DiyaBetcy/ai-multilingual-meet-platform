@@ -70,6 +70,51 @@ export default function MeetDashboard() {
     }
   }, [showChat]);
 
+  useEffect(() => {
+
+    if (!captionsEnabled || !stream.getAudioTracks().length) {
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current = null;
+        console.log("Recorder stopped");
+      }
+      return;
+    }
+
+    const recorder = new MediaRecorder(stream, {
+      mimeType: "audio/webm"
+    });
+
+    mediaRecorderRef.current = recorder;
+
+    recorder.onstart = () => {
+      console.log("Recorder started");
+    };
+
+    recorder.ondataavailable = (event) => {
+
+      if (event.data.size === 0) return;
+
+      console.log("Audio chunk captured:", event.data.size);
+
+      setCaptionText(`Chunk size: ${event.data.size}`);
+
+      // DEBUG: play chunk
+      const audioURL = URL.createObjectURL(event.data);
+      const audio = new Audio(audioURL);
+      audio.play();
+    };
+
+    recorder.start(1000); // capture every second
+
+    return () => {
+      if (recorder.state !== "inactive") {
+        recorder.stop();
+      }
+    };
+
+  }, [captionsEnabled, stream]);
+
   /* apply preview settings */
   useEffect(() => {
 
