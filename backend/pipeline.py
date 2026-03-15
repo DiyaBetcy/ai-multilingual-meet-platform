@@ -5,7 +5,7 @@ import os
 
 # Step 1: Transcribe audio
 model = whisper.load_model("base")
-result = model.transcribe("hello-how-are-you-145245.mp3", fp16=False)
+result = model.transcribe("im-sorry-what-338742.mp3", fp16=False)
 text = result["text"]  # This is the transcribed text
 print(result["text"])
 
