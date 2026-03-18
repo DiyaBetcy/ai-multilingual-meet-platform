@@ -7,13 +7,19 @@ import ParticipantsPanel from "./ParticipantsPanel.jsx";
 import ChatPanel from "./ChatPanel.jsx";
 
 export default function MeetDashboard() {
+
   const socketRef = useRef(null);
   const localVideoRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const lastSpokenRef = useRef("");
+
   const navigate = useNavigate();
   const location = useLocation();
 
   const previewMicOn = location.state?.micOn ?? true;
   const previewCamOn = location.state?.camOn ?? false;
+
+  const [selectedLanguage, setSelectedLanguage] = useState("ml-IN");
 
   const [showPopup, setShowPopup] = useState(false);
   const [showPeople, setShowPeople] = useState(false);
@@ -35,40 +41,50 @@ export default function MeetDashboard() {
 
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
   const [captionText, setCaptionText] = useState("");
-  const mediaRecorderRef = useRef(null);
 
   const screenStreamRef = useRef(null);
+
+  /* ---------------- SOCKET ---------------- */
 
   useEffect(() => {
 
     socketRef.current = io("http://localhost:5000");
 
-    socketRef.current.on("caption", (text) => {
+    socketRef.current.on("translated-caption", (text) => {
+
+      if (!captionsEnabled) return;
+
+      if (!text || text === lastSpokenRef.current) return;
+
+      lastSpokenRef.current = text;
+
       setCaptionText(text);
+      speakText(text);
     });
 
     return () => {
+      socketRef.current.off("translated-caption");
       socketRef.current.disconnect();
     };
 
-  }, []);
+  }, [captionsEnabled]);
 
+  /* ---------------- VIDEO ---------------- */
 
-  /* attach stream to video element */
   useEffect(() => {
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = stream;
     }
   }, [stream]);
 
-  /* cleanup media on unmount */
   useEffect(() => {
     return () => {
       stream.getTracks().forEach(track => track.stop());
     };
   }, []);
 
-  /* meeting timer */
+  /* ---------------- TIMER ---------------- */
+
   useEffect(() => {
     if (!meetingRunning) return;
 
@@ -79,75 +95,74 @@ export default function MeetDashboard() {
     return () => clearInterval(interval);
   }, [meetingRunning]);
 
-  /* reset unread when chat opened */
-  useEffect(() => {
-    if (showChat) {
-      setUnreadCount(0);
-    }
-  }, [showChat]);
+  /* ---------------- SPEECH RECOGNITION ---------------- */
 
   useEffect(() => {
 
-    if (!captionsEnabled || !stream.getAudioTracks().length) {
-      if (mediaRecorderRef.current) {
-        mediaRecorderRef.current.stop();
-        mediaRecorderRef.current = null;
-        console.log("Recorder stopped");
+    if (!captionsEnabled || !micOn) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        recognitionRef.current = null;
       }
       setCaptionText("");
       return;
     }
 
-    const recorder = new MediaRecorder(stream, {
-      mimeType: "audio/webm"
-    });
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    mediaRecorderRef.current = recorder;
+    if (!SpeechRecognition) {
+      alert("Speech Recognition not supported in this browser");
+      return;
+    }
 
-    recorder.onstart = () => {
-      console.log("Recorder started");
-    };
+    if (recognitionRef.current) return;
 
-    recorder.ondataavailable = (event) => {
+    const recognition = new SpeechRecognition();
 
-      if (event.data.size === 0) return;
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
 
-      if (captionsEnabled && socketRef.current?.connected) {
-        socketRef.current.emit("audio-chunk", event.data);
+    recognition.onresult = (event) => {
+
+      if (!micOn) return;
+
+      const text =
+        event.results[event.results.length - 1][0].transcript;
+
+      if (socketRef.current?.connected) {
+        socketRef.current.emit("speech-text", text);
       }
-
     };
 
-    recorder.start(250);   // improved latency
+    recognition.onerror = (e) => {
+      console.error("Speech recognition error:", e);
+    };
 
-    return () => {
-      if (recorder.state !== "inactive") {
-        recorder.stop();
+    recognition.onend = () => {
+      if (captionsEnabled && micOn) {
+        recognition.start();
       }
     };
 
-  }, [captionsEnabled, stream]);
+    recognition.start();
+    recognitionRef.current = recognition;
 
-  /* apply preview settings */
+  }, [captionsEnabled, micOn]);
+
+  /* ---------------- CLEANUP ---------------- */
+
   useEffect(() => {
-
-    const applyPreviewSettings = async () => {
-
-      if (previewCamOn) {
-        await toggleCam();
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
       }
-
-      if (previewMicOn) {
-        await toggleMic();
-      }
-
+      speechSynthesis.cancel();
     };
-
-    applyPreviewSettings();
-
   }, []);
 
-  /* MICROPHONE */
+  /* ---------------- MICROPHONE ---------------- */
 
   const toggleMic = async () => {
 
@@ -171,7 +186,7 @@ export default function MeetDashboard() {
     setMicOn(existingAudio.enabled);
   };
 
-  /* CAMERA */
+  /* ---------------- CAMERA ---------------- */
 
   const startCamera = async () => {
 
@@ -199,7 +214,7 @@ export default function MeetDashboard() {
     setCamOn(existingVideo.enabled);
   };
 
-  /* SCREEN SHARE */
+  /* ---------------- SCREEN SHARE ---------------- */
 
   const startScreenShare = async () => {
 
@@ -237,13 +252,13 @@ export default function MeetDashboard() {
     startCamera();
   };
 
-  /* HAND RAISE */
+  /* ---------------- HAND RAISE ---------------- */
 
   const toggleHandRaise = () => {
     setHandRaised(prev => !prev);
   };
 
-  /* CHAT */
+  /* ---------------- CHAT ---------------- */
 
   const sendMessage = (text) => {
 
@@ -269,7 +284,24 @@ export default function MeetDashboard() {
     }
   };
 
-  /* END MEETING */
+  /* ---------------- VOICE OUTPUT ---------------- */
+
+  const speakText = (text) => {
+
+    if (!text || !captionsEnabled) return;
+
+    speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+
+    utterance.lang = selectedLanguage;
+    utterance.rate = 1;
+    utterance.pitch = 1;
+
+    speechSynthesis.speak(utterance);
+  };
+
+  /* ---------------- END MEETING ---------------- */
 
   const endMeeting = () => {
 
@@ -295,16 +327,7 @@ export default function MeetDashboard() {
     navigate("/start");
   };
 
-  /* TIME FORMAT */
-
-  const formatTime = (secs) => {
-
-    const h = Math.floor(secs / 3600);
-    const m = Math.floor((secs % 3600) / 60);
-    const s = secs % 60;
-
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  };
+  /* ---------------- UI ---------------- */
 
   const participants = [
     {
@@ -320,19 +343,6 @@ export default function MeetDashboard() {
   return (
     <div className="base-container">
 
-      <div className="start-top-bar">
-        <img src="/src/assets/logo.png" className="start-logo" />
-
-        <div className="start-menu">
-
-          <span onClick={() => navigate("/")}>Home</span>
-          <span onClick={() => navigate("/meetings")}>Meetings</span>
-          <span onClick={() => navigate("/settings")}>Settings</span>
-          <span onClick={() => navigate("/profile")}>Profile</span>
-
-        </div>
-      </div>
-
       <div className="main-content">
 
         <video
@@ -346,7 +356,7 @@ export default function MeetDashboard() {
 
         {captionsEnabled && (
           <div className="caption-overlay">
-            {captionText || "Listening..."}
+            {captionText || "🎤 Listening..."}
           </div>
         )}
 
@@ -395,10 +405,7 @@ export default function MeetDashboard() {
           <img src="/src/assets/hand.png" alt="Raise Hand" />
         </button>
 
-        <button
-          className="control-btn"
-          onClick={() => setShowPeople(true)}
-        >
+        <button className="control-btn" onClick={() => setShowPeople(true)}>
           👥
         </button>
 
@@ -417,17 +424,11 @@ export default function MeetDashboard() {
           <img src="/src/assets/share.png" alt="Share" />
         </button>
 
-        <button
-          className="control-btn"
-          onClick={() => setShowPopup(true)}
-        >
+        <button className="control-btn" onClick={() => setShowPopup(true)}>
           <img src="/src/assets/more.png" alt="More" />
         </button>
 
-        <button
-          className="control-btn end"
-          onClick={endMeeting}
-        >
+        <button className="control-btn end" onClick={endMeeting}>
           <img src="/src/assets/hangup.png" alt="Hang Up" />
         </button>
 
