@@ -10,20 +10,20 @@ const io = new Server(server, {
   cors: { origin: "*" }
 });
 
-/* ---------------- SOCKET ---------------- */
-
 io.on("connection", (socket) => {
 
   console.log("User connected:", socket.id);
 
   socket.on("speech-text", async (text) => {
 
-    console.log("Received:", text);
+    if (!text || text.trim().length < 2) return;
 
-    if (!text) return;
+    console.log("Received:", text);
 
     try {
       const res = await translate(text, { to: "ml" });
+
+      if (!res?.text || res.text.trim() === "") return;
 
       console.log("Translated:", res.text);
 
@@ -32,7 +32,7 @@ io.on("connection", (socket) => {
     } catch (error) {
       console.error("Translation error:", error.message);
 
-      // fallback (IMPORTANT)
+      // fallback
       socket.emit("translated-caption", text);
     }
   });
@@ -42,8 +42,6 @@ io.on("connection", (socket) => {
   });
 
 });
-
-/* ---------------- SERVER ---------------- */
 
 server.listen(5000, () => {
   console.log("Server running on port 5000");
