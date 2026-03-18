@@ -1,7 +1,7 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-const fetch = require("node-fetch");
+const { translate } = require("@vitalets/google-translate-api");
 
 const app = express();
 const server = http.createServer(app);
@@ -9,33 +9,6 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*" }
 });
-
-/* ---------------- TRANSLATION FUNCTION ---------------- */
-
-const translate = async (text, targetLang) => {
-  try {
-    const res = await fetch("https://translate.argosopentech.com/translate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        q: text,
-        source: "en",
-        target: targetLang,
-        format: "text"
-      })
-    });
-
-    const data = await res.json();
-
-    return data.translatedText;
-
-  } catch (error) {
-    console.error("Translation error:", error);
-    return text; // fallback (important)
-  }
-};
 
 /* ---------------- SOCKET ---------------- */
 
@@ -50,13 +23,17 @@ io.on("connection", (socket) => {
     if (!text) return;
 
     try {
-      // currently fixed language (Malayalam)
-      const translated = await translate(text, "ml");
+      const res = await translate(text, { to: "ml" });
 
-      socket.emit("translated-caption", translated);
+      console.log("Translated:", res.text);
+
+      socket.emit("translated-caption", res.text);
 
     } catch (error) {
-      console.error("Processing error:", error);
+      console.error("Translation error:", error.message);
+
+      // fallback (IMPORTANT)
+      socket.emit("translated-caption", text);
     }
   });
 
