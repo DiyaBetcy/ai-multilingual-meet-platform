@@ -12,14 +12,12 @@ export default function JoinPreview() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  /* ---------- HELPERS ---------- */
   const generateMeetingId = () =>
     Math.random().toString(36).substring(2, 8).toUpperCase();
 
   const generatePassword = () =>
     Math.random().toString(36).substring(2, 10);
 
-  /* ---------- STATE ---------- */
   const [name, setName] = useState("");
   const [meetingId, setMeetingId] = useState("");
   const [password, setPassword] = useState("");
@@ -30,99 +28,91 @@ export default function JoinPreview() {
   const [stream, setStream] = useState(null);
   const videoRef = useRef(null);
 
-  /* ---------- AUTO GENERATE FOR CREATE ---------- */
-useEffect(() => {
-  if (mode === "create") {
-    setMeetingId(generateMeetingId());
-    setPassword(generatePassword());
-  }
+  useEffect(() => {
+    if (mode === "create") {
+      setMeetingId(generateMeetingId());
+      setPassword(generatePassword());
+    }
 
-  if (mode === "join" && location.state?.meetingId) {
-    setMeetingId(location.state.meetingId);
-  }
-}, [mode, location.state]);
+    if (mode === "join" && location.state?.meetingId) {
+      setMeetingId(location.state.meetingId);
+    }
+  }, [mode, location.state]);
 
-  /* ---------- AUTO GENERATE FOR CREATE ---------- */
- useEffect(() => {
-  let localStream;
+  useEffect(() => {
+    let localStream;
 
-  const getMedia = async () => {
+    const getMedia = async () => {
+      try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+
+        localStream = mediaStream;
+        setStream(mediaStream);
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+        }
+
+        setCamOn(true);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    getMedia();
+
+    return () => {
+      if (localStream) {
+        localStream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
+  const toggleMic = () => {
+    if (!stream) return;
+
+    const audioTrack = stream.getAudioTracks()[0];
+    if (!audioTrack) return;
+
+    audioTrack.enabled = !audioTrack.enabled;
+    setMicOn(audioTrack.enabled);
+  };
+
+  const toggleCam = async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
+      if (camOn) {
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
 
-      localStream = mediaStream;
-      setStream(mediaStream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = null;
+        }
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
+        setStream(null);
+        setCamOn(false);
+      } else {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+
+        setStream(newStream);
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = newStream;
+        }
+
+        setCamOn(true);
       }
-
-      setCamOn(true);
     } catch (err) {
-      console.error(err);
+      console.error("Camera toggle error:", err);
     }
   };
 
-  getMedia();
-
-  return () => {
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
-    }
-  };
-}, []);
-
-/* ---------- MICROPHONE TOGGLE ---------- */
-const toggleMic = () => {
-  if (!stream) return;
-
-  const audioTrack = stream.getAudioTracks()[0];
-  if (!audioTrack) return;
-
-  audioTrack.enabled = !audioTrack.enabled;
-  setMicOn(audioTrack.enabled);
-};
-
-/* ---------- CAMERA TOGGLE ---------- */
-
-const toggleCam = async () => {
-  try {
-    if (camOn) {
-      // 🔥 TURN OFF CAMERA COMPLETELY
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-
-      setStream(null);
-      setCamOn(false);
-
-    } else {
-      // 🔥 START BRAND NEW CAMERA STREAM
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: false,
-      });
-
-      setStream(newStream);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = newStream;
-      }
-
-      setCamOn(true);
-    }
-  } catch (err) {
-    console.error("Camera toggle error:", err);
-  }
-};
-  /* ---------- HANDLE START / JOIN ---------- */
   const handleMeetingStart = () => {
     if (!name.trim()) {
       alert("Please enter your name");
@@ -136,30 +126,26 @@ const toggleCam = async () => {
 
     navigate(`/meeting/${meetingId}`, {
       state: {
-        name,
+        username: name,
+        meetingId: meetingId,
         mode,
         micOn,
         camOn,
         aiAnchor,
         waitingRoom,
+        password,
       },
     });
   };
 
   return (
     <div className="jp-container">
-
-      {/* ---------- TOP BAR ---------- */}
       <div className="jp-top-info">
         <h2>{mode === "create" ? "Create Meeting" : "Join Meeting"}</h2>
       </div>
 
-      {/* ---------- MAIN CONTENT ---------- */}
       <div className="jp-main">
-
-        {/* ---------- LEFT DETAILS ---------- */}
         <div className="jp-details">
-
           <input
             placeholder="Your Name"
             value={name}
@@ -229,41 +215,34 @@ const toggleCam = async () => {
               </select>
             </div>
           )}
-
         </div>
 
-        {/* ---------- RIGHT VIDEO ---------- */}
         <div className="jp-video-section">
           <div className="jp-video-box">
-  <video
-    ref={videoRef}
-    autoPlay
-    playsInline
-    muted
-    style={{ width: "100%", height: "100%" }}
-  />
-</div>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{ width: "100%", height: "100%" }}
+            />
+          </div>
 
           <div className="jp-controls">
             <button onClick={toggleMic}>
-  <img src={micOn ? micOnIcon : micOffIcon} alt="mic" />
-</button>
+              <img src={micOn ? micOnIcon : micOffIcon} alt="mic" />
+            </button>
 
             <button onClick={toggleCam}>
-  <img src={camOn ? camOnIcon : camOffIcon} alt="cam" />
-</button>
+              <img src={camOn ? camOnIcon : camOffIcon} alt="cam" />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* ---------- ACTION BUTTON ---------- */}
-      <button
-        className="jp-action-btn"
-        onClick={handleMeetingStart}
-      >
+      <button className="jp-action-btn" onClick={handleMeetingStart}>
         {mode === "create" ? "Start" : "Join"}
       </button>
-
     </div>
   );
 }

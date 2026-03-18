@@ -1,128 +1,183 @@
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 dotenv.config();
 
-import express from 'express';
-import cors from 'cors';
-import mongoose from 'mongoose';
-import nodemailer from 'nodemailer';
-import Otp from './models/Otp.js'; // Make sure models/Otp.js exists
+import express from "express";
+import cors from "cors";
+import mongoose from "mongoose";
+import nodemailer from "nodemailer";
+import Otp from "./models/Otp.js";
 import User from "./models/User.js";
 import bcrypt from "bcryptjs";
+import http from "http";
+import { Server } from "socket.io";
 
 const app = express();
+const server = http.createServer(app);
+
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+];
 
 const corsOptions = {
-  origin: "http://localhost:5173", // your Vite frontend
+  origin: allowedOrigins,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 app.use(cors(corsOptions));
-
-// Fix for preflight requests
 app.options(/.*/, cors(corsOptions));
-
 app.use(express.json());
 
-// Connect MongoDB
-mongoose.connect("mongodb+srv://meetadmin:Meet%401234@cluster0.189unnx.mongodb.net/?appName=Cluster0")
+// MongoDB connection
+mongoose
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
-  .catch(err => console.log(err));
+  .catch((err) => console.log(err));
 
 // Test route
 app.get("/", (req, res) => {
   res.send("Backend is working 🚀");
 });
 
-// Function to generate 6-digit OTP
-const generateOTP = () => Math.floor(100000 + Math.random() * 900000);
+// OTP + Signup routes (keep your existing routes here)
 
-// POST /send-otp route
-app.post('/send-otp', async (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ message: 'Email is required' });
-
-  const otp = generateOTP();
-
-  // Configure Nodemailer
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: 'Your OTP for AI Meet Platform',
-    text: `Your OTP is: ${otp}`,
-  };
-
-  try {
-    await transporter.sendMail(mailOptions);
-    console.log(`OTP ${otp} sent to ${email}`);
-
-    // Save OTP in MongoDB
-    const otpDoc = new Otp({ email, otp });
-    await otpDoc.save();
-
-    res.status(200).json({ message: 'OTP sent successfully' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Failed to send OTP' });
-  }
+// ------------------ SOCKET.IO ------------------
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+  },
 });
 
-// POST /verify-otp route
-app.post('/verify-otp', async (req, res) => {
-  const { email, otp } = req.body;
-  if (!email || !otp) return res.status(400).json({ message: 'Email and OTP are required' });
+// roomId -> [{ id, name }]
+const rooms = {};
 
-  try {
-    const otpRecord = await Otp.findOne({ email, otp });
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
 
-    if (!otpRecord) return res.status(400).json({ message: 'Invalid OTP or expired' });
-
-    // OTP is valid, delete it after verification
-    await Otp.deleteOne({ _id: otpRecord._id });
-
-    res.status(200).json({ message: 'OTP verified successfully' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Verification failed' });
-  }
-});
-
-app.post("/signup", async (req, res) => {
-  const { name, email, password } = req.body;
-
-  if (!name || !email || !password) {
-    return res.status(400).json({ message: "All fields are required" });
-  }
-
-  try {
-    const existing = await User.findOne({ email });
-    if (existing) return res.status(400).json({ message: "Email already registered" });
-
-    const hashed = await bcrypt.hash(password, 10);
-
-    const user = await User.create({
-      name,
-      email,
-      password: hashed,
-      isVerified: true,
+  socket.on("join-room", ({ roomId, username }) => {
+    console.log("join-room received:", {
+      roomId,
+      username,
+      socketId: socket.id,
     });
 
-    return res.status(201).json({ message: "Account created successfully", userId: user._id });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: "Signup failed" });
-  }
+    socket.join(roomId);
+
+    if (!rooms[roomId]) {
+      rooms[roomId] = [];
+    }
+
+    const alreadyInRoom = rooms[roomId].some((user) => user.id === socket.id);
+
+    if (!alreadyInRoom) {
+      rooms[roomId].push({
+        id: socket.id,
+        name: username,
+      });
+    }
+
+    socket.data.roomId = roomId;
+    socket.data.username = username;
+
+    console.log(`${username} joined room ${roomId}`);
+    console.log("rooms after join:", JSON.stringify(rooms[roomId], null, 2));
+
+    // send full participant list to everyone
+    io.to(roomId).emit("participants-update", rooms[roomId]);
+
+    // notify other users in the room that a new peer joined
+    socket.to(roomId).emit("user-joined", {
+      socketId: socket.id,
+      username,
+    });
+  });
+
+  socket.on("chat-message", ({ roomId, message, username }) => {
+    console.log("chat-message received:", { roomId, username, message });
+
+    io.to(roomId).emit("chat-message", {
+      id: `${Date.now()}-${Math.random()}`,
+      username,
+      message,
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    });
+  });
+
+  // ------------------ WEBRTC SIGNALING ------------------
+
+  socket.on("webrtc-offer", ({ target, offer, callerId, username }) => {
+    console.log("webrtc-offer:", {
+      from: callerId,
+      to: target,
+      username,
+    });
+
+    io.to(target).emit("webrtc-offer", {
+      offer,
+      callerId,
+      username,
+    });
+  });
+
+  socket.on("webrtc-answer", ({ target, answer, responderId }) => {
+    console.log("webrtc-answer:", {
+      from: responderId,
+      to: target,
+    });
+
+    io.to(target).emit("webrtc-answer", {
+      answer,
+      responderId,
+    });
+  });
+
+  socket.on("webrtc-ice-candidate", ({ target, candidate, senderId }) => {
+    console.log("webrtc-ice-candidate:", {
+      from: senderId,
+      to: target,
+    });
+
+    io.to(target).emit("webrtc-ice-candidate", {
+      candidate,
+      senderId,
+    });
+  });
+
+  socket.on("disconnect", () => {
+    const { roomId, username } = socket.data || {};
+
+    console.log("User disconnected:", socket.id);
+
+    if (roomId) {
+      // notify peers that this user left
+      socket.to(roomId).emit("user-left", {
+        socketId: socket.id,
+      });
+    }
+
+    if (roomId && rooms[roomId]) {
+      rooms[roomId] = rooms[roomId].filter((user) => user.id !== socket.id);
+
+      console.log(`${username || "User"} left room ${roomId}`);
+      console.log("rooms after disconnect:", JSON.stringify(rooms[roomId], null, 2));
+
+      io.to(roomId).emit("participants-update", rooms[roomId]);
+
+      if (rooms[roomId].length === 0) {
+        delete rooms[roomId];
+        console.log(`Deleted empty room ${roomId}`);
+      }
+    }
+  });
 });
 
+// ------------------ START SERVER ------------------
 const PORT = 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
