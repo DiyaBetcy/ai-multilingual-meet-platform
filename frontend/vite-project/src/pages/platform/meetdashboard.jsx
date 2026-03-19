@@ -1,25 +1,93 @@
 import { io } from "socket.io-client";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import "./meetdashboard.css";
 import Popup from "./popup.jsx";
 import ParticipantsPanel from "./ParticipantsPanel.jsx";
 import ChatPanel from "./ChatPanel.jsx";
 
+function RemoteVideoTile({ participant, stream }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream]);
+
+  return (
+    <div className="video-tile">
+      {participant?.camOn && stream ? (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          className="tile-video"
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+      ) : (
+        <div
+          className="tile-placeholder"
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#1f1f1f",
+            color: "white",
+            fontSize: "14px",
+            textAlign: "center",
+            padding: "8px",
+          }}
+        >
+          {participant?.name || "Participant"}
+        </div>
+      )}
+
+      <div
+        style={{
+          position: "absolute",
+          left: "8px",
+          bottom: "8px",
+          background: "rgba(0,0,0,0.55)",
+          color: "white",
+          padding: "4px 8px",
+          borderRadius: "8px",
+          fontSize: "12px",
+        }}
+      >
+        {participant?.name}
+        {participant?.isHost ? " (Host)" : ""}
+        {!participant?.micOn ? " 🔇" : ""}
+        {participant?.handRaised ? " ✋" : ""}
+        {participant?.isSharing ? " 🖥️" : ""}
+      </div>
+    </div>
+  );
+}
+
 export default function MeetDashboard() {
+  const { meetingId } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const socketRef = useRef(null);
   const localVideoRef = useRef(null);
   const recognitionRef = useRef(null);
   const lastSpokenRef = useRef("");
+  const peersRef = useRef({});
+  const localStreamRef = useRef(new MediaStream());
+  const cameraTrackRef = useRef(null);
+  const screenTrackRef = useRef(null);
+  const hasJoinedRef = useRef(false);
 
-  const navigate = useNavigate();
-  const location = useLocation();
-
+  const myName = location.state?.name || "Guest";
   const previewMicOn = location.state?.micOn ?? true;
   const previewCamOn = location.state?.camOn ?? false;
+  const initialPreferredLanguage = location.state?.preferredLanguage || "ml-IN";
 
-  const [selectedLanguage, setSelectedLanguage] = useState("ml-IN");
+  const [selectedLanguage, setSelectedLanguage] = useState(initialPreferredLanguage);
 
   const [showPopup, setShowPopup] = useState(false);
   const [showPeople, setShowPeople] = useState(false);
@@ -31,10 +99,9 @@ export default function MeetDashboard() {
   const [meetingSeconds, setMeetingSeconds] = useState(0);
   const [meetingRunning, setMeetingRunning] = useState(true);
 
-  const [stream, setStream] = useState(new MediaStream());
+  const [streamReady, setStreamReady] = useState(false);
   const [micOn, setMicOn] = useState(previewMicOn);
-  const [camOn, setCamOn] = useState(false);
-
+  const [camOn, setCamOn] = useState(previewCamOn);
   const [isSharing, setIsSharing] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
   const [screenWarning, setScreenWarning] = useState(false);
@@ -42,45 +109,341 @@ export default function MeetDashboard() {
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
   const [captionText, setCaptionText] = useState("");
 
-  const screenStreamRef = useRef(null);
+  const [participants, setParticipants] = useState([]);
+  const [remoteStreams, setRemoteStreams] = useState({});
+  const [selfSocketId, setSelfSocketId] = useState(null);
 
-  /* ---------------- SOCKET ---------------- */
+  const refreshLocalVideo = () => {
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = localStreamRef.current;
+    }
+  };
+
+  const syncMyParticipantState = (overrides = {}) => {
+    if (!socketRef.current?.connected) return;
+
+    socketRef.current.emit("participant-update", {
+      meetingId,
+      micOn: overrides.micOn ?? micOn,
+      camOn: overrides.camOn ?? camOn,
+      handRaised: overrides.handRaised ?? handRaised,
+      isSharing: overrides.isSharing ?? isSharing,
+      preferredLanguage: overrides.preferredLanguage ?? selectedLanguage,
+    });
+  };
+
+  const closePeerConnection = (socketId) => {
+    const pc = peersRef.current[socketId];
+    if (pc) {
+      try {
+        pc.close();
+      } catch (err) {
+        console.error("Error closing peer connection:", err);
+      }
+      delete peersRef.current[socketId];
+    }
+
+    setRemoteStreams((prev) => {
+      const copy = { ...prev };
+      delete copy[socketId];
+      return copy;
+    });
+  };
+
+  const createPeerConnection = (remoteSocketId) => {
+    if (peersRef.current[remoteSocketId]) {
+      return peersRef.current[remoteSocketId];
+    }
+
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    });
+
+    localStreamRef.current.getTracks().forEach((track) => {
+      pc.addTrack(track, localStreamRef.current);
+    });
+
+    pc.onicecandidate = (event) => {
+      if (event.candidate && socketRef.current?.connected) {
+        socketRef.current.emit("ice-candidate", {
+          meetingId,
+          target: remoteSocketId,
+          candidate: event.candidate,
+        });
+      }
+    };
+
+    pc.ontrack = (event) => {
+      const remoteStream = event.streams[0];
+      setRemoteStreams((prev) => ({
+        ...prev,
+        [remoteSocketId]: remoteStream,
+      }));
+    };
+
+    pc.onconnectionstatechange = () => {
+      const state = pc.connectionState;
+      if (state === "failed" || state === "closed" || state === "disconnected") {
+        closePeerConnection(remoteSocketId);
+      }
+    };
+
+    peersRef.current[remoteSocketId] = pc;
+    return pc;
+  };
+
+  const addTrackToAllPeers = (track) => {
+    Object.values(peersRef.current).forEach((pc) => {
+      const alreadySending = pc
+        .getSenders()
+        .some((sender) => sender.track && sender.track.id === track.id);
+
+      if (!alreadySending) {
+        pc.addTrack(track, localStreamRef.current);
+      }
+    });
+  };
+
+  const replaceVideoTrackForAllPeers = async (newTrack) => {
+    const allPeerConnections = Object.values(peersRef.current);
+
+    for (const pc of allPeerConnections) {
+      const sender = pc.getSenders().find((s) => s.track?.kind === "video");
+      if (sender) {
+        await sender.replaceTrack(newTrack);
+      } else {
+        pc.addTrack(newTrack, localStreamRef.current);
+      }
+    }
+  };
+
+  const ensureInitialMedia = async () => {
+    try {
+      const media = await navigator.mediaDevices.getUserMedia({
+        audio: previewMicOn,
+        video: previewCamOn,
+      });
+
+      localStreamRef.current = media;
+
+      const initialAudioTrack = media.getAudioTracks()[0];
+      const initialVideoTrack = media.getVideoTracks()[0];
+
+      if (initialAudioTrack) {
+        initialAudioTrack.enabled = previewMicOn;
+      }
+
+      if (initialVideoTrack) {
+        initialVideoTrack.enabled = previewCamOn;
+        cameraTrackRef.current = initialVideoTrack;
+      }
+
+      setMicOn(!!initialAudioTrack && previewMicOn);
+      setCamOn(!!initialVideoTrack && previewCamOn);
+
+      refreshLocalVideo();
+      setStreamReady(true);
+    } catch (err) {
+      console.error("Failed to get initial media:", err);
+      localStreamRef.current = new MediaStream();
+      refreshLocalVideo();
+      setMicOn(false);
+      setCamOn(false);
+      setStreamReady(true);
+    }
+  };
+
+  /* ---------------- INITIAL LOCAL MEDIA ---------------- */
 
   useEffect(() => {
+    ensureInitialMedia();
+
+    return () => {
+      localStreamRef.current.getTracks().forEach((track) => track.stop());
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ---------------- SOCKET + ROOM JOIN ---------------- */
+
+  useEffect(() => {
+    if (!meetingId || !streamReady || hasJoinedRef.current) return;
 
     socketRef.current = io("http://localhost:5000");
+    const socket = socketRef.current;
 
-    socketRef.current.on("translated-caption", (text) => {
+    socket.on("connect", () => {
+      socket.emit(
+        "join-room",
+        {
+          meetingId,
+          name: myName,
+          password: location.state?.password || "",
+          micOn: previewMicOn,
+          camOn: previewCamOn,
+          preferredLanguage: selectedLanguage,
+          createIfMissing: true,
+          waitingRoom: location.state?.waitingRoom || false,
+          aiAnchor: location.state?.aiAnchor || false,
+        },
+        (response) => {
+          if (!response?.ok) {
+            alert(response?.message || "Failed to join room");
+            navigate("/start");
+            return;
+          }
 
+          hasJoinedRef.current = true;
+          setSelfSocketId(response.selfSocketId || socket.id);
+          setParticipants(response.users || []);
+        }
+      );
+    });
+
+    socket.on("join-error", (payload) => {
+      alert(payload?.message || "Failed to join room");
+      navigate("/start");
+    });
+
+    socket.on("room-users", (users) => {
+      setParticipants(users || []);
+    });
+
+    socket.on("user-joined", async (user) => {
+      if (!user || user.socketId === socket.id) return;
+
+      setParticipants((prev) => {
+        const exists = prev.some((p) => p.socketId === user.socketId);
+        return exists ? prev : [...prev, user];
+      });
+
+      try {
+        const pc = createPeerConnection(user.socketId);
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        socket.emit("offer", {
+          meetingId,
+          target: user.socketId,
+          sdp: offer,
+        });
+      } catch (err) {
+        console.error("Error creating offer:", err);
+      }
+    });
+
+    socket.on("user-left", ({ socketId }) => {
+      closePeerConnection(socketId);
+      setParticipants((prev) => prev.filter((p) => p.socketId !== socketId));
+    });
+
+    socket.on("participant-updated", (updatedUser) => {
+      setParticipants((prev) =>
+        prev.map((p) =>
+          p.socketId === updatedUser.socketId ? { ...p, ...updatedUser } : p
+        )
+      );
+    });
+
+    socket.on("chat-message", (msg) => {
+      setMessages((prev) => [...prev, msg]);
+
+      if (!showChat) {
+        setUnreadCount((count) => count + 1);
+      }
+    });
+
+    socket.on("translated-caption", (text) => {
       if (!captionsEnabled) return;
-
       if (!text || text === lastSpokenRef.current) return;
 
       lastSpokenRef.current = text;
-
       setCaptionText(text);
       speakText(text);
     });
 
+    socket.on("offer", async ({ caller, sdp }) => {
+      try {
+        const pc = createPeerConnection(caller);
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        socket.emit("answer", {
+          meetingId,
+          target: caller,
+          sdp: answer,
+        });
+      } catch (err) {
+        console.error("Error handling offer:", err);
+      }
+    });
+
+    socket.on("answer", async ({ sender, sdp }) => {
+      try {
+        const pc = peersRef.current[sender];
+        if (!pc) return;
+
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+      } catch (err) {
+        console.error("Error handling answer:", err);
+      }
+    });
+
+    socket.on("ice-candidate", async ({ sender, candidate }) => {
+      try {
+        const pc = peersRef.current[sender];
+        if (!pc || !candidate) return;
+
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (err) {
+        console.error("Error adding ICE candidate:", err);
+      }
+    });
+
     return () => {
-      socketRef.current.off("translated-caption");
-      socketRef.current.disconnect();
+      try {
+        socket.emit("leave-room", { meetingId });
+      } catch (err) {
+        console.error("leave-room emit failed:", err);
+      }
+
+      Object.keys(peersRef.current).forEach((socketId) => {
+        closePeerConnection(socketId);
+      });
+
+      socket.off("connect");
+      socket.off("join-error");
+      socket.off("room-users");
+      socket.off("user-joined");
+      socket.off("user-left");
+      socket.off("participant-updated");
+      socket.off("chat-message");
+      socket.off("translated-caption");
+      socket.off("offer");
+      socket.off("answer");
+      socket.off("ice-candidate");
+      socket.disconnect();
+      hasJoinedRef.current = false;
     };
+  }, [
+    meetingId,
+    streamReady,
+    myName,
+    navigate,
+    previewMicOn,
+    previewCamOn,
+    selectedLanguage,
+    captionsEnabled,
+    showChat,
+    location.state,
+  ]);
 
-  }, [captionsEnabled]);
-
-  /* ---------------- VIDEO ---------------- */
+  /* ---------------- KEEP LOCAL VIDEO BOUND ---------------- */
 
   useEffect(() => {
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = stream;
-    }
-  }, [stream]);
-
-  useEffect(() => {
-    return () => {
-      stream.getTracks().forEach(track => track.stop());
-    };
+    refreshLocalVideo();
   }, []);
 
   /* ---------------- TIMER ---------------- */
@@ -89,7 +452,7 @@ export default function MeetDashboard() {
     if (!meetingRunning) return;
 
     const interval = setInterval(() => {
-      setMeetingSeconds(s => s + 1);
+      setMeetingSeconds((s) => s + 1);
     }, 1000);
 
     return () => clearInterval(interval);
@@ -98,7 +461,6 @@ export default function MeetDashboard() {
   /* ---------------- SPEECH RECOGNITION ---------------- */
 
   useEffect(() => {
-
     if (!captionsEnabled || !micOn) {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
@@ -119,17 +481,14 @@ export default function MeetDashboard() {
     if (recognitionRef.current) return;
 
     const recognition = new SpeechRecognition();
-
     recognition.continuous = true;
     recognition.interimResults = false;
     recognition.lang = "en-US";
 
     recognition.onresult = (event) => {
-
       if (!micOn) return;
 
-      const text =
-        event.results[event.results.length - 1][0].transcript;
+      const text = event.results[event.results.length - 1][0].transcript;
 
       if (socketRef.current?.connected) {
         socketRef.current.emit("speech-text", text);
@@ -142,13 +501,20 @@ export default function MeetDashboard() {
 
     recognition.onend = () => {
       if (captionsEnabled && micOn) {
-        recognition.start();
+        try {
+          recognition.start();
+        } catch (err) {
+          console.error("Recognition restart failed:", err);
+        }
       }
     };
 
-    recognition.start();
-    recognitionRef.current = recognition;
-
+    try {
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch (err) {
+      console.error("Recognition start failed:", err);
+    }
   }, [captionsEnabled, micOn]);
 
   /* ---------------- CLEANUP ---------------- */
@@ -165,135 +531,184 @@ export default function MeetDashboard() {
   /* ---------------- MICROPHONE ---------------- */
 
   const toggleMic = async () => {
+    try {
+      let audioTrack = localStreamRef.current.getAudioTracks()[0];
 
-    const existingAudio = stream.getAudioTracks()[0];
+      if (!audioTrack) {
+        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioTrack = audioStream.getAudioTracks()[0];
+        localStreamRef.current.addTrack(audioTrack);
+        addTrackToAllPeers(audioTrack);
+        refreshLocalVideo();
+        setMicOn(true);
+        syncMyParticipantState({ micOn: true });
+        return;
+      }
 
-    if (!existingAudio) {
-
-      const audioStream = await navigator.mediaDevices.getUserMedia({
-        audio: true
-      });
-
-      const audioTrack = audioStream.getAudioTracks()[0];
-
-      stream.addTrack(audioTrack);
-
-      setMicOn(true);
-      return;
+      audioTrack.enabled = !audioTrack.enabled;
+      setMicOn(audioTrack.enabled);
+      syncMyParticipantState({ micOn: audioTrack.enabled });
+    } catch (err) {
+      console.error("Microphone toggle error:", err);
     }
-
-    existingAudio.enabled = !existingAudio.enabled;
-    setMicOn(existingAudio.enabled);
   };
 
   /* ---------------- CAMERA ---------------- */
 
   const startCamera = async () => {
+    try {
+      const camStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const videoTrack = camStream.getVideoTracks()[0];
 
-    const camStream = await navigator.mediaDevices.getUserMedia({
-      video: true
-    });
+      cameraTrackRef.current = videoTrack;
 
-    const videoTrack = camStream.getVideoTracks()[0];
+      const existingVideoTracks = localStreamRef.current.getVideoTracks();
+      existingVideoTracks.forEach((track) => {
+        localStreamRef.current.removeTrack(track);
+      });
 
-    stream.addTrack(videoTrack);
+      localStreamRef.current.addTrack(videoTrack);
+      await replaceVideoTrackForAllPeers(videoTrack);
 
-    setCamOn(true);
+      videoTrack.enabled = true;
+      setCamOn(true);
+      refreshLocalVideo();
+      syncMyParticipantState({ camOn: true, isSharing: false });
+    } catch (err) {
+      console.error("Start camera error:", err);
+    }
   };
 
   const toggleCam = async () => {
+    try {
+      const existingVideo = localStreamRef.current
+        .getVideoTracks()
+        .find((track) => track !== screenTrackRef.current);
 
-    const existingVideo = stream.getVideoTracks()[0];
+      if (!existingVideo) {
+        await startCamera();
+        return;
+      }
 
-    if (!existingVideo) {
-      await startCamera();
-      return;
+      existingVideo.enabled = !existingVideo.enabled;
+      setCamOn(existingVideo.enabled);
+      syncMyParticipantState({ camOn: existingVideo.enabled });
+    } catch (err) {
+      console.error("Camera toggle error:", err);
     }
-
-    existingVideo.enabled = !existingVideo.enabled;
-    setCamOn(existingVideo.enabled);
   };
 
   /* ---------------- SCREEN SHARE ---------------- */
 
   const startScreenShare = async () => {
+    try {
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+      });
 
-    const displayStream = await navigator.mediaDevices.getDisplayMedia({
-      video: true
-    });
+      const screenTrack = displayStream.getVideoTracks()[0];
+      screenTrackRef.current = screenTrack;
 
-    const screenTrack = displayStream.getVideoTracks()[0];
+      const currentVideoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (currentVideoTrack && currentVideoTrack !== screenTrack) {
+        cameraTrackRef.current = currentVideoTrack;
+        localStreamRef.current.removeTrack(currentVideoTrack);
+      }
 
-    const existingVideo = stream.getVideoTracks()[0];
+      localStreamRef.current.addTrack(screenTrack);
+      await replaceVideoTrackForAllPeers(screenTrack);
 
-    if (existingVideo) {
-      stream.removeTrack(existingVideo);
+      setIsSharing(true);
+      setCamOn(true);
+      refreshLocalVideo();
+      syncMyParticipantState({ isSharing: true, camOn: true });
+
+      screenTrack.onended = () => {
+        stopScreenShare();
+      };
+    } catch (err) {
+      console.error("Screen share error:", err);
+
+      if (
+        String(err?.message || "").toLowerCase().includes("screen") ||
+        String(err?.message || "").toLowerCase().includes("display")
+      ) {
+        setScreenWarning(true);
+      }
     }
-
-    stream.addTrack(screenTrack);
-
-    setIsSharing(true);
-
-    screenTrack.onended = () => {
-      stopScreenShare();
-    };
   };
 
-  const stopScreenShare = () => {
+  const stopScreenShare = async () => {
+    try {
+      const activeScreenTrack = screenTrackRef.current;
 
-    const screenTrack = stream.getVideoTracks()[0];
+      if (activeScreenTrack) {
+        localStreamRef.current.removeTrack(activeScreenTrack);
+        activeScreenTrack.stop();
+        screenTrackRef.current = null;
+      }
 
-    if (screenTrack) {
-      stream.removeTrack(screenTrack);
-      screenTrack.stop();
+      if (cameraTrackRef.current && cameraTrackRef.current.readyState === "live") {
+        localStreamRef.current.addTrack(cameraTrackRef.current);
+        await replaceVideoTrackForAllPeers(cameraTrackRef.current);
+        setCamOn(cameraTrackRef.current.enabled);
+      } else {
+        try {
+          const camStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          const newCameraTrack = camStream.getVideoTracks()[0];
+          cameraTrackRef.current = newCameraTrack;
+          localStreamRef.current.addTrack(newCameraTrack);
+          await replaceVideoTrackForAllPeers(newCameraTrack);
+          setCamOn(true);
+        } catch (err) {
+          console.error("Unable to restore camera after screen share:", err);
+          setCamOn(false);
+        }
+      }
+
+      setIsSharing(false);
+      refreshLocalVideo();
+      syncMyParticipantState({ isSharing: false, camOn: true });
+    } catch (err) {
+      console.error("Stop screen share error:", err);
     }
-
-    setIsSharing(false);
-    startCamera();
   };
 
   /* ---------------- HAND RAISE ---------------- */
 
   const toggleHandRaise = () => {
-    setHandRaised(prev => !prev);
+    const newValue = !handRaised;
+    setHandRaised(newValue);
+    syncMyParticipantState({ handRaised: newValue });
   };
 
   /* ---------------- CHAT ---------------- */
 
   const sendMessage = (text) => {
+    if (!text?.trim()) return;
+    if (!socketRef.current?.connected) return;
 
     const now = new Date();
-
     const time = now.toLocaleTimeString([], {
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
 
-    setMessages(prev => [
-      ...prev,
-      {
-        id: Date.now(),
-        sender: "You",
-        text,
-        time
-      }
-    ]);
-
-    if (!showChat) {
-      setUnreadCount(c => c + 1);
-    }
+    socketRef.current.emit("chat-message", {
+      meetingId,
+      text,
+      time,
+    });
   };
 
   /* ---------------- VOICE OUTPUT ---------------- */
 
   const speakText = (text) => {
-
     if (!text || !captionsEnabled) return;
 
     speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
-
     utterance.lang = selectedLanguage;
     utterance.rate = 1;
     utterance.pitch = 1;
@@ -303,22 +718,34 @@ export default function MeetDashboard() {
 
   /* ---------------- END MEETING ---------------- */
 
-  const endMeeting = () => {
-
+  const endMeeting = async () => {
     setMeetingRunning(false);
 
-    if (isSharing) {
-      stopScreenShare();
+    try {
+      if (isSharing) {
+        await stopScreenShare();
+      }
+    } catch (err) {
+      console.error(err);
     }
 
-    stream.getTracks().forEach(t => t.stop());
+    localStreamRef.current.getTracks().forEach((track) => track.stop());
 
-    setStream(new MediaStream());
+    Object.keys(peersRef.current).forEach((socketId) => {
+      closePeerConnection(socketId);
+    });
+
+    if (socketRef.current?.connected) {
+      socketRef.current.emit("leave-room", { meetingId });
+      socketRef.current.disconnect();
+    }
 
     setCamOn(false);
     setMicOn(false);
     setIsSharing(false);
     setHandRaised(false);
+    setParticipants([]);
+    setRemoteStreams({});
 
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = null;
@@ -327,56 +754,115 @@ export default function MeetDashboard() {
     navigate("/start");
   };
 
-  /* ---------------- UI ---------------- */
+  const formattedTime = new Date(meetingSeconds * 1000)
+    .toISOString()
+    .substring(11, 19);
 
-  const participants = [
-    {
-      id: "me",
-      name: "You (Host)",
-      isYou: true,
-      micOn,
-      camOn,
-      handRaised
-    }
-  ];
+  const remoteParticipants = participants.filter(
+    (p) => p.socketId && p.socketId !== selfSocketId
+  );
 
   return (
     <div className="base-container">
-
       <div className="main-content">
+        <div style={{ position: "relative", width: "100%", height: "100%" }}>
+          <video
+            ref={localVideoRef}
+            autoPlay
+            muted
+            playsInline
+            className="main-video"
+            style={{
+              display: camOn || isSharing ? "block" : "none",
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+          />
 
-        <video
-          ref={localVideoRef}
-          autoPlay
-          muted
-          playsInline
-          className="main-video"
-          style={{ display: (camOn || isSharing) ? "block" : "none" }}
-        />
+          {captionsEnabled && (
+            <div className="caption-overlay">
+              {captionText || "🎤 Listening..."}
+            </div>
+          )}
 
-        {captionsEnabled && (
-          <div className="caption-overlay">
-            {captionText || "🎤 Listening..."}
+          {!camOn && !isSharing && (
+            <div
+              className="main-video"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#1f1f1f",
+                color: "white",
+                fontSize: "18px",
+              }}
+            >
+              {myName}
+            </div>
+          )}
+
+          <div
+            style={{
+              position: "absolute",
+              left: "12px",
+              top: "12px",
+              background: "rgba(0,0,0,0.55)",
+              color: "white",
+              padding: "6px 10px",
+              borderRadius: "10px",
+              fontSize: "13px",
+              zIndex: 3,
+            }}
+          >
+            {myName} {handRaised ? "✋" : ""} {!micOn ? "🔇" : ""}{" "}
+            {isSharing ? "🖥️ Sharing" : ""}
           </div>
-        )}
 
-        {!camOn && !isSharing && (
-          <div className="main-video"></div>
-        )}
-
-        <div className="side-videos">
-          <div className="video-tile"></div>
-          <div className="video-tile"></div>
-          <div className="video-tile"></div>
-          <div className="video-tile"></div>
-          <div className="video-tile"></div>
-          <div className="video-tile"></div>
+          <div
+            style={{
+              position: "absolute",
+              right: "12px",
+              top: "12px",
+              background: "rgba(0,0,0,0.55)",
+              color: "white",
+              padding: "6px 10px",
+              borderRadius: "10px",
+              fontSize: "13px",
+              zIndex: 3,
+            }}
+          >
+            {formattedTime}
+          </div>
         </div>
 
+        <div className="side-videos">
+          {remoteParticipants.length === 0 ? (
+            <div
+              className="video-tile"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                background: "#1f1f1f",
+              }}
+            >
+              Waiting for others to join...
+            </div>
+          ) : (
+            remoteParticipants.map((participant) => (
+              <RemoteVideoTile
+                key={participant.socketId}
+                participant={participant}
+                stream={remoteStreams[participant.socketId]}
+              />
+            ))
+          )}
+        </div>
       </div>
 
       <div className="controls">
-
         <button
           className={`control-btn ${micOn ? "" : "off"}`}
           onClick={toggleMic}
@@ -393,7 +879,7 @@ export default function MeetDashboard() {
 
         <button
           className={`control-btn ${!captionsEnabled ? "off" : ""}`}
-          onClick={() => setCaptionsEnabled(prev => !prev)}
+          onClick={() => setCaptionsEnabled((prev) => !prev)}
         >
           <img src="/src/assets/cc.png" alt="Captions" />
         </button>
@@ -411,7 +897,10 @@ export default function MeetDashboard() {
 
         <button
           className="control-btn chat-btn"
-          onClick={() => setShowChat(true)}
+          onClick={() => {
+            setShowChat(true);
+            setUnreadCount(0);
+          }}
         >
           💬
           {unreadCount > 0 && <span className="chat-badge">{unreadCount}</span>}
@@ -431,7 +920,6 @@ export default function MeetDashboard() {
         <button className="control-btn end" onClick={endMeeting}>
           <img src="/src/assets/hangup.png" alt="Hang Up" />
         </button>
-
       </div>
 
       <Popup open={showPopup} onClose={() => setShowPopup(false)} />
@@ -453,14 +941,36 @@ export default function MeetDashboard() {
         <div className="screen-warning-popup">
           <div className="popup-content">
             <p>
-              ⚠ <strong>Entire Screen sharing is not supported.</strong><br />
+              ⚠ <strong>Entire Screen sharing is not supported.</strong>
+              <br />
               Please select <strong>Chrome Tab</strong> or <strong>Window</strong>.
             </p>
-            <button onClick={() => setScreenWarning(false)}>OK</button>
+
+            <div style={{ marginTop: "12px" }}>
+              <label style={{ color: "white", marginRight: "8px" }}>
+                Voice language:
+              </label>
+              <select
+                value={selectedLanguage}
+                onChange={(e) => {
+                  const lang = e.target.value;
+                  setSelectedLanguage(lang);
+                  syncMyParticipantState({ preferredLanguage: lang });
+                }}
+              >
+                <option value="en-US">English</option>
+                <option value="hi-IN">Hindi</option>
+                <option value="ml-IN">Malayalam</option>
+                <option value="ta-IN">Tamil</option>
+              </select>
+            </div>
+
+            <button onClick={() => setScreenWarning(false)} style={{ marginTop: "12px" }}>
+              OK
+            </button>
           </div>
         </div>
       )}
-
     </div>
   );
 }
