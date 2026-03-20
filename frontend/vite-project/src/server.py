@@ -1,165 +1,145 @@
-# server.py
 from flask import Flask, request
-from flask_socketio import SocketIO
-from flask_cors import CORS
-import threading
-import time
-from gtts import gTTS
-import io
+from flask_socketio import SocketIO, emit, join_room, leave_room
 import base64
+from gtts import gTTS
+import uuid
+import os
+import time
 
 app = Flask(__name__)
-CORS(app)
 
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-clients = set()
+# 🔥 STORE ROOMS
+rooms = {}  # { roomId: [ {sid, name, language} ] }
 
-# ---------- Convert text to audio ----------
-def text_to_audio(text, lang="en"):
-    tts = gTTS(text=text, lang=lang)
-    fp = io.BytesIO()
-    tts.write_to_fp(fp)
-    fp.seek(0)
-    return base64.b64encode(fp.read()).decode("utf-8")
 
-# ---------- Socket connect ----------
+# ---------- CONNECT ----------
 @socketio.on("connect")
 def handle_connect():
     print("Client connected:", request.sid)
-    clients.add(request.sid)
 
+
+# ---------- DISCONNECT ----------
 @socketio.on("disconnect")
 def handle_disconnect():
     print("Client disconnected:", request.sid)
-    clients.discard(request.sid)
 
-# ---------- AI Anchor ----------
+    for roomId in rooms:
+        rooms[roomId] = [p for p in rooms[roomId] if p["sid"] != request.sid]
+
+        # send updated list
+        emit_participants(roomId)
+
+
+# ---------- REGISTER ----------
+@socketio.on("register_participant")
+def register(data):
+    print("📩 Received:", data)   # 🔥 ADD THIS
+
+    roomId = data.get("roomId")
+    name = data.get("name", "Guest")
+    language = data.get("language", "en")
+
+    if not roomId:
+        return
+
+    join_room(roomId)
+    print(f"{name} joined room {roomId}")
+
+    if roomId not in rooms:
+        rooms[roomId] = []
+
+    # avoid duplicates
+    rooms[roomId] = [p for p in rooms[roomId] if p["sid"] != request.sid]
+
+    rooms[roomId].append({
+        "sid": request.sid,
+        "name": name,
+        "language": language
+    })
+
+    print(f"{name} joined room {roomId}")
+
+    emit_participants(roomId)
+
+
+# ---------- SEND PARTICIPANT LIST ----------
+def emit_participants(roomId):
+    participants = [p["name"] for p in rooms.get(roomId, [])]
+
+    socketio.emit(
+        "participant_list",
+        {"participants": participants},
+        room=roomId
+    )
+
+
+# ---------- TEXT TO SPEECH ----------
+def generate_audio(text):
+    filename = f"temp_{uuid.uuid4()}.mp3"
+    tts = gTTS(text=text, lang="en")
+    tts.save(filename)
+
+    with open(filename, "rb") as f:
+        audio = base64.b64encode(f.read()).decode("utf-8")
+
+    os.remove(filename)
+    return audio
+
+
+# ---------- RUN ANCHOR ----------
 def run_anchor(data):
-    if not clients:
-        print("❌ No clients connected")
+    roomId = data.get("roomId")
+    sessions = data.get("sessions", [])
+    time_per_speaker = data.get("time", 10)
+    full_agenda = data.get("full_agenda", "")
+
+    if not roomId:
+        print("❌ No roomId received")
         return
 
     def speak(text):
         print("Speaking:", text)
-        audio = text_to_audio(text)
-    
-    room_id = data.get("roomId", "default")
+        audio = generate_audio(text)
 
-    socketio.emit("ai_audio", {"audio": audio}, room=room_id)
-
+        socketio.emit("ai_audio", {"audio": audio}, room=roomId)
         time.sleep(2)
 
-    speak(data.get("full_agenda", "Welcome to AI meeting"))
+    # START FLOW
+    speak(full_agenda)
 
-    participants_in_room = {}
-    room_id = data.get("roomId", "default")
+    for s in sessions:
+        speaker = s["speaker"]
+        topic = s["topic"]
 
-if room_id not in participants_in_room:
-    participants_in_room[room_id] = 0
-
-participants_in_room[room_id] += 1
-
-socketio.emit("participant_count", {
-    "count": participants_in_room[room_id]
-}, room=room_id)
-
-@socketio.on("disconnect")
-@socketio.on("disconnect")
-def handle_disconnect():
-    sid = request.sid
-
-    if sid in participant_languages:
-        room_id = participant_languages[sid]["room"]
-
-        participants_in_room[room_id] -= 1
-
-        print(f"❌ {sid} left room {room_id}")
-        print(f"👥 Count: {participants_in_room[room_id]}")
-
-        socketio.emit(
-            "participant_count",
-            {"count": participants_in_room[room_id]},
-            room=room_id
-        )
-
-        del participant_languages[sid]
-def handle_disconnect():
-    sid = request.sid
-
-    if sid in participant_languages:
-        room_id = participant_languages[sid]["room"]
-
-        participants_in_room[room_id] -= 1
-
-        socketio.emit("participant_count", {
-            "count": participants_in_room[room_id]
-        }, room=room_id)
-
-        del participant_languages[sid]
-    for s in data.get("sessions", []):
-        speak(f"Now I invite {s['speaker']} to present on {s['topic']}")
+        speak(f"Now I invite {speaker} to present on {topic}")
         speak("You may begin now")
-        time.sleep(data.get("time", 10))
+
+        time.sleep(time_per_speaker)
+
         speak("Time is up. Thank you")
 
     speak("Meeting ended. Thank you")
 
-# ---------- Start anchor ----------
+
+# ---------- START ANCHOR ----------
 @app.route("/start-anchor", methods=["POST"])
 def start_anchor():
     data = request.json
-    threading.Thread(target=run_anchor, args=(data,), daemon=True).start()
+
+    # 🔥 IMPORTANT: must pass roomId
+    roomId = data.get("roomId")
+
+    if not roomId:
+        return {"error": "roomId missing"}, 400
+
+    socketio.start_background_task(run_anchor, data)
+
     return {"status": "started"}
 
-room_id = data.get("roomId", "default")
-join_room(room_id)
 
-participant_languages[request.sid] = {
-    "language": language,
-    "room": room_id
-}
+# ---------- RUN ----------
 if __name__ == "__main__":
     print("🚀 Server running on http://localhost:5000")
-    socketio.run(app, host="0.0.0.0", port=5000, allow_unsafe_werkzeug=True)
-
-    participant_languages = {}
-participants_in_room = {}
-
-@socketio.on("register_participant")
-participant_data = {}  # sid -> {name, language, room}
-
-@socketio.on("register_participant")
-def handle_register(data):
-    room_id = data.get("roomId")
-    language = data.get("language", "en")
-    name = data.get("name", "Guest")
-
-    if not room_id:
-        return
-
-    room_id = room_id.strip().upper()
-
-    join_room(room_id)
-
-    participant_data[request.sid] = {
-        "name": name,
-        "language": language,
-        "room": room_id
-    }
-
-    print(f"✅ {name} joined {room_id}")
-
-    # 🔥 Build participant list
-    users = [
-        p["name"]
-        for p in participant_data.values()
-        if p["room"] == room_id
-    ]
-
-    # 🔥 Send list to all in room
-    socketio.emit(
-        "participant_list",
-        {"participants": users},
-        room=room_id
-    )
+    socketio.run(app, host="0.0.0.0", port=5000)

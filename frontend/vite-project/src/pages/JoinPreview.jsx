@@ -1,17 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import io from "socket.io-client";
 import "./JoinPreview.css";
 
 import micOnIcon from "../assets/mic-on.jpg";
 import micOffIcon from "../assets/mic-off.jpg";
 import camOnIcon from "../assets/cam-on.webp";
 import camOffIcon from "../assets/cam-off.jpg";
-
-// ✅ SINGLE SOCKET INSTANCE
-const socket = io("http://localhost:5000", {
-  transports: ["websocket"],
-});
 
 export default function JoinPreview() {
   const { mode } = useParams();
@@ -31,30 +25,10 @@ export default function JoinPreview() {
   const [language, setLanguage] = useState("en");
   const [timePerSpeaker, setTimePerSpeaker] = useState(30);
   const [sessions, setSessions] = useState([{ speaker: "", topic: "" }]);
-const [participantCount, setParticipantCount] = useState(0);
-  const [stream, setStream] = useState(null);
 
+  const [stream, setStream] = useState(null);
   const videoRef = useRef(null);
 
-useEffect(() => {
-  socket.on("connect", () => {
-    console.log("✅ Connected:", socket.id);
-
-    socket.emit("register_participant", {
-      language: language,
-      roomId: meetingId   // 🔥 MUST BE SAME
-    });
-  });
-
-  socket.on("participant_count", ({ count }) => {
-    console.log("👥 Participants:", count);
-  });
-
-  return () => {
-    socket.off("participant_count");
-  };
-}, [meetingId, language]);
-  // 🔥 AUDIO CONTROL
   const hasUnlockedAudio = useRef(false);
 
   // ---------- AUTO GENERATE ----------
@@ -84,42 +58,6 @@ useEffect(() => {
     };
 
     getMedia();
-  }, []);
-
-  // ---------- SOCKET ----------
-  useEffect(() => {
-    socket.on("connect", () => {
-      console.log("✅ Connected:", socket.id);
-
-      socket.emit("register_participant", {
-        language: language,
-      });
-    });
-
-    socket.on("ai_audio", ({ audio }) => {
-      console.log("🎧 Received AI audio");
-
-      try {
-        const byteArray = Uint8Array.from(atob(audio), (c) =>
-          c.charCodeAt(0)
-        );
-
-        const blob = new Blob([byteArray], { type: "audio/mp3" });
-        const url = URL.createObjectURL(blob);
-
-        const sound = new Audio(url);
-
-        sound.play()
-          .then(() => console.log("🔊 Playing AI voice"))
-          .catch((err) => console.error("❌ Blocked:", err));
-      } catch (err) {
-        console.error("Audio error:", err);
-      }
-    });
-
-    return () => {
-      socket.off("ai_audio");
-    };
   }, []);
 
   // ---------- MIC ----------
@@ -153,16 +91,16 @@ useEffect(() => {
     }
   };
 
-  // ---------- START ----------
+  // ---------- START / JOIN ----------
   const handleMeetingStart = async () => {
     if (!name.trim()) return alert("Please enter your name");
+    if (!meetingId.trim()) return alert("Meeting ID is required");
 
-    // 🔓 UNLOCK AUDIO (IMPORTANT)
+    // 🔓 Unlock browser audio
     if (!hasUnlockedAudio.current) {
       const unlockAudio = new Audio(
         "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
       );
-
       try {
         await unlockAudio.play();
         unlockAudio.pause();
@@ -173,57 +111,26 @@ useEffect(() => {
         console.error("Unlock failed:", err);
       }
     }
-// Only check participants AFTER meeting started (optional)
-if (mode === "create" && aiAnchor && participantCount === 0) {
-  console.warn("No participants yet — starting anyway");
-}
-    // 🎤 START AI ANCHOR
-    if (aiAnchor) {
-      const fullAgenda = `Welcome everyone to ${meetingTitle}. Today we have speakers: ${sessions
-        .map((s) => `${s.speaker} on ${s.topic}`)
-        .join(", ")}. Each speaker will speak for ${timePerSpeaker} seconds.`;
 
-      try {
-        await fetch("http://localhost:5000/start-anchor", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            sessions,
-            time: timePerSpeaker,
-            full_agenda: fullAgenda,
-          }),
-        });
+    // ✅ DO NOT start anchor here anymore
 
-        console.log("🚀 Anchor started");
-      } catch (err) {
-        console.error("Failed to start AI Anchor:", err);
-      }
-    }
-
-    // ⏳ WAIT before navigation (VERY IMPORTANT)
-    setTimeout(() => {
-      navigate(`/meeting/${meetingId}`, {
-        state: {
-          name,
-          mode,
-          micOn,
-          camOn,
-          aiAnchor,
-          waitingRoom,
-          meetingTitle,
-          language,
-          timePerSpeaker,
-          sessions,
-        },
-      });
-    }, 3000);
+    // 👉 Navigate to Meeting page
+    navigate(`/meeting/${meetingId.trim().toUpperCase()}`, {
+      state: {
+        name,
+        meetingId: meetingId.trim().toUpperCase(),
+        mode,
+        micOn,
+        camOn,
+        aiAnchor,
+        waitingRoom,
+        meetingTitle,
+        language,
+        timePerSpeaker,
+        sessions,
+      },
+    });
   };
-socket.emit("register_participant", {
-  language: language,
-  roomId: meetingId   // 🔥 VERY IMPORTANT
-});
 
   // ---------- UI ----------
   return (

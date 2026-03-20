@@ -1,94 +1,110 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useParams, useLocation } from "react-router-dom";
 import io from "socket.io-client";
 
 export default function Meeting() {
+  const { meetingId } = useParams();
+  const location = useLocation();
+
   const socketRef = useRef(null);
   const audioRef = useRef(null);
-
-  useEffect(() => {
-    socketRef.current = io("http://localhost:5000", {
-      transports: ["websocket"],
-    });
-
-    socketRef.current.on("connect", () => {
-      console.log("✅ Connected:", socketRef.current.id);
-
-      socketRef.current.emit("register_participant", {
-        language: "en",
-      });
-    });
-
-    socketRef.current.on("ai_audio", ({ audio }) => {
-      console.log("🎧 Received audio");
-
-      if (!audioRef.current) return;
-
-      // Convert base64 → Blob
-      const audioBlob = new Blob(
-        [Uint8Array.from(atob(audio), (c) => c.charCodeAt(0))],
-        { type: "audio/mp3" }
-      );
-
-      const url = URL.createObjectURL(audioBlob);
-
-      audioRef.current.src = url;
-    const testAudio = () => {
-    const audio = new Audio(
-    "data:audio/mp3;base64,//uQxAAAAAAAAAAAAAAAAAAAA..."
-  );
-  audio.play().then(() => console.log("PLAYING")).catch(console.error);
-};
-
-      // 🔥 FORCE PLAY
-      audioRef.current
-        .play()
-        .then(() => console.log("▶️ Playing"))
-        .catch((err) => console.error("❌ Play error:", err));
-    });
-
-    return () => {
-      socketRef.current.disconnect();
-    };
-  }, []);
+  console.log("JOINING ROOM:", meetingId);
   const [participants, setParticipants] = useState([]);
+
+  // ---------- SOCKET CONNECT ----------
   useEffect(() => {
+  if (socketRef.current) return; // ✅ PREVENT MULTIPLE SOCKETS
+
+  const socket = io("http://localhost:5000", {
+    transports: ["websocket"],
+  });
+
+  socketRef.current = socket;
+
+  socket.on("connect", () => {
+    console.log("✅ Connected:", socket.id);
+
+    if (!meetingId) {
+      console.log("❌ No meetingId");
+      return;
+    }
+
+    console.log("🚪 Joining room:", meetingId);
+
+    socket.emit("register_participant", {
+      name: location.state?.name || "Guest",
+      language: location.state?.language || "en",
+      roomId: meetingId.trim().toUpperCase(),
+    });
+  });
+
   socket.on("participant_list", ({ participants }) => {
     console.log("👥 Participants:", participants);
     setParticipants(participants);
   });
 
-  return () => socket.off("participant_list");
+  return () => {
+    socket.disconnect();
+    socketRef.current = null;
+  };
 }, []);
 
+  // ---------- START AI ANCHOR AFTER JOIN ----------
+  useEffect(() => {
+    if (!location.state?.aiAnchor) return;
 
-  // 🔥 THIS BUTTON IS CRITICAL (UNLOCKS AUDIO)
-  const startMeeting = async () => {
-    console.log("🚀 Start clicked");
+    console.log("🎤 Starting AI Anchor AFTER join");
 
-    // Unlock browser audio
+    const fullAgenda = `Welcome everyone to ${
+      location.state.meetingTitle
+    }. Today we have speakers: ${location.state.sessions
+      .map((s) => `${s.speaker} on ${s.topic}`)
+      .join(", ")}.`;
+
+    setTimeout(() => {
+      fetch("http://localhost:5000/start-anchor", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessions: location.state.sessions,
+          time: location.state.timePerSpeaker,
+          full_agenda: fullAgenda,
+          roomId: meetingId   // 🔥 ADD THIS
+        }),
+      });
+    }, 1500); // 🔥 IMPORTANT DELAY
+  }, []);
+
+  // ---------- UNLOCK AUDIO BUTTON ----------
+  const unlockAudio = async () => {
     const audio = new Audio();
-    audio.play().catch(() => {});
-
-    await fetch("http://localhost:5000/start-anchor", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        full_agenda: "Welcome to the AI meeting",
-        time: 5,
-        sessions: [
-          { speaker: "Neha", topic: "AI" }
-        ],
-      }),
-    });
+    try {
+      await audio.play();
+      console.log("🔓 Audio unlocked");
+    } catch {}
   };
 
   return (
-    
-    <>
-      <button onClick={startMeeting}>Start Meeting</button>
-      <audio ref={audioRef} controls />
-    </>
+    <div style={{ padding: "20px" }}>
+      <h2>Meeting ID: {meetingId}</h2>
+
+      {/* 🔥 AUDIO UNLOCK BUTTON */}
+      <button onClick={unlockAudio}>Enable Audio 🔊</button>
+
+      {/* 🎧 AUDIO PLAYER */}
+      <audio ref={audioRef} />
+
+      {/* 👥 PARTICIPANTS */}
+      <div style={{ marginTop: "20px" }}>
+        <h3>Participants ({participants.length})</h3>
+        <ul>
+          {participants.map((p, i) => (
+            <li key={i}>👤 {p}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
   );
 }
