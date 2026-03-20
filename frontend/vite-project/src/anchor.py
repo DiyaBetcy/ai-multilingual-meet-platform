@@ -1,65 +1,77 @@
-# anchor.py
-
+import threading
 import time
-from pipeline import speak_pipeline
+from gtts import gTTS
+import base64
+import io
+from flask import Flask, request
+from flask_socketio import SocketIO
 
+app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-def get_host_input():
-    meeting_title = input("Enter meeting title: ")
-    language = input("Enter preferred language: ").lower().strip()
-    
+# ---------- Helper to generate TTS audio and return base64 ----------
+def text_to_audio_base64(text, language="en"):
+    tts = gTTS(text=text, lang=language)
+    fp = io.BytesIO()
+    tts.write_to_fp(fp)
+    fp.seek(0)
+    return base64.b64encode(fp.read()).decode("utf-8")
 
-    sessions = []
-    n = int(input("Enter number of sessions: "))
+def run_anchor(data):
+    meeting_title = data.get("meeting_title", "Meeting")
+    sessions = data.get("sessions", [])
+    host_language = data.get("language", "en")
+    time_per_speaker = data.get("time", 30)
+    full_agenda = data.get("full_agenda", "")
 
-    for i in range(n):
-        speaker = input(f"Enter speaker {i+1} name: ")
-        topic = input(f"Enter topic for speaker {i+1}: ")
-        sessions.append({
-            "speaker": speaker,
-            "topic": topic
-        })
+    # Speak full agenda
+    if full_agenda:
+        audio_b64 = text_to_audio_base64(full_agenda, host_language)
+        print(f"[BACKEND] Emitting full agenda ({len(audio_b64)} bytes)...")
+        socketio.emit("ai_audio", {"audio": audio_b64})
 
-    time_per_speaker = int(input("Enter time per speaker (seconds): "))
+    # Loop through speakers
+    for session in sessions:
+        intro_text = f"Now I invite {session['speaker']} to present on {session['topic']}."
+        audio_b64 = text_to_audio_base64(intro_text, host_language)
+        print(f"[BACKEND] Emitting intro audio for {session['speaker']} ({len(audio_b64)} bytes)...")
+        socketio.emit("ai_audio", {"audio": audio_b64})
 
-    return {
-        "meeting_title": meeting_title,
-        "language": language,
-        "sessions": sessions,
-        "time": time_per_speaker
-    }
+        begin_text = "You may begin now."
+        audio_b64 = text_to_audio_base64(begin_text, host_language)
+        print(f"[BACKEND] Emitting start audio for {session['speaker']} ({len(audio_b64)} bytes)...")
+        socketio.emit("ai_audio", {"audio": audio_b64})
 
-
-def run_anchor():
-    data = get_host_input()
-    lang = data["language"]
-    t = data["time"]
-
-    # 🎬 Opening
-    speak_pipeline(f"Welcome everyone to {data['meeting_title']}.", lang)
-    speak_pipeline(f"The session language is {lang}.", lang)
-    speak_pipeline("I am your AI anchor for this conference.", lang)
-
-    # 🔁 Speaker loop
-    for session in data["sessions"]:
-        speak_pipeline(f"Now inviting {session['speaker']} to present.", lang)
-        speak_pipeline(f"The topic is {session['topic']}.", lang)
-        speak_pipeline("You may begin now.", lang)
-
-        if t > 10:
-            time.sleep(t - 10)
-            print("⚠️ 10 seconds remaining!")
+        # ... rest of your timer code
+        
+        # Timer for speaker
+        if time_per_speaker > 10:
+            time.sleep(time_per_speaker - 10)
+            warning_text = "10 seconds remaining!"
+            audio_b64 = text_to_audio_base64(warning_text, host_language)
+            socketio.emit("ai_audio", {"audio": audio_b64})
             time.sleep(10)
         else:
-            time.sleep(t)
+            time.sleep(time_per_speaker)
 
-        speak_pipeline(" Thank you.", lang)
+        end_text = "Time is up. Thank you."
+        audio_b64 = text_to_audio_base64(end_text, host_language)
+        socketio.emit("ai_audio", {"audio": audio_b64})
         time.sleep(2)
 
-    # 🎬 Closing
-    speak_pipeline("Thank you all for participating.", lang)
-    speak_pipeline("The conference is now concluded.", lang)
+    # 3️⃣ Closing
+    closing_text = "Thank you all for participating. The conference is now concluded."
+    audio_b64 = text_to_audio_base64(closing_text, host_language)
+    socketio.emit("ai_audio", {"audio": audio_b64})
 
+# ---------- Endpoint to start AI Anchor ----------
+@app.route("/start-anchor", methods=["POST"])
+def start_anchor():
+    data = request.json
+    # Run the anchor in a separate thread so Flask doesn't block
+    threading.Thread(target=run_anchor, args=(data,), daemon=True).start()
+    return {"status": "started"}
 
 if __name__ == "__main__":
-    run_anchor()
+    # Use allow_unsafe_werkzeug=True to prevent SocketIO warnings on Windows
+    socketio.run(app, host="0.0.0.0", port=5000, allow_unsafe_werkzeug=True)

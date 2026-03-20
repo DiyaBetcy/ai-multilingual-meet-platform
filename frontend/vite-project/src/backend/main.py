@@ -2,8 +2,8 @@ from fastapi import FastAPI, UploadFile, File
 import whisper
 import tempfile
 import os
+from pipeline import translate_text
 from gtts import gTTS
-from backend.pipeline import translate_text  # your mBART function
 
 app = FastAPI()
 
