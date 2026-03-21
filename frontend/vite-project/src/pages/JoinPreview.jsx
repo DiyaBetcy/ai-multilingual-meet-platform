@@ -1,11 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { io } from "socket.io-client"; // ✅ FIXED IMPORT
 import "./JoinPreview.css";
 
 import micOnIcon from "../assets/mic-on.jpg";
 import micOffIcon from "../assets/mic-off.jpg";
 import camOnIcon from "../assets/cam-on.webp";
 import camOffIcon from "../assets/cam-off.jpg";
+
+// ✅ SINGLE SOCKET
+const socket = io("http://localhost:5000", {
+  transports: ["websocket"],
+});
 
 export default function JoinPreview() {
   const { mode } = useParams();
@@ -27,16 +33,24 @@ export default function JoinPreview() {
   const [sessions, setSessions] = useState([{ speaker: "", topic: "" }]);
 
   const [stream, setStream] = useState(null);
-  const videoRef = useRef(null);
 
+  const videoRef = useRef(null);
   const hasUnlockedAudio = useRef(false);
 
-  // ---------- AUTO GENERATE ----------
+  // ---------- GENERATORS ----------
+  const generateMeetingId = () =>
+    Math.random().toString(36).substring(2, 8).toUpperCase();
+
+  const generatePassword = () =>
+    Math.random().toString(36).substring(2, 10);
+
+  // ---------- AUTO SET ----------
   useEffect(() => {
     if (mode === "create") {
-      setMeetingId(Math.random().toString(36).substring(2, 8).toUpperCase());
-      setPassword(Math.random().toString(36).substring(2, 10));
+      setMeetingId(generateMeetingId());
+      setPassword(generatePassword());
     }
+
     if (mode === "join" && location.state?.meetingId) {
       setMeetingId(location.state.meetingId);
     }
@@ -50,8 +64,12 @@ export default function JoinPreview() {
           video: true,
           audio: true,
         });
+
         setStream(mediaStream);
-        if (videoRef.current) videoRef.current.srcObject = mediaStream;
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+        }
       } catch (err) {
         console.error("Permission denied:", err);
       }
@@ -59,6 +77,24 @@ export default function JoinPreview() {
 
     getMedia();
   }, []);
+
+  // ---------- SOCKET REGISTER ----------
+  useEffect(() => {
+    if (!meetingId) return;
+
+    socket.on("connect", () => {
+      console.log("✅ Connected:", socket.id);
+
+      socket.emit("register_participant", {
+        name: name || "Guest",
+        roomId: meetingId.trim().toUpperCase(), // ✅ FIXED
+      });
+    });
+
+    return () => {
+      socket.off("connect");
+    };
+  }, [meetingId, name]);
 
   // ---------- MIC ----------
   const toggleMic = () => {
@@ -87,24 +123,26 @@ export default function JoinPreview() {
         setCamOn(true);
       }
     } catch (err) {
-      console.error("Camera toggle error:", err);
+      console.error("Camera error:", err);
     }
   };
 
   // ---------- START / JOIN ----------
   const handleMeetingStart = async () => {
-    if (!name.trim()) return alert("Please enter your name");
-    if (!meetingId.trim()) return alert("Meeting ID is required");
+    if (!name.trim()) return alert("Enter your name");
+    if (!meetingId.trim()) return alert("Meeting ID required");
 
-    // 🔓 Unlock browser audio
+  const finalRoom = meetingId.trim().toUpperCase();
+
+    // 🔓 UNLOCK AUDIO (CRITICAL FIX)
     if (!hasUnlockedAudio.current) {
-      const unlockAudio = new Audio(
-        "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
-      );
       try {
-        await unlockAudio.play();
-        unlockAudio.pause();
-        unlockAudio.currentTime = 0;
+        const audio = new Audio(
+          "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+        );
+        await audio.play();
+        audio.pause();
+        audio.currentTime = 0;
         hasUnlockedAudio.current = true;
         console.log("🔓 Audio unlocked");
       } catch (err) {
@@ -112,13 +150,28 @@ export default function JoinPreview() {
       }
     }
 
-    // ✅ DO NOT start anchor here anymore
+    // 🎤 START AI ANCHOR
+    if (mode === "create" && aiAnchor) {
+      const fullAgenda = `Welcome everyone to ${meetingTitle}. Today we have speakers: ${sessions
+        .map((s) => `${s.speaker} on ${s.topic}`)
+        .join(", ")}. Each speaker will speak for ${timePerSpeaker} seconds.`;
+await fetch("http://localhost:5000/start-anchor", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    sessions,
+    time: timePerSpeaker,
+    full_agenda: fullAgenda,
+    roomId: meetingId   // 🔥 THIS IS CRITICAL
+  }),
+});
+}
 
-    // 👉 Navigate to Meeting page
-    navigate(`/meeting/${meetingId.trim().toUpperCase()}`, {
+    // 👉 NAVIGATE (DO NOT CHANGE UI)
+    navigate(`/meeting/${finalRoom}`, {
       state: {
         name,
-        meetingId: meetingId.trim().toUpperCase(),
+        meetingId: finalRoom,
         mode,
         micOn,
         camOn,
@@ -132,7 +185,7 @@ export default function JoinPreview() {
     });
   };
 
-  // ---------- UI ----------
+  // ---------- UI (UNCHANGED) ----------
   return (
     <div className="jp-container">
       <div className="jp-top-info">
@@ -140,7 +193,6 @@ export default function JoinPreview() {
       </div>
 
       <div className="jp-main">
-        {/* LEFT PANEL */}
         <div className="jp-details">
           <input
             placeholder="Your Name"
@@ -156,13 +208,7 @@ export default function JoinPreview() {
 
           {mode === "create" && (
             <div className="jp-regenerate">
-              <button
-                onClick={() =>
-                  setMeetingId(
-                    Math.random().toString(36).substring(2, 8).toUpperCase()
-                  )
-                }
-              >
+              <button onClick={() => setMeetingId(generateMeetingId())}>
                 New Meeting ID
               </button>
             </div>
@@ -175,7 +221,6 @@ export default function JoinPreview() {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          {/* AI SETTINGS */}
           {mode === "create" && (
             <>
               <input
@@ -245,7 +290,6 @@ export default function JoinPreview() {
           )}
         </div>
 
-        {/* RIGHT VIDEO */}
         <div className="jp-video-section">
           <div className="jp-video-box">
             <video ref={videoRef} autoPlay playsInline muted />
@@ -253,10 +297,10 @@ export default function JoinPreview() {
 
           <div className="jp-controls">
             <button onClick={toggleMic}>
-              <img src={micOnIcon} alt="mic" />
+              <img src={micOn ? micOnIcon : micOffIcon} alt="mic" />
             </button>
             <button onClick={toggleCam}>
-              <img src={camOnIcon} alt="cam" />
+              <img src={camOn ? camOnIcon : camOffIcon} alt="cam" />
             </button>
           </div>
         </div>
@@ -265,6 +309,5 @@ export default function JoinPreview() {
       <button className="jp-action-btn" onClick={handleMeetingStart}>
         {mode === "create" ? "Start" : "Join"}
       </button>
-    </div>
-  );
+);
 }
