@@ -1,6 +1,6 @@
-import { io } from "socket.io-client";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { socket } from "../../socket";
 import "./meetdashboard.css";
 import Popup from "./popup.jsx";
 import ParticipantsPanel from "./ParticipantsPanel.jsx";
@@ -16,7 +16,7 @@ function RemoteVideoTile({ participant, stream }) {
   }, [stream]);
 
   return (
-    <div className="video-tile">
+    <div className="video-tile" style={{ position: "relative" }}>
       {participant?.camOn && stream ? (
         <video
           ref={videoRef}
@@ -58,6 +58,7 @@ function RemoteVideoTile({ participant, stream }) {
         }}
       >
         {participant?.name}
+        {participant?.isYou ? " (You)" : ""}
         {participant?.isHost ? " (Host)" : ""}
         {!participant?.micOn ? " 🔇" : ""}
         {participant?.handRaised ? " ✋" : ""}
@@ -72,7 +73,7 @@ export default function MeetDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const socketRef = useRef(null);
+  const socketRef = useRef(socket);
   const localVideoRef = useRef(null);
   const recognitionRef = useRef(null);
   const lastSpokenRef = useRef("");
@@ -80,7 +81,6 @@ export default function MeetDashboard() {
   const localStreamRef = useRef(new MediaStream());
   const cameraTrackRef = useRef(null);
   const screenTrackRef = useRef(null);
-  const hasJoinedRef = useRef(false);
 
   const myName = location.state?.name || "Guest";
   const previewMicOn = location.state?.micOn ?? true;
@@ -253,8 +253,6 @@ export default function MeetDashboard() {
     }
   };
 
-  /* ---------------- INITIAL LOCAL MEDIA ---------------- */
-
   useEffect(() => {
     ensureInitialMedia();
 
@@ -264,53 +262,37 @@ export default function MeetDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ---------------- SOCKET + ROOM JOIN ---------------- */
-
   useEffect(() => {
-    if (!meetingId || !streamReady || hasJoinedRef.current) return;
+    if (!meetingId || !streamReady) return;
 
-    socketRef.current = io("http://localhost:5000");
-    const socket = socketRef.current;
+    const currentSocket = socketRef.current;
 
-    socket.on("connect", () => {
-      socket.emit(
-        "join-room",
-        {
-          meetingId,
-          name: myName,
-          password: location.state?.password || "",
-          micOn: previewMicOn,
-          camOn: previewCamOn,
-          preferredLanguage: selectedLanguage,
-          createIfMissing: true,
-          waitingRoom: location.state?.waitingRoom || false,
-          aiAnchor: location.state?.aiAnchor || false,
-        },
-        (response) => {
-          if (!response?.ok) {
-            alert(response?.message || "Failed to join room");
-            navigate("/start");
-            return;
-          }
+    if (!currentSocket.connected) {
+      currentSocket.connect();
+    }
 
-          hasJoinedRef.current = true;
-          setSelfSocketId(response.selfSocketId || socket.id);
-          setParticipants(response.users || []);
-        }
-      );
-    });
+    setSelfSocketId(currentSocket.id || null);
 
-    socket.on("join-error", (payload) => {
-      alert(payload?.message || "Failed to join room");
+    const handleConnect = () => {
+      setSelfSocketId(currentSocket.id || null);
+      console.log("Shared socket connected in MeetDashboard:", currentSocket.id);
+    };
+
+    const handleJoinError = (payload) => {
+      console.log("join-error:", payload);
+      alert(payload?.message || "Meeting connection problem");
       navigate("/start");
-    });
+    };
 
-    socket.on("room-users", (users) => {
+    const handleRoomUsers = (users) => {
+      console.log("room-users received:", users);
       setParticipants(users || []);
-    });
+    };
 
-    socket.on("user-joined", async (user) => {
-      if (!user || user.socketId === socket.id) return;
+    const handleUserJoined = async (user) => {
+      console.log("user-joined received:", user);
+
+      if (!user || user.socketId === currentSocket.id) return;
 
       setParticipants((prev) => {
         const exists = prev.some((p) => p.socketId === user.socketId);
@@ -322,7 +304,7 @@ export default function MeetDashboard() {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
-        socket.emit("offer", {
+        currentSocket.emit("offer", {
           meetingId,
           target: user.socketId,
           sdp: offer,
@@ -330,39 +312,39 @@ export default function MeetDashboard() {
       } catch (err) {
         console.error("Error creating offer:", err);
       }
-    });
+    };
 
-    socket.on("user-left", ({ socketId }) => {
+    const handleUserLeft = ({ socketId }) => {
       closePeerConnection(socketId);
       setParticipants((prev) => prev.filter((p) => p.socketId !== socketId));
-    });
+    };
 
-    socket.on("participant-updated", (updatedUser) => {
+    const handleParticipantUpdated = (updatedUser) => {
       setParticipants((prev) =>
         prev.map((p) =>
           p.socketId === updatedUser.socketId ? { ...p, ...updatedUser } : p
         )
       );
-    });
+    };
 
-    socket.on("chat-message", (msg) => {
+    const handleChatMessage = (msg) => {
       setMessages((prev) => [...prev, msg]);
 
       if (!showChat) {
         setUnreadCount((count) => count + 1);
       }
-    });
+    };
 
-    socket.on("translated-caption", (text) => {
+    const handleTranslatedCaption = (text) => {
       if (!captionsEnabled) return;
       if (!text || text === lastSpokenRef.current) return;
 
       lastSpokenRef.current = text;
       setCaptionText(text);
       speakText(text);
-    });
+    };
 
-    socket.on("offer", async ({ caller, sdp }) => {
+    const handleOffer = async ({ caller, sdp }) => {
       try {
         const pc = createPeerConnection(caller);
         await pc.setRemoteDescription(new RTCSessionDescription(sdp));
@@ -370,7 +352,7 @@ export default function MeetDashboard() {
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
 
-        socket.emit("answer", {
+        currentSocket.emit("answer", {
           meetingId,
           target: caller,
           sdp: answer,
@@ -378,75 +360,64 @@ export default function MeetDashboard() {
       } catch (err) {
         console.error("Error handling offer:", err);
       }
-    });
+    };
 
-    socket.on("answer", async ({ sender, sdp }) => {
+    const handleAnswer = async ({ sender, sdp }) => {
       try {
         const pc = peersRef.current[sender];
         if (!pc) return;
-
         await pc.setRemoteDescription(new RTCSessionDescription(sdp));
       } catch (err) {
         console.error("Error handling answer:", err);
       }
-    });
+    };
 
-    socket.on("ice-candidate", async ({ sender, candidate }) => {
+    const handleIceCandidate = async ({ sender, candidate }) => {
       try {
         const pc = peersRef.current[sender];
         if (!pc || !candidate) return;
-
         await pc.addIceCandidate(new RTCIceCandidate(candidate));
       } catch (err) {
         console.error("Error adding ICE candidate:", err);
       }
-    });
+    };
+
+    currentSocket.on("connect", handleConnect);
+    currentSocket.on("join-error", handleJoinError);
+    currentSocket.on("room-users", handleRoomUsers);
+    currentSocket.on("user-joined", handleUserJoined);
+    currentSocket.on("user-left", handleUserLeft);
+    currentSocket.on("participant-updated", handleParticipantUpdated);
+    currentSocket.on("chat-message", handleChatMessage);
+    currentSocket.on("translated-caption", handleTranslatedCaption);
+    currentSocket.on("offer", handleOffer);
+    currentSocket.on("answer", handleAnswer);
+    currentSocket.on("ice-candidate", handleIceCandidate);
 
     return () => {
-      try {
-        socket.emit("leave-room", { meetingId });
-      } catch (err) {
-        console.error("leave-room emit failed:", err);
-      }
-
-      Object.keys(peersRef.current).forEach((socketId) => {
-        closePeerConnection(socketId);
-      });
-
-      socket.off("connect");
-      socket.off("join-error");
-      socket.off("room-users");
-      socket.off("user-joined");
-      socket.off("user-left");
-      socket.off("participant-updated");
-      socket.off("chat-message");
-      socket.off("translated-caption");
-      socket.off("offer");
-      socket.off("answer");
-      socket.off("ice-candidate");
-      socket.disconnect();
-      hasJoinedRef.current = false;
+      currentSocket.off("connect", handleConnect);
+      currentSocket.off("join-error", handleJoinError);
+      currentSocket.off("room-users", handleRoomUsers);
+      currentSocket.off("user-joined", handleUserJoined);
+      currentSocket.off("user-left", handleUserLeft);
+      currentSocket.off("participant-updated", handleParticipantUpdated);
+      currentSocket.off("chat-message", handleChatMessage);
+      currentSocket.off("translated-caption", handleTranslatedCaption);
+      currentSocket.off("offer", handleOffer);
+      currentSocket.off("answer", handleAnswer);
+      currentSocket.off("ice-candidate", handleIceCandidate);
     };
   }, [
     meetingId,
     streamReady,
-    myName,
     navigate,
-    previewMicOn,
-    previewCamOn,
-    selectedLanguage,
-    captionsEnabled,
     showChat,
-    location.state,
+    captionsEnabled,
   ]);
-
-  /* ---------------- KEEP LOCAL VIDEO BOUND ---------------- */
 
   useEffect(() => {
     refreshLocalVideo();
   }, []);
-
-  /* ---------------- TIMER ---------------- */
 
   useEffect(() => {
     if (!meetingRunning) return;
@@ -457,8 +428,6 @@ export default function MeetDashboard() {
 
     return () => clearInterval(interval);
   }, [meetingRunning]);
-
-  /* ---------------- SPEECH RECOGNITION ---------------- */
 
   useEffect(() => {
     if (!captionsEnabled || !micOn) {
@@ -517,8 +486,6 @@ export default function MeetDashboard() {
     }
   }, [captionsEnabled, micOn]);
 
-  /* ---------------- CLEANUP ---------------- */
-
   useEffect(() => {
     return () => {
       if (recognitionRef.current) {
@@ -527,8 +494,6 @@ export default function MeetDashboard() {
       speechSynthesis.cancel();
     };
   }, []);
-
-  /* ---------------- MICROPHONE ---------------- */
 
   const toggleMic = async () => {
     try {
@@ -552,8 +517,6 @@ export default function MeetDashboard() {
       console.error("Microphone toggle error:", err);
     }
   };
-
-  /* ---------------- CAMERA ---------------- */
 
   const startCamera = async () => {
     try {
@@ -597,8 +560,6 @@ export default function MeetDashboard() {
       console.error("Camera toggle error:", err);
     }
   };
-
-  /* ---------------- SCREEN SHARE ---------------- */
 
   const startScreenShare = async () => {
     try {
@@ -674,15 +635,11 @@ export default function MeetDashboard() {
     }
   };
 
-  /* ---------------- HAND RAISE ---------------- */
-
   const toggleHandRaise = () => {
     const newValue = !handRaised;
     setHandRaised(newValue);
     syncMyParticipantState({ handRaised: newValue });
   };
-
-  /* ---------------- CHAT ---------------- */
 
   const sendMessage = (text) => {
     if (!text?.trim()) return;
@@ -701,8 +658,6 @@ export default function MeetDashboard() {
     });
   };
 
-  /* ---------------- VOICE OUTPUT ---------------- */
-
   const speakText = (text) => {
     if (!text || !captionsEnabled) return;
 
@@ -715,8 +670,6 @@ export default function MeetDashboard() {
 
     speechSynthesis.speak(utterance);
   };
-
-  /* ---------------- END MEETING ---------------- */
 
   const endMeeting = async () => {
     setMeetingRunning(false);
@@ -758,7 +711,12 @@ export default function MeetDashboard() {
     .toISOString()
     .substring(11, 19);
 
-  const remoteParticipants = participants.filter(
+  const participantsWithSelf = participants.map((p) => ({
+    ...p,
+    isYou: p.socketId === selfSocketId,
+  }));
+
+  const remoteParticipants = participantsWithSelf.filter(
     (p) => p.socketId && p.socketId !== selfSocketId
   );
 
@@ -927,7 +885,7 @@ export default function MeetDashboard() {
       <ParticipantsPanel
         open={showPeople}
         onClose={() => setShowPeople(false)}
-        participants={participants}
+        participants={participantsWithSelf}
       />
 
       <ChatPanel

@@ -8,9 +8,11 @@ import camOnIcon from "../assets/cam-on.webp";
 import camOffIcon from "../assets/cam-off.jpg";
 
 export default function JoinPreview() {
-  const { mode } = useParams(); // create | join
+  const { mode } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const videoRef = useRef(null);
 
   const generateMeetingId = () =>
     Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -21,6 +23,7 @@ export default function JoinPreview() {
   const [name, setName] = useState("");
   const [meetingId, setMeetingId] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   const [aiAnchor, setAiAnchor] = useState(false);
@@ -29,8 +32,6 @@ export default function JoinPreview() {
   const [agenda, setAgenda] = useState("");
   const [stream, setStream] = useState(null);
   const [loading, setLoading] = useState(false);
-
-  const videoRef = useRef(null);
 
   useEffect(() => {
     if (mode === "create") {
@@ -59,13 +60,8 @@ export default function JoinPreview() {
         const audioTrack = mediaStream.getAudioTracks()[0];
         const videoTrack = mediaStream.getVideoTracks()[0];
 
-        if (audioTrack) {
-          audioTrack.enabled = micOn;
-        }
-
-        if (videoTrack) {
-          videoTrack.enabled = camOn;
-        }
+        if (audioTrack) audioTrack.enabled = micOn;
+        if (videoTrack) videoTrack.enabled = camOn;
 
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream;
@@ -84,6 +80,7 @@ export default function JoinPreview() {
         localStream.getTracks().forEach((track) => track.stop());
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -151,7 +148,7 @@ export default function JoinPreview() {
       return;
     }
 
-    if (mode === "join" && !password.trim()) {
+    if (!password.trim()) {
       alert("Please enter the meeting password");
       return;
     }
@@ -159,7 +156,14 @@ export default function JoinPreview() {
     setLoading(true);
 
     try {
-      navigate(`/meeting/${meetingId}`, {
+      console.log("JoinPreview submit:", {
+        mode,
+        meetingId: meetingId.trim(),
+        password: password.trim(),
+        name: name.trim(),
+      });
+
+      navigate(`/meeting/${meetingId.trim()}`, {
         state: {
           name: name.trim(),
           mode,
@@ -174,7 +178,7 @@ export default function JoinPreview() {
         },
       });
     } catch (err) {
-      console.error("Navigation error:", err);
+      console.error("Meeting preview navigation error:", err);
       alert("Unable to continue to the meeting");
     } finally {
       setLoading(false);
@@ -212,12 +216,35 @@ export default function JoinPreview() {
             </div>
           )}
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <div
+            style={{
+              display: "flex",
+              gap: "8px",
+              alignItems: "center",
+            }}
+          >
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{ flex: 1 }}
+            />
+
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              style={{
+                padding: "10px 12px",
+                borderRadius: "8px",
+                border: "1px solid #ccc",
+                background: "white",
+                cursor: "pointer",
+              }}
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
 
           {mode === "create" && (
             <div className="jp-regenerate">
