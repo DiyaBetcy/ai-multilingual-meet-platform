@@ -12,11 +12,8 @@ export default function JoinPreview() {
   const navigate = useNavigate();
   const location = useLocation();
 
-<<<<<<< HEAD
   const videoRef = useRef(null);
 
-=======
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
   const generateMeetingId = () =>
     Math.random().toString(36).substring(2, 8).toUpperCase();
 
@@ -60,7 +57,6 @@ export default function JoinPreview() {
         localStream = mediaStream;
         setStream(mediaStream);
 
-<<<<<<< HEAD
         const audioTrack = mediaStream.getAudioTracks()[0];
         const videoTrack = mediaStream.getVideoTracks()[0];
 
@@ -74,15 +70,6 @@ export default function JoinPreview() {
         console.error("Preview media error:", err);
         setMicOn(false);
         setCamOn(false);
-=======
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-        }
-
-        setCamOn(true);
-      } catch (err) {
-        console.error(err);
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
       }
     };
 
@@ -93,7 +80,6 @@ export default function JoinPreview() {
         localStream.getTracks().forEach((track) => track.stop());
       }
     };
-<<<<<<< HEAD
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -152,53 +138,6 @@ export default function JoinPreview() {
   };
 
   const handleMeetingStart = async () => {
-=======
-  }, []);
-
-  const toggleMic = () => {
-    if (!stream) return;
-
-    const audioTrack = stream.getAudioTracks()[0];
-    if (!audioTrack) return;
-
-    audioTrack.enabled = !audioTrack.enabled;
-    setMicOn(audioTrack.enabled);
-  };
-
-  const toggleCam = async () => {
-    try {
-      if (camOn) {
-        if (stream) {
-          stream.getTracks().forEach((track) => track.stop());
-        }
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = null;
-        }
-
-        setStream(null);
-        setCamOn(false);
-      } else {
-        const newStream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false,
-        });
-
-        setStream(newStream);
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = newStream;
-        }
-
-        setCamOn(true);
-      }
-    } catch (err) {
-      console.error("Camera toggle error:", err);
-    }
-  };
-
-  const handleMeetingStart = () => {
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
     if (!name.trim()) {
       alert("Please enter your name");
       return;
@@ -209,7 +148,6 @@ export default function JoinPreview() {
       return;
     }
 
-<<<<<<< HEAD
     if (!password.trim()) {
       alert("Please enter the meeting password");
       return;
@@ -218,13 +156,6 @@ export default function JoinPreview() {
     setLoading(true);
 
     try {
-      console.log("JoinPreview submit:", {
-        mode,
-        meetingId: meetingId.trim(),
-        password: password.trim(),
-        name: name.trim(),
-      });
-
       navigate(`/meeting/${meetingId.trim()}`, {
         state: {
           name: name.trim(),
@@ -245,20 +176,6 @@ export default function JoinPreview() {
     } finally {
       setLoading(false);
     }
-=======
-    navigate(`/meeting/${meetingId}`, {
-      state: {
-        username: name,
-        meetingId: meetingId,
-        mode,
-        micOn,
-        camOn,
-        aiAnchor,
-        waitingRoom,
-        password,
-      },
-    });
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
   };
 
   return (
@@ -361,7 +278,6 @@ export default function JoinPreview() {
             </>
           )}
 
-<<<<<<< HEAD
           <div className="jp-field">
             <select
               value={preferredLanguage}
@@ -373,23 +289,10 @@ export default function JoinPreview() {
               <option value="ta-IN">Tamil</option>
             </select>
           </div>
-=======
-          {mode === "join" && (
-            <div className="jp-field">
-              <select>
-                <option value="en">English</option>
-                <option value="hi">Hindi</option>
-                <option value="ml">Malayalam</option>
-                <option value="ta">Tamil</option>
-              </select>
-            </div>
-          )}
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
         </div>
 
         <div className="jp-video-section">
           <div className="jp-video-box">
-<<<<<<< HEAD
             {camOn ? (
               <video
                 ref={videoRef}
@@ -422,40 +325,18 @@ export default function JoinPreview() {
             </button>
 
             <button type="button" onClick={toggleCam}>
-=======
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              style={{ width: "100%", height: "100%" }}
-            />
-          </div>
-
-          <div className="jp-controls">
-            <button onClick={toggleMic}>
-              <img src={micOn ? micOnIcon : micOffIcon} alt="mic" />
-            </button>
-
-            <button onClick={toggleCam}>
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
               <img src={camOn ? camOnIcon : camOffIcon} alt="cam" />
             </button>
           </div>
         </div>
       </div>
 
-<<<<<<< HEAD
       <button
         className="jp-action-btn"
         onClick={handleMeetingStart}
         disabled={loading}
       >
         {loading ? "Please wait..." : mode === "create" ? "Start" : "Join"}
-=======
-      <button className="jp-action-btn" onClick={handleMeetingStart}>
-        {mode === "create" ? "Start" : "Join"}
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
       </button>
     </div>
   );

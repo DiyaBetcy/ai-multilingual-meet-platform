@@ -1,26 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-<<<<<<< HEAD
 import { socket } from "../../socket";
-=======
-import { io } from "socket.io-client";
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
 import "./meetdashboard.css";
 import Popup from "./popup.jsx";
 import ParticipantsPanel from "./ParticipantsPanel.jsx";
 import ChatPanel from "./ChatPanel.jsx";
 
-<<<<<<< HEAD
 function RemoteVideoTile({ participant, stream }) {
-=======
-function RemoteVideoTile({ stream, label = "Participant" }) {
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
   const videoRef = useRef(null);
 
   useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream;
-<<<<<<< HEAD
     }
   }, [stream]);
 
@@ -72,40 +63,12 @@ function RemoteVideoTile({ stream, label = "Participant" }) {
         {!participant?.micOn ? " 🔇" : ""}
         {participant?.handRaised ? " ✋" : ""}
         {participant?.isSharing ? " 🖥️" : ""}
-=======
-      console.log("RemoteVideoTile stream updated:", label, stream);
-    }
-  }, [stream, label]);
-
-  return (
-    <div className="video-tile" style={{ position: "relative", overflow: "hidden" }}>
-      <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          left: 8,
-          bottom: 8,
-          background: "rgba(0,0,0,0.5)",
-          color: "white",
-          padding: "2px 8px",
-          borderRadius: 8,
-          fontSize: 12,
-        }}
-      >
-        {label}
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
       </div>
     </div>
   );
 }
 
 export default function MeetDashboard() {
-<<<<<<< HEAD
   const { meetingId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -118,50 +81,41 @@ export default function MeetDashboard() {
   const localStreamRef = useRef(new MediaStream());
   const cameraTrackRef = useRef(null);
   const screenTrackRef = useRef(null);
+  const hasRoomActionRunRef = useRef(false);
 
+  const mode = location.state?.mode || "join";
   const myName = location.state?.name || "Guest";
+  const password = (location.state?.password || "").trim();
   const previewMicOn = location.state?.micOn ?? true;
   const previewCamOn = location.state?.camOn ?? false;
   const initialPreferredLanguage = location.state?.preferredLanguage || "ml-IN";
+  const waitingRoom = location.state?.waitingRoom || false;
+  const aiAnchor = location.state?.aiAnchor || false;
 
-  const [selectedLanguage, setSelectedLanguage] = useState(initialPreferredLanguage);
+  const [selectedLanguage, setSelectedLanguage] = useState(
+    initialPreferredLanguage
+  );
 
-=======
-
-  const socketRef = useRef(null);
-  const localVideoRef = useRef(null);
-  const navigate = useNavigate();
-  const location = useLocation();
-const previewMicOn = location.state?.micOn ?? true;
-const previewCamOn = location.state?.camOn ?? false;
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
   const [showPopup, setShowPopup] = useState(false);
-    const [showPeople, setShowPeople] = useState(false);
-const [showChat, setShowChat] = useState(false);
-const [messages, setMessages] = useState([]);
-const [unreadCount, setUnreadCount] = useState(0);
-const [meetingSeconds, setMeetingSeconds] = useState(0);
-const [meetingRunning, setMeetingRunning] = useState(true);
+  const [showPeople, setShowPeople] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
+  const [messages, setMessages] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
+  const [meetingSeconds, setMeetingSeconds] = useState(0);
+  const [meetingRunning, setMeetingRunning] = useState(true);
 
-<<<<<<< HEAD
   const [streamReady, setStreamReady] = useState(false);
   const [micOn, setMicOn] = useState(previewMicOn);
   const [camOn, setCamOn] = useState(previewCamOn);
-=======
-
-
-  const [stream, setStream] = useState(null);
-  const [micOn, setMicOn] = useState(previewMicOn);
-const [camOn, setCamOn] = useState(false);
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
   const [isSharing, setIsSharing] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
   const [screenWarning, setScreenWarning] = useState(false);
 
+  const [captionsEnabled, setCaptionsEnabled] = useState(false);
+  const [captionText, setCaptionText] = useState("");
 
-<<<<<<< HEAD
   const [participants, setParticipants] = useState([]);
   const [remoteStreams, setRemoteStreams] = useState({});
   const [selfSocketId, setSelfSocketId] = useState(null);
@@ -236,7 +190,11 @@ const [camOn, setCamOn] = useState(false);
 
     pc.onconnectionstatechange = () => {
       const state = pc.connectionState;
-      if (state === "failed" || state === "closed" || state === "disconnected") {
+      if (
+        state === "failed" ||
+        state === "closed" ||
+        state === "disconnected"
+      ) {
         closePeerConnection(remoteSocketId);
       }
     };
@@ -320,15 +278,61 @@ const [camOn, setCamOn] = useState(false);
 
     const currentSocket = socketRef.current;
 
-    if (!currentSocket.connected) {
-      currentSocket.connect();
-    }
+    const doRoomAction = () => {
+      if (hasRoomActionRunRef.current) return;
+      hasRoomActionRunRef.current = true;
 
-    setSelfSocketId(currentSocket.id || null);
+      setSelfSocketId(currentSocket.id || null);
+
+      const payload =
+        mode === "create"
+          ? {
+              meetingId,
+              password,
+              waitingRoom,
+              aiAnchor,
+              hostName: myName,
+              micOn: previewMicOn,
+              camOn: previewCamOn,
+              preferredLanguage: initialPreferredLanguage,
+            }
+          : {
+              meetingId,
+              password,
+              name: myName,
+              micOn: previewMicOn,
+              camOn: previewCamOn,
+              preferredLanguage: initialPreferredLanguage,
+              createIfMissing: false,
+            };
+
+      const eventName = mode === "create" ? "create-room" : "join-room";
+
+      console.log("MeetDashboard room action:", {
+        eventName,
+        mode,
+        meetingId,
+        password,
+        name: myName,
+      });
+
+      currentSocket.emit(eventName, payload, (response) => {
+        console.log(`${eventName} response:`, response);
+
+        if (!response?.ok) {
+          alert(response?.message || "Failed to enter meeting");
+          navigate("/start");
+          return;
+        }
+
+        setSelfSocketId(response.selfSocketId || currentSocket.id);
+        setParticipants(response.users || []);
+      });
+    };
 
     const handleConnect = () => {
-      setSelfSocketId(currentSocket.id || null);
-      console.log("Shared socket connected in MeetDashboard:", currentSocket.id);
+      console.log("Socket connected in MeetDashboard:", currentSocket.id);
+      doRoomAction();
     };
 
     const handleJoinError = (payload) => {
@@ -382,7 +386,6 @@ const [camOn, setCamOn] = useState(false);
 
     const handleChatMessage = (msg) => {
       setMessages((prev) => [...prev, msg]);
-
       if (!showChat) {
         setUnreadCount((count) => count + 1);
       }
@@ -447,6 +450,12 @@ const [camOn, setCamOn] = useState(false);
     currentSocket.on("answer", handleAnswer);
     currentSocket.on("ice-candidate", handleIceCandidate);
 
+    if (!currentSocket.connected) {
+      currentSocket.connect();
+    } else {
+      handleConnect();
+    }
+
     return () => {
       currentSocket.off("connect", handleConnect);
       currentSocket.off("join-error", handleJoinError);
@@ -459,10 +468,19 @@ const [camOn, setCamOn] = useState(false);
       currentSocket.off("offer", handleOffer);
       currentSocket.off("answer", handleAnswer);
       currentSocket.off("ice-candidate", handleIceCandidate);
+      hasRoomActionRunRef.current = false;
     };
   }, [
     meetingId,
     streamReady,
+    mode,
+    myName,
+    password,
+    previewMicOn,
+    previewCamOn,
+    initialPreferredLanguage,
+    waitingRoom,
+    aiAnchor,
     navigate,
     showChat,
     captionsEnabled,
@@ -487,66 +505,11 @@ const [camOn, setCamOn] = useState(false);
       if (recognitionRef.current) {
         recognitionRef.current.stop();
         recognitionRef.current = null;
-=======
-const cameraStreamRef = useRef(null);
-const screenStreamRef = useRef(null);
-const micStreamRef = useRef(null);
-
-
-  useEffect(() => {
-  // Google Meet style: do NOT auto start camera on page load
-  return () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-    }
-  };
-}, [stream]);
-useEffect(() => {
-  if (!meetingRunning) return;
-
-  const interval = setInterval(() => {
-    setMeetingSeconds((s) => s + 1);
-  }, 1000);
-
-  return () => clearInterval(interval);
-}, [meetingRunning]);
-
-useEffect(() => {
-  if (showChat) {
-    setUnreadCount(0);
-  }
-}, [showChat]);
-
-useEffect(() => {
-  if (!location.state) return;
-
-  const applyPreviewSettings = async () => {
-    try {
-      // Only start camera if previewCamOn is true
-      if (previewCamOn === true) {
-        await startCamera();
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
       }
-
-      // Only request mic if previewMicOn is true
-      if (previewMicOn === true) {
-        const audioStream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: false,
-        });
-
-        micStreamRef.current = audioStream;
-        setMicOn(true);
-      } else {
-        setMicOn(false);
-      }
-
-    } catch (err) {
-      console.error(err);
+      setCaptionText("");
+      return;
     }
-  };
 
-<<<<<<< HEAD
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -608,7 +571,9 @@ useEffect(() => {
       let audioTrack = localStreamRef.current.getAudioTracks()[0];
 
       if (!audioTrack) {
-        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const audioStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
         audioTrack = audioStream.getAudioTracks()[0];
         localStreamRef.current.addTrack(audioTrack);
         addTrackToAllPeers(audioTrack);
@@ -628,7 +593,9 @@ useEffect(() => {
 
   const startCamera = async () => {
     try {
-      const camStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const camStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+      });
       const videoTrack = camStream.getVideoTracks()[0];
 
       cameraTrackRef.current = videoTrack;
@@ -706,129 +673,29 @@ useEffect(() => {
       }
     }
   };
-=======
-  applyPreviewSettings();
-}, [location.state]);
-    
-
-  const toggleMic = async () => {
-  try {
-    // If mic stream does not exist → request mic access
-    if (!micStreamRef.current) {
-      const audioStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: false,
-      });
-
-      micStreamRef.current = audioStream;
-      setMicOn(true);
-      return;
-    }
-
-    const audioTrack = micStreamRef.current.getAudioTracks()[0];
-    if (!audioTrack) return;
-
-    audioTrack.enabled = !audioTrack.enabled;
-    setMicOn(audioTrack.enabled);
-
-  } catch (err) {
-    console.error(err);
-    alert("Microphone permission denied");
-  }
-};
-
-
-    const startCamera = async () => {
-  try {
-    const s = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: false, // do NOT request mic here
-    });
-
-    setStream(s);
-    cameraStreamRef.current = s;
-
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = s;
-    }
-
-    setCamOn(true);
-
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-const toggleCam = async () => {
-  try {
-    if (!stream) {
-      await startCamera();
-      return;
-    }
-
-    const videoTrack = stream.getVideoTracks()[0];
-    if (!videoTrack) return;
-
-    if (camOn) {
-      // STOP camera completely
-      videoTrack.stop();
-      setCamOn(false);
-    } else {
-      // Restart camera
-      await startCamera();
-    }
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-const startScreenShare = async () => {
-  try {
-    const displayStream = await navigator.mediaDevices.getDisplayMedia({
-      video: true,
-      audio: false,
-    });
-
-    screenStreamRef.current = displayStream;
-
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = displayStream;
-    }
-
-      await replaceVideoTrackForPeers(screenTrack);
-      setIsSharing(true);
-      setCamOn(true);
-
-    displayStream.getVideoTracks()[0].onended = () => {
-      stopScreenShare();
-    };
-
-  } catch (err) {
-    console.error("Screen share failed:", err);
-  }
-};
-
-
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
 
   const stopScreenShare = async () => {
     try {
       const activeScreenTrack = screenTrackRef.current;
 
-<<<<<<< HEAD
       if (activeScreenTrack) {
         localStreamRef.current.removeTrack(activeScreenTrack);
         activeScreenTrack.stop();
         screenTrackRef.current = null;
       }
 
-      if (cameraTrackRef.current && cameraTrackRef.current.readyState === "live") {
+      if (
+        cameraTrackRef.current &&
+        cameraTrackRef.current.readyState === "live"
+      ) {
         localStreamRef.current.addTrack(cameraTrackRef.current);
         await replaceVideoTrackForAllPeers(cameraTrackRef.current);
         setCamOn(cameraTrackRef.current.enabled);
       } else {
         try {
-          const camStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          const camStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          });
           const newCameraTrack = camStream.getVideoTracks()[0];
           cameraTrackRef.current = newCameraTrack;
           localStreamRef.current.addTrack(newCameraTrack);
@@ -912,74 +779,6 @@ const startScreenShare = async () => {
     setHandRaised(false);
     setParticipants([]);
     setRemoteStreams({});
-=======
-  // Stop screen stream
-  if (screenStreamRef.current) {
-    screenStreamRef.current.getTracks().forEach(t => t.stop());
-    screenStreamRef.current = null;
-  }
-
-  // Restore camera
-  if (cameraStreamRef.current && localVideoRef.current) {
-    localVideoRef.current.srcObject = cameraStreamRef.current;
-  }
-
-  setIsSharing(false);
-};
-
-
-const toggleHandRaise = () => {
-  setHandRaised((prev) => !prev);
-};
-const sendMessage = (text) => {
-  const now = new Date();
-  const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-  setMessages((prev) => [
-    ...prev,
-    {
-      id: `${Date.now()}`,
-      sender: "You",
-      text,
-      time,
-    },
-  ]);
-
-  // ✅ increase unread only if chat is closed
-  if (!showChat) {
-    setUnreadCount((c) => c + 1);
-  }
-};
-
-
-const endMeeting = () => {
-  setMeetingRunning(false); 
-
-  // Stop screen sharing if active
-  if (isSharing) {
-    stopScreenShare();
-  }
-
-  // Stop camera + mic tracks
-  if (stream) {
-    stream.getTracks().forEach((t) => t.stop());
-  }
-
-  // ✅ Stop dedicated mic stream
-  if (micStreamRef.current) {
-    micStreamRef.current.getTracks().forEach(t => t.stop());
-    micStreamRef.current = null;
-  }
-
-  // Reset all states
-  setStream(null);
-  cameraStreamRef.current = null;
-
-  setCamOn(false);
-  setMicOn(false);
-  setIsSharing(false);
-  setHandRaised(false);
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
 
     if (localVideoRef.current) {
       localVideoRef.current.srcObject = null;
@@ -988,7 +787,6 @@ const endMeeting = () => {
     navigate("/start");
   };
 
-<<<<<<< HEAD
   const formattedTime = new Date(meetingSeconds * 1000)
     .toISOString()
     .substring(11, 19);
@@ -1001,33 +799,9 @@ const endMeeting = () => {
   const remoteParticipants = participantsWithSelf.filter(
     (p) => p.socketId && p.socketId !== selfSocketId
   );
-=======
-const formatTime = (secs) => {
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = secs % 60;
 
-  const hh = String(h).padStart(2, "0");
-  const mm = String(m).padStart(2, "0");
-  const ss = String(s).padStart(2, "0");
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
-
-  return `${hh}:${mm}:${ss}`;
-};
-
-const participants = [
-  {
-    id: "me",
-    name: "You (Host)",
-    isYou: true,
-    micOn,
-    camOn,
-    handRaised,
-  },
-];
   return (
     <div className="base-container">
-<<<<<<< HEAD
       <div className="main-content">
         <div style={{ position: "relative", width: "100%", height: "100%" }}>
           <video
@@ -1049,47 +823,6 @@ const participants = [
               {captionText || "🎤 Listening..."}
             </div>
           )}
-=======
-      {/* Top Bar */}
-      
-      <div className="start-top-bar">
-        <img src="/src/assets/logo.png" className="start-logo" />
-        <div className="start-menu">
-  <span onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
-    Home
-  </span>
-
-  <span onClick={() => navigate("/meetings")} style={{ cursor: "pointer" }}>
-    Meetings
-  </span>
-
-  <span onClick={() => navigate("/settings")} style={{ cursor: "pointer" }}>
-    Settings
-  </span>
-
-  <span onClick={() => navigate("/profile")} style={{ cursor: "pointer" }}>
-    Profile
-  </span>
-</div>
-
-
-
-      </div>
-
-
-      {/* Main Content */}
-      <div className="main-content">
-        {/* Big video */}
-        <video
-          ref={localVideoRef}
-          autoPlay
-          muted
-          playsInline
-          className="main-video"
-          style={{ display: (camOn || isSharing) ? "block" : "none" }}
-
-        />
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
 
           {!camOn && !isSharing && (
             <div
@@ -1124,7 +857,6 @@ const participants = [
             {isSharing ? "🖥️ Sharing" : ""}
           </div>
 
-<<<<<<< HEAD
           <div
             style={{
               position: "absolute",
@@ -1140,29 +872,6 @@ const participants = [
           >
             {formattedTime}
           </div>
-=======
-        {!camOn && !isSharing && (
-  <div className="main-video" style={{ display: "block" }} />
-)}
-
-        <div className="side-videos">
-          {remoteVideos.length === 0 ? (
-            <>
-              <div className="video-tile"></div>
-              <div className="video-tile"></div>
-              <div className="video-tile"></div>
-              <div className="video-tile"></div>
-            </>
-          ) : (
-            remoteVideos.map((video) => (
-              <RemoteVideoTile
-                key={video.socketId}
-                stream={video.stream}
-                label={video.name}
-              />
-            ))
-          )}
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
         </div>
 
         <div className="side-videos">
@@ -1214,30 +923,17 @@ const participants = [
         </button>
 
         <button
-  className={`control-btn ${handRaised ? "off" : ""}`}
-  onClick={toggleHandRaise}
-  title={handRaised ? "Lower hand" : "Raise hand"}
->
-  <img src="/src/assets/hand.png" alt="Raise Hand" />
-</button>
-<button
-  className="control-btn"
-  onClick={() => setShowPeople(true)}
-  title="People"
->
-  👥
-</button>
-<button
-  className="control-btn chat-btn"
-  onClick={() => setShowChat(true)}
-  title="Chat"
->
-  💬
-  {unreadCount > 0 && <span className="chat-badge">{unreadCount}</span>}
-</button>
+          className={`control-btn ${handRaised ? "off" : ""}`}
+          onClick={toggleHandRaise}
+        >
+          <img src="/src/assets/hand.png" alt="Raise Hand" />
+        </button>
+
+        <button className="control-btn" onClick={() => setShowPeople(true)}>
+          👥
+        </button>
 
         <button
-<<<<<<< HEAD
           className="control-btn chat-btn"
           onClick={() => {
             setShowChat(true);
@@ -1254,63 +950,18 @@ const participants = [
         >
           <img src="/src/assets/share.png" alt="Share" />
         </button>
-=======
-  className={`control-btn ${isSharing ? "off" : ""}`}
-  onClick={isSharing ? stopScreenShare : startScreenShare}
-  title={isSharing ? "Stop sharing" : "Share screen"}
->
-  <img src="/src/assets/share.png" alt="Share" />
-</button>
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
 
         <button className="control-btn" onClick={() => setShowPopup(true)}>
           <img src="/src/assets/more.png" alt="More" />
         </button>
 
-<<<<<<< HEAD
         <button className="control-btn end" onClick={endMeeting}>
           <img src="/src/assets/hangup.png" alt="Hang Up" />
         </button>
-=======
-        <button
-  className="control-btn end"
-  onClick={endMeeting}
-  title="Leave call"
->
-  <img src="/src/assets/hangup.png" alt="Hang Up" />
-</button>
-
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
       </div>
-      <Popup
-  open={showPopup}
-  onClose={() => setShowPopup(false)}
-/>
-<ParticipantsPanel
-  open={showPeople}
-  onClose={() => setShowPeople(false)}
-  participants={participants}
-/>
 
-<ChatPanel
-  open={showChat}
-  onClose={() => setShowChat(false)}
-  messages={messages}
-  onSend={sendMessage}
-/>
-{screenWarning && (
-  <div className="screen-warning-popup">
-    <div className="popup-content">
-      <p>
-        ⚠ <strong>Entire Screen sharing is not supported.</strong><br />
-        Please select <strong>Chrome Tab</strong> or <strong>Window</strong>.
-      </p>
-      <button onClick={() => setScreenWarning(false)}>OK</button>
-    </div>
-  </div>
-)}
+      <Popup open={showPopup} onClose={() => setShowPopup(false)} />
 
-<<<<<<< HEAD
       <ParticipantsPanel
         open={showPeople}
         onClose={() => setShowPeople(false)}
@@ -1330,7 +981,8 @@ const participants = [
             <p>
               ⚠ <strong>Entire Screen sharing is not supported.</strong>
               <br />
-              Please select <strong>Chrome Tab</strong> or <strong>Window</strong>.
+              Please select <strong>Chrome Tab</strong> or{" "}
+              <strong>Window</strong>.
             </p>
 
             <div style={{ marginTop: "12px" }}>
@@ -1352,15 +1004,15 @@ const participants = [
               </select>
             </div>
 
-            <button onClick={() => setScreenWarning(false)} style={{ marginTop: "12px" }}>
+            <button
+              onClick={() => setScreenWarning(false)}
+              style={{ marginTop: "12px" }}
+            >
               OK
             </button>
           </div>
         </div>
       )}
-=======
-
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
     </div>
   );
 }
