@@ -12,344 +12,225 @@ export default function MeetDashboard() {
   const localVideoRef = useRef(null);
   const recognitionRef = useRef(null);
   const lastSpokenRef = useRef("");
+  const streamRef = useRef(new MediaStream()); // ✅ FIX: use ref for stable stream
 
   const navigate = useNavigate();
   const location = useLocation();
-
+  const audioRef = useRef(null);
   const previewMicOn = location.state?.micOn ?? true;
   const previewCamOn = location.state?.camOn ?? false;
 
-  const [selectedLanguage, setSelectedLanguage] = useState("ml-IN");
-
+  const [selectedLanguage] = useState("ml-IN");
   const [showPopup, setShowPopup] = useState(false);
   const [showPeople, setShowPeople] = useState(false);
   const [showChat, setShowChat] = useState(false);
-
   const [messages, setMessages] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-
   const [meetingSeconds, setMeetingSeconds] = useState(0);
   const [meetingRunning, setMeetingRunning] = useState(true);
-
-  const [stream, setStream] = useState(new MediaStream());
   const [micOn, setMicOn] = useState(previewMicOn);
   const [camOn, setCamOn] = useState(false);
-
   const [isSharing, setIsSharing] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
-  const [screenWarning, setScreenWarning] = useState(false);
-
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
   const [captionText, setCaptionText] = useState("");
-
-  const screenStreamRef = useRef(null);
-
-  /* ---------------- SOCKET ---------------- */
-
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  /* ---- SOCKET ---- */
   useEffect(() => {
-
     socketRef.current = io("http://localhost:5000");
 
     socketRef.current.on("translated-caption", (text) => {
+      console.log("CAPTION RECEIVED ✅", text);
 
-      if (!captionsEnabled) return;
-
-      if (!text || text === lastSpokenRef.current) return;
-
-      lastSpokenRef.current = text;
+      if (!text) return;
 
       setCaptionText(text);
-      speakText(text);
+    });
+
+    socketRef.current.on("tts-audio", (base64Audio) => {
+      console.log("TTS AUDIO RECEIVED ✅");
+
+      if (!base64Audio) return;
+
+      playBase64Audio(base64Audio);
     });
 
     return () => {
       socketRef.current.off("translated-caption");
+      socketRef.current.off("tts-audio");
       socketRef.current.disconnect();
-    };
-
-  }, [captionsEnabled]);
-
-  /* ---------------- VIDEO ---------------- */
-
-  useEffect(() => {
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = stream;
-    }
-  }, [stream]);
-
-  useEffect(() => {
-    return () => {
-      stream.getTracks().forEach(track => track.stop());
     };
   }, []);
 
-  /* ---------------- TIMER ---------------- */
-
+  /* ---- TIMER ---- */
   useEffect(() => {
     if (!meetingRunning) return;
-
-    const interval = setInterval(() => {
-      setMeetingSeconds(s => s + 1);
-    }, 1000);
-
+    const interval = setInterval(() => setMeetingSeconds(s => s + 1), 1000);
     return () => clearInterval(interval);
   }, [meetingRunning]);
 
-  /* ---------------- SPEECH RECOGNITION ---------------- */
+  const formatTime = (s) => {
+    const m = Math.floor(s / 60).toString().padStart(2, "0");
+    const sec = (s % 60).toString().padStart(2, "0");
+    return `${m}:${sec}`;
+  };
 
+  /* ---- SPEECH RECOGNITION ---- */
   useEffect(() => {
-
     if (!captionsEnabled || !micOn) {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-        recognitionRef.current = null;
-      }
-      setCaptionText("");
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
       return;
     }
 
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      alert("Speech Recognition not supported in this browser");
-      return;
-    }
-
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) { alert("Speech Recognition not supported"); return; }
     if (recognitionRef.current) return;
 
     const recognition = new SpeechRecognition();
-
     recognition.continuous = true;
     recognition.interimResults = false;
     recognition.lang = "en-US";
 
     recognition.onresult = (event) => {
-
       if (!micOn) return;
-
-      const text =
-        event.results[event.results.length - 1][0].transcript;
-
+      const text = event.results[event.results.length - 1][0].transcript;
       if (socketRef.current?.connected) {
         socketRef.current.emit("speech-text", text);
       }
     };
 
-    recognition.onerror = (e) => {
-      console.error("Speech recognition error:", e);
-    };
-
+    recognition.onerror = (e) => console.error("Recognition error:", e);
     recognition.onend = () => {
-      if (captionsEnabled && micOn) {
-        recognition.start();
-      }
+      if (captionsEnabled && micOn) recognition.start();
     };
 
     recognition.start();
     recognitionRef.current = recognition;
-
   }, [captionsEnabled, micOn]);
 
-  /* ---------------- CLEANUP ---------------- */
-
+  /* ---- CLEANUP ---- */
   useEffect(() => {
     return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
+      recognitionRef.current?.stop();
       speechSynthesis.cancel();
+      streamRef.current.getTracks().forEach(t => t.stop());
     };
   }, []);
 
-  /* ---------------- MICROPHONE ---------------- */
-
+  /* ---- MIC ---- */
   const toggleMic = async () => {
-
-    const existingAudio = stream.getAudioTracks()[0];
-
-    if (!existingAudio) {
-
-      const audioStream = await navigator.mediaDevices.getUserMedia({
-        audio: true
-      });
-
-      const audioTrack = audioStream.getAudioTracks()[0];
-
-      stream.addTrack(audioTrack);
-
-      setMicOn(true);
+    const existing = streamRef.current.getAudioTracks()[0];
+    if (!existing) {
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+        streamRef.current.addTrack(s.getAudioTracks()[0]);
+        setMicOn(true);
+      } catch (e) { console.error("Mic error:", e); }
       return;
     }
-
-    existingAudio.enabled = !existingAudio.enabled;
-    setMicOn(existingAudio.enabled);
+    existing.enabled = !existing.enabled;
+    setMicOn(existing.enabled);
   };
 
-  /* ---------------- CAMERA ---------------- */
-
+  /* ---- CAMERA ---- */
   const startCamera = async () => {
-
-    const camStream = await navigator.mediaDevices.getUserMedia({
-      video: true
-    });
-
-    const videoTrack = camStream.getVideoTracks()[0];
-
-    stream.addTrack(videoTrack);
-
-    setCamOn(true);
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video: true });
+      const track = s.getVideoTracks()[0];
+      streamRef.current.addTrack(track);
+      // ✅ FIX: re-assign srcObject so video element picks up new track
+      if (localVideoRef.current) localVideoRef.current.srcObject = streamRef.current;
+      setCamOn(true);
+    } catch (e) { console.error("Camera error:", e); }
   };
 
   const toggleCam = async () => {
-
-    const existingVideo = stream.getVideoTracks()[0];
-
-    if (!existingVideo) {
-      await startCamera();
-      return;
-    }
-
-    existingVideo.enabled = !existingVideo.enabled;
-    setCamOn(existingVideo.enabled);
+    const existing = streamRef.current.getVideoTracks()[0];
+    if (!existing) { await startCamera(); return; }
+    existing.enabled = !existing.enabled;
+    setCamOn(existing.enabled);
   };
 
-  /* ---------------- SCREEN SHARE ---------------- */
-
+  /* ---- SCREEN SHARE ---- */
   const startScreenShare = async () => {
-
-    const displayStream = await navigator.mediaDevices.getDisplayMedia({
-      video: true
-    });
-
-    const screenTrack = displayStream.getVideoTracks()[0];
-
-    const existingVideo = stream.getVideoTracks()[0];
-
-    if (existingVideo) {
-      stream.removeTrack(existingVideo);
-    }
-
-    stream.addTrack(screenTrack);
-
-    setIsSharing(true);
-
-    screenTrack.onended = () => {
-      stopScreenShare();
-    };
+    try {
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const screenTrack = displayStream.getVideoTracks()[0];
+      const existing = streamRef.current.getVideoTracks()[0];
+      if (existing) streamRef.current.removeTrack(existing);
+      streamRef.current.addTrack(screenTrack);
+      if (localVideoRef.current) localVideoRef.current.srcObject = streamRef.current;
+      setIsSharing(true);
+      screenTrack.onended = stopScreenShare;
+    } catch (e) { console.error("Screen share error:", e); }
   };
+  const unlockAudio = () => {
+    console.log("Force playing audio 🔊");
+  if (!audioUnlocked) {
+    const audio = new Audio("data:audio/mpeg;base64,//uQZAAAAAAAAAAAAAAAAAAAA"); // tiny silent audio
+    audio.play().then(() => {
+      console.log("Audio unlocked 🔊");
+      setAudioUnlocked(true);
+    }).catch(err => console.error("Unlock failed:", err));
+  }
+};
+
+  const playBase64Audio = (base64) => {
+  console.log("playBase64Audio called");
+
+  try {
+    const audio = new Audio("data:audio/mpeg;base64," + base64);
+
+    audio.play()
+      .then(() => console.log("Playing audio 🔊"))
+      .catch(err => console.error("Play error:", err));
+
+  } catch (e) {
+    console.error("Audio error:", e);
+  }
+};
 
   const stopScreenShare = () => {
-
-    const screenTrack = stream.getVideoTracks()[0];
-
-    if (screenTrack) {
-      stream.removeTrack(screenTrack);
-      screenTrack.stop();
-    }
-
+    const track = streamRef.current.getVideoTracks()[0];
+    if (track) { streamRef.current.removeTrack(track); track.stop(); }
     setIsSharing(false);
-    startCamera();
-  };
-
-  /* ---------------- HAND RAISE ---------------- */
-
-  const toggleHandRaise = () => {
-    setHandRaised(prev => !prev);
-  };
-
-  /* ---------------- CHAT ---------------- */
-
-  const sendMessage = (text) => {
-
-    const now = new Date();
-
-    const time = now.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-
-    setMessages(prev => [
-      ...prev,
-      {
-        id: Date.now(),
-        sender: "You",
-        text,
-        time
-      }
-    ]);
-
-    if (!showChat) {
-      setUnreadCount(c => c + 1);
-    }
-  };
-
-  /* ---------------- VOICE OUTPUT ---------------- */
-
-  const speakText = (text) => {
-
-    if (!text || !captionsEnabled) return;
-
-    speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-
-    utterance.lang = selectedLanguage;
-    utterance.rate = 1;
-    utterance.pitch = 1;
-
-    speechSynthesis.speak(utterance);
-  };
-
-  /* ---------------- END MEETING ---------------- */
-
-  const endMeeting = () => {
-
-    setMeetingRunning(false);
-
-    if (isSharing) {
-      stopScreenShare();
-    }
-
-    stream.getTracks().forEach(t => t.stop());
-
-    setStream(new MediaStream());
-
     setCamOn(false);
-    setMicOn(false);
-    setIsSharing(false);
-    setHandRaised(false);
+  };
 
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = null;
-    }
+  /* ---- CHAT ---- */
+  const sendMessage = (text) => {
+    const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    setMessages(prev => [...prev, { id: Date.now(), sender: "You", text, time }]);
+    if (!showChat) setUnreadCount(c => c + 1);
+  };
 
+  const handleOpenChat = () => {
+    setShowChat(true);
+    setUnreadCount(0); // ✅ FIX: clear badge when opened
+  };
+
+  /* ---- END MEETING ---- */
+  const endMeeting = () => {
+    setMeetingRunning(false);
+    streamRef.current.getTracks().forEach(t => t.stop());
+    if (localVideoRef.current) localVideoRef.current.srcObject = null;
+    setCamOn(false); setMicOn(false); setIsSharing(false); setHandRaised(false);
     navigate("/start");
   };
 
-  /* ---------------- UI ---------------- */
-
-  const participants = [
-    {
-      id: "me",
-      name: "You (Host)",
-      isYou: true,
-      micOn,
-      camOn,
-      handRaised
-    }
-  ];
+  const participants = [{ id: "me", name: "You (Host)", isYou: true, micOn, camOn, handRaised }];
 
   return (
     <div className="base-container">
-
       <div className="main-content">
+
+        {/* Timer */}
+        <div className="meeting-timer">{formatTime(meetingSeconds)}</div>
 
         <video
           ref={localVideoRef}
-          autoPlay
-          muted
-          playsInline
+          autoPlay muted playsInline
           className="main-video"
           style={{ display: (camOn || isSharing) ? "block" : "none" }}
         />
@@ -360,107 +241,59 @@ export default function MeetDashboard() {
           </div>
         )}
 
-        {!camOn && !isSharing && (
-          <div className="main-video"></div>
-        )}
+        {!camOn && !isSharing && <div className="main-video no-cam">📷 Camera off</div>}
 
         <div className="side-videos">
-          <div className="video-tile"></div>
-          <div className="video-tile"></div>
-          <div className="video-tile"></div>
-          <div className="video-tile"></div>
-          <div className="video-tile"></div>
-          <div className="video-tile"></div>
+          {[...Array(6)].map((_, i) => <div key={i} className="video-tile" />)}
         </div>
-
       </div>
 
       <div className="controls">
 
-        <button
-          className={`control-btn ${micOn ? "" : "off"}`}
-          onClick={toggleMic}
-        >
-          <img src="/src/assets/mic.png" alt="Mic" />
+        {/* Mic */}
+        <button className={`control-btn ${micOn ? "on" : "off"}`} onClick={async () => { unlockAudio(); await toggleMic(); }} title={micOn ? "Mute" : "Unmute"}>
+          {micOn ? "🎙️" : "🔇"}
         </button>
 
-        <button
-          className={`control-btn ${camOn ? "" : "off"}`}
-          onClick={toggleCam}
-        >
-          <img src="/src/assets/camera.png" alt="Camera" />
+        {/* Camera */}
+        <button className={`control-btn ${camOn ? "on" : "off"}`} onClick={toggleCam} title={camOn ? "Stop Camera" : "Start Camera"}>
+          {camOn ? "📹" : "📷"}
         </button>
 
-        <button
-          className={`control-btn ${!captionsEnabled ? "off" : ""}`}
-          onClick={() => setCaptionsEnabled(prev => !prev)}
-        >
-          <img src="/src/assets/cc.png" alt="Captions" />
+        {/* Captions / TTS toggle */}
+        <button className={`control-btn ${captionsEnabled ? "on" : "off"}`} onClick={() => { unlockAudio(); setCaptionsEnabled(p => !p); }} title="Toggle Captions + Voice">
+          {captionsEnabled ? "CC" : "cc"}
         </button>
 
-        <button
-          className={`control-btn ${handRaised ? "off" : ""}`}
-          onClick={toggleHandRaise}
-        >
-          <img src="/src/assets/hand.png" alt="Raise Hand" />
+        {/* Hand raise */}
+        <button className={`control-btn ${handRaised ? "on raised" : "off"}`} onClick={() => setHandRaised(p => !p)} title={handRaised ? "Lower Hand" : "Raise Hand"}>
+          ✋
         </button>
 
-        <button className="control-btn" onClick={() => setShowPeople(true)}>
-          👥
-        </button>
+        {/* Participants */}
+        <button className="control-btn on" onClick={() => setShowPeople(true)} title="Participants">👥</button>
 
-        <button
-          className="control-btn chat-btn"
-          onClick={() => setShowChat(true)}
-        >
+        {/* Chat */}
+        <button className="control-btn on chat-btn" onClick={handleOpenChat} title="Chat">
           💬
           {unreadCount > 0 && <span className="chat-badge">{unreadCount}</span>}
         </button>
 
-        <button
-          className={`control-btn ${isSharing ? "off" : ""}`}
-          onClick={isSharing ? stopScreenShare : startScreenShare}
-        >
-          <img src="/src/assets/share.png" alt="Share" />
+        {/* Screen share */}
+        <button className={`control-btn ${isSharing ? "on" : "off"}`} onClick={isSharing ? stopScreenShare : startScreenShare} title={isSharing ? "Stop Sharing" : "Share Screen"}>
+          🖥️
         </button>
 
-        <button className="control-btn" onClick={() => setShowPopup(true)}>
-          <img src="/src/assets/more.png" alt="More" />
-        </button>
+        {/* More */}
+        <button className="control-btn on" onClick={() => setShowPopup(true)} title="More options">⚙️</button>
 
-        <button className="control-btn end" onClick={endMeeting}>
-          <img src="/src/assets/hangup.png" alt="Hang Up" />
-        </button>
-
+        {/* End call */}
+        <button className="control-btn end" onClick={endMeeting} title="End Meeting">📵</button>
       </div>
 
       <Popup open={showPopup} onClose={() => setShowPopup(false)} />
-
-      <ParticipantsPanel
-        open={showPeople}
-        onClose={() => setShowPeople(false)}
-        participants={participants}
-      />
-
-      <ChatPanel
-        open={showChat}
-        onClose={() => setShowChat(false)}
-        messages={messages}
-        onSend={sendMessage}
-      />
-
-      {screenWarning && (
-        <div className="screen-warning-popup">
-          <div className="popup-content">
-            <p>
-              ⚠ <strong>Entire Screen sharing is not supported.</strong><br />
-              Please select <strong>Chrome Tab</strong> or <strong>Window</strong>.
-            </p>
-            <button onClick={() => setScreenWarning(false)}>OK</button>
-          </div>
-        </div>
-      )}
-
+      <ParticipantsPanel open={showPeople} onClose={() => setShowPeople(false)} participants={participants} />
+      <ChatPanel open={showChat} onClose={() => setShowChat(false)} messages={messages} onSend={sendMessage} />
     </div>
   );
 }

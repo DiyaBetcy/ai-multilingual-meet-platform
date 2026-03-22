@@ -12,6 +12,7 @@
   "description": "",
   "dependencies": {
     "@deepgram/sdk": "^3.13.0",
+    "@vitalets/google-translate-api": "^9.2.1",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^17.3.1",
@@ -20,6 +21,7 @@
     "mongoose": "^9.2.1",
     "nodemailer": "^8.0.1",
     "otp-generator": "^4.0.1",
+    "sarvamai": "^1.1.6",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
