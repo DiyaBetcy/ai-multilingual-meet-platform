@@ -136,6 +136,7 @@ const toggleCam = async () => {
 
     navigate(`/meeting/${meetingId}`, {
       state: {
+        meetingId,
         name,
         mode,
         micOn,

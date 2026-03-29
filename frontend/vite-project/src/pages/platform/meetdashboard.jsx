@@ -1,68 +1,101 @@
-import { io } from "socket.io-client";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { useWebRTC } from "../../hooks/useWebRTC.js";
+import { useTranslation } from "../../hooks/useTranslation.js";
+import VideoGrid from "../../components/VideoGrid.jsx";
+import LanguageSelector from "../../components/LanguageSelector.jsx";
+import TranslatedCaption from "../../components/TranslatedCaption.jsx";
 import "./meetdashboard.css";
 import Popup from "./popup.jsx";
-import ParticipantsPanel from "./ParticipantsPanel.jsx";
-import ChatPanel from "./ChatPanel.jsx";
+import ParticipantsPanel from "./participantspanel.jsx";
+import ChatPanel from "./chatpanel.jsx";
 
 export default function MeetDashboard() {
-
-  const socketRef = useRef(null);
-  const localVideoRef = useRef(null);
-  const recognitionRef = useRef(null);
-  const lastSpokenRef = useRef("");
-  const streamRef = useRef(new MediaStream()); // ✅ FIX: use ref for stable stream
-
   const navigate = useNavigate();
   const location = useLocation();
-  const audioRef = useRef(null);
-  const previewMicOn = location.state?.micOn ?? true;
-  const previewCamOn = location.state?.camOn ?? false;
+  const { meetingId: urlMeetingId } = useParams();
+  
+  // Debug navigation state
+  console.log("Navigation state:", location.state);
+  console.log("URL params meetingId:", urlMeetingId);
+  
+  // Get meeting info from navigation state
+  const meetingInfo = location.state || {};
+  const { name: userName, mode, micOn: previewMicOn, camOn: previewCamOn, meetingId: stateMeetingId } = meetingInfo;
+  
+  // Use meeting ID from URL first, then from state
+  const meetingId = urlMeetingId || stateMeetingId;
+  
+  console.log("Meeting info extracted:", meetingInfo);
+  console.log("Final meeting ID:", meetingId);
+  
+  // WebRTC hook - updated to use all new features
+  const {
+    isConnected,
+    participants: rtcParticipants,
+    messages: rtcMessages,
+    isMuted,
+    isVideoOff,
+    isScreenSharing,
+    handRaised,
+    initializeLocalMedia,
+    toggleMicrophone,
+    toggleCamera,
+    toggleScreenShare,
+    toggleHandRaise,
+    sendMessage: rtcSendMessage,
+    cleanup,
+    setLocalVideoRef,
+    localStream
+  } = useWebRTC(meetingId, userName, meetingInfo.userId);
 
-  const [selectedLanguage] = useState("ml-IN");
+  // Translation hook for multi-user real-time translation
+  const [tempUserId] = useState(() => 'user_' + Math.random().toString(36).substr(2, 9));
+  
+  const {
+    isConnected: translationConnected,
+    currentLanguage,
+    availableLanguages,
+    caption,
+    isListening,
+    changeLanguage,
+    toggleListening
+  } = useTranslation(meetingId, userName, meetingInfo.userId || tempUserId, 'en');
+
   const [showPopup, setShowPopup] = useState(false);
   const [showPeople, setShowPeople] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const [messages, setMessages] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [meetingSeconds, setMeetingSeconds] = useState(0);
   const [meetingRunning, setMeetingRunning] = useState(true);
-  const [micOn, setMicOn] = useState(previewMicOn);
-  const [camOn, setCamOn] = useState(false);
-  const [isSharing, setIsSharing] = useState(false);
-  const [handRaised, setHandRaised] = useState(false);
-  const [captionsEnabled, setCaptionsEnabled] = useState(false);
+  // Use hook state for mic/cam
+  const [micOn, setMicOn] = useState(previewMicOn ?? true);
+  const [camOn, setCamOn] = useState(previewCamOn ?? false);
+  // Use hook state for hand raised
+  const [captionsEnabled, setCaptionsEnabled] = useState(true); // Enable by default
   const [captionText, setCaptionText] = useState("");
   const [audioUnlocked, setAudioUnlocked] = useState(false);
-  /* ---- SOCKET ---- */
+
+
+  // Initialize local media when connected
   useEffect(() => {
-    socketRef.current = io("http://localhost:5000");
+    if (isConnected && userName) {
+      console.log("Initializing local media with mic:", camOn, "cam:", micOn);
+      initializeLocalMedia(camOn, micOn);
+    }
+  }, [isConnected, userName, camOn, micOn, initializeLocalMedia]);
 
-    socketRef.current.on("translated-caption", (text) => {
-      console.log("CAPTION RECEIVED ✅", text);
+  // Debug participant changes
+  useEffect(() => {
+    console.log("Participants updated:", rtcParticipants);
+  }, [rtcParticipants]);
 
-      if (!text) return;
+  // Debug WebRTC hook initialization
+  useEffect(() => {
+    console.log("🔍 WebRTC hook debug - Meeting ID:", meetingId, "User name:", userName);
+    console.log("🔍 Should connect to WebRTC:", !!(meetingId && userName));
+  }, [meetingId, userName]);
 
-      setCaptionText(text);
-    });
-
-    socketRef.current.on("tts-audio", (base64Audio) => {
-      console.log("TTS AUDIO RECEIVED ✅");
-
-      if (!base64Audio) return;
-
-      playBase64Audio(base64Audio);
-    });
-
-    return () => {
-      socketRef.current.off("translated-caption");
-      socketRef.current.off("tts-audio");
-      socketRef.current.disconnect();
-    };
-  }, []);
-
-  /* ---- TIMER ---- */
+  // Meeting timer
   useEffect(() => {
     if (!meetingRunning) return;
     const interval = setInterval(() => setMeetingSeconds(s => s + 1), 1000);
@@ -75,225 +108,219 @@ export default function MeetDashboard() {
     return `${m}:${sec}`;
   };
 
-  /* ---- SPEECH RECOGNITION ---- */
-  useEffect(() => {
-    if (!captionsEnabled || !micOn) {
-      recognitionRef.current?.stop();
-      recognitionRef.current = null;
-      return;
-    }
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) { alert("Speech Recognition not supported"); return; }
-    if (recognitionRef.current) return;
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    recognition.lang = "en-US";
-
-    recognition.onresult = (event) => {
-      if (!micOn) return;
-      const text = event.results[event.results.length - 1][0].transcript;
-      if (socketRef.current?.connected) {
-        socketRef.current.emit("speech-text", text);
-      }
-    };
-
-    recognition.onerror = (e) => console.error("Recognition error:", e);
-    recognition.onend = () => {
-      if (captionsEnabled && micOn) recognition.start();
-    };
-
-    recognition.start();
-    recognitionRef.current = recognition;
-  }, [captionsEnabled, micOn]);
-
-  /* ---- CLEANUP ---- */
+  // Cleanup
   useEffect(() => {
     return () => {
-      recognitionRef.current?.stop();
-      speechSynthesis.cancel();
-      streamRef.current.getTracks().forEach(t => t.stop());
+      cleanup();
     };
-  }, []);
+  }, [cleanup]);
 
-  /* ---- MIC ---- */
-  const toggleMic = async () => {
-    const existing = streamRef.current.getAudioTracks()[0];
-    if (!existing) {
-      try {
-        const s = await navigator.mediaDevices.getUserMedia({ audio: true });
-        streamRef.current.addTrack(s.getAudioTracks()[0]);
-        setMicOn(true);
-      } catch (e) { console.error("Mic error:", e); }
-      return;
-    }
-    existing.enabled = !existing.enabled;
-    setMicOn(existing.enabled);
+  // Media controls - use hook state
+  const handleToggleMic = async () => {
+    const newState = await toggleMicrophone();
+    setMicOn(!newState);
   };
 
-  /* ---- CAMERA ---- */
-  const startCamera = async () => {
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: true });
-      const track = s.getVideoTracks()[0];
-      streamRef.current.addTrack(track);
-      // ✅ FIX: re-assign srcObject so video element picks up new track
-      if (localVideoRef.current) localVideoRef.current.srcObject = streamRef.current;
-      setCamOn(true);
-    } catch (e) { console.error("Camera error:", e); }
+  const handleToggleCam = async () => {
+    const newState = await toggleCamera();
+    setCamOn(!newState);
   };
 
-  const toggleCam = async () => {
-    const existing = streamRef.current.getVideoTracks()[0];
-    if (!existing) { await startCamera(); return; }
-    existing.enabled = !existing.enabled;
-    setCamOn(existing.enabled);
+  const handleToggleScreenShare = async () => {
+    await toggleScreenShare();
   };
 
-  /* ---- SCREEN SHARE ---- */
-  const startScreenShare = async () => {
-    try {
-      const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      const screenTrack = displayStream.getVideoTracks()[0];
-      const existing = streamRef.current.getVideoTracks()[0];
-      if (existing) streamRef.current.removeTrack(existing);
-      streamRef.current.addTrack(screenTrack);
-      if (localVideoRef.current) localVideoRef.current.srcObject = streamRef.current;
-      setIsSharing(true);
-      screenTrack.onended = stopScreenShare;
-    } catch (e) { console.error("Screen share error:", e); }
+  const handleToggleHandRaise = () => {
+    toggleHandRaise();
   };
+
   const unlockAudio = () => {
     console.log("Force playing audio 🔊");
-  if (!audioUnlocked) {
-    const audio = new Audio("data:audio/mpeg;base64,//uQZAAAAAAAAAAAAAAAAAAAA"); // tiny silent audio
-    audio.play().then(() => {
-      console.log("Audio unlocked 🔊");
-      setAudioUnlocked(true);
-    }).catch(err => console.error("Unlock failed:", err));
-  }
-};
+    if (!audioUnlocked) {
+      // Create a proper silent audio file
+      const silentAudioData = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAAAQAEAAEAfAAAQAQABAAgAZGF0YQAAAAA=";
+      const audio = new Audio(silentAudioData);
+      audio.volume = 0.01;
+      audio.play().then(() => {
+        console.log("Audio unlocked 🔊");
+        setAudioUnlocked(true);
+        // Clean up the audio element
+        audio.pause();
+        audio.src = "";
+      }).catch(err => {
+        console.error("Unlock failed:", err);
+        // Try alternative method
+        try {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          const audioContext = new AudioContext();
+          if (audioContext.state === 'suspended') {
+            audioContext.resume().then(() => {
+              console.log("AudioContext resumed 🔊");
+              setAudioUnlocked(true);
+            });
+          }
+        } catch (e) {
+          console.error("AudioContext failed:", e);
+        }
+      });
+    }
+  };
 
   const playBase64Audio = (base64) => {
-  console.log("playBase64Audio called");
-
-  try {
-    const audio = new Audio("data:audio/mpeg;base64," + base64);
-
-    audio.play()
-      .then(() => console.log("Playing audio 🔊"))
-      .catch(err => console.error("Play error:", err));
-
-  } catch (e) {
-    console.error("Audio error:", e);
-  }
-};
-
-  const stopScreenShare = () => {
-    const track = streamRef.current.getVideoTracks()[0];
-    if (track) { streamRef.current.removeTrack(track); track.stop(); }
-    setIsSharing(false);
-    setCamOn(false);
+    try {
+      const audio = new Audio("data:audio/mpeg;base64," + base64);
+      audio.volume = 0.8;
+      audio.play()
+        .then(() => console.log("Playing audio 🔊"))
+        .catch(err => console.error("Play error:", err));
+    } catch (e) {
+      console.error("Audio error:", e);
+    }
   };
 
-  /* ---- CHAT ---- */
-  const sendMessage = (text) => {
-    const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    setMessages(prev => [...prev, { id: Date.now(), sender: "You", text, time }]);
-    if (!showChat) setUnreadCount(c => c + 1);
+  const handleEndMeeting = () => {
+    cleanup();
+    navigate("/");
   };
 
-  const handleOpenChat = () => {
-    setShowChat(true);
-    setUnreadCount(0); // ✅ FIX: clear badge when opened
+  const handleSendMessage = (message) => {
+    rtcSendMessage(message);
   };
 
-  /* ---- END MEETING ---- */
-  const endMeeting = () => {
-    setMeetingRunning(false);
-    streamRef.current.getTracks().forEach(t => t.stop());
-    if (localVideoRef.current) localVideoRef.current.srcObject = null;
-    setCamOn(false); setMicOn(false); setIsSharing(false); setHandRaised(false);
-    navigate("/start");
+  // Debug function to test connection
+  const testConnection = () => {
+    console.log("Testing WebRTC connection...");
+    console.log("Is connected:", isConnected);
+    console.log("Meeting ID:", meetingId);
+    console.log("User name:", userName);
+    console.log("Participants:", rtcParticipants);
+    
+    if (!meetingId) {
+      console.error("No meeting ID available - cannot connect to WebRTC");
+      alert("Meeting ID is missing. Please go back and join the meeting again.");
+      return;
+    }
+    
+    // Manual connection test
+    console.log("🔧 Manual connection test...");
+    const testSocket = io("http://localhost:3001");
+    testSocket.on("connect", () => {
+      console.log("✅ Manual test socket connected!");
+      testSocket.emit("join-room", {
+        roomId: meetingId,
+        userName: userName + " (test)",
+        userId: "test-" + Date.now()
+      });
+    });
+    testSocket.on("connect_error", (err) => {
+      console.error("❌ Manual test failed:", err);
+    });
+    
+    // Also test if main socket is connected
+    console.log("🔍 Main socket status:", isConnected);
+    if (!isConnected) {
+      console.log("🔄 Attempting to reconnect...");
+      // Trigger reconnection by changing a state
+      window.location.reload();
+    }
   };
-
-  const participants = [{ id: "me", name: "You (Host)", isYou: true, micOn, camOn, handRaised }];
 
   return (
-    <div className="base-container">
-      <div className="main-content">
-
-        {/* Timer */}
-        <div className="meeting-timer">{formatTime(meetingSeconds)}</div>
-
-        <video
-          ref={localVideoRef}
-          autoPlay muted playsInline
-          className="main-video"
-          style={{ display: (camOn || isSharing) ? "block" : "none" }}
+    <div className="meet-dashboard">
+      {/* Header */}
+      <div className="meet-header">
+        <div className="meet-info">
+          <h3>Meeting: {meetingId}</h3>
+          <span className="timer">{formatTime(meetingSeconds)}</span>
+          <span className={`connection-status ${isConnected ? "connected" : "disconnected"}`}>
+            {isConnected ? "🟢 Connected" : "🔴 Connecting..."}
+          </span>
+        </div>
+        
+        {/* Language Selector */}
+        <LanguageSelector
+          currentLanguage={currentLanguage}
+          availableLanguages={availableLanguages}
+          onChangeLanguage={changeLanguage}
+          isListening={isListening}
+          onToggleListening={toggleListening}
         />
-
-        {captionsEnabled && (
-          <div className="caption-overlay">
-            {captionText || "🎤 Listening..."}
-          </div>
-        )}
-
-        {!camOn && !isSharing && <div className="main-video no-cam">📷 Camera off</div>}
-
-        <div className="side-videos">
-          {[...Array(6)].map((_, i) => <div key={i} className="video-tile" />)}
+        
+        <div className="meet-controls">
+          <button onClick={handleToggleMic} className={`control-btn ${!isMuted ? "active" : "muted"}`}>
+            {!isMuted ? "🎤" : "🔇"}
+          </button>
+          <button onClick={handleToggleCam} className={`control-btn ${!isVideoOff ? "active" : "off"}`}>
+            {!isVideoOff ? "📹" : "📵"}
+          </button>
+          <button onClick={handleToggleScreenShare} className={`control-btn ${isScreenSharing ? "active" : ""}`}>
+            🖥️
+          </button>
+          <button onClick={handleToggleHandRaise} className={`control-btn ${handRaised ? "raised" : ""}`}>
+            ✋
+          </button>
+          <button onClick={() => setCaptionsEnabled(!captionsEnabled)} className={`control-btn ${captionsEnabled ? "active" : ""}`}>
+            📝
+          </button>
+          <button onClick={() => setShowChat(!showChat)} className="control-btn">
+            💬
+          </button>
+          <button onClick={() => setShowPeople(!showPeople)} className="control-btn">
+            👥
+          </button>
+          <button onClick={testConnection} className="control-btn debug">
+            🐛
+          </button>
+          <button onClick={handleEndMeeting} className="control-btn end-call">
+            📞
+          </button>
         </div>
       </div>
 
-      <div className="controls">
+      {/* Main Content */}
+      <div className="meet-content">
+        {/* Video Grid */}
+        <div className="video-section">
+          <VideoGrid 
+            participants={rtcParticipants} 
+            localStream={localStream}
+            userName={userName}
+            setLocalVideoRef={setLocalVideoRef}
+            isMuted={isMuted}
+            isVideoOff={isVideoOff}
+            isScreenSharing={isScreenSharing}
+            handRaised={handRaised}
+          />
+          
+          {/* Translated Captions */}
+          <TranslatedCaption 
+            caption={caption}
+            isVisible={captionsEnabled}
+          />
+        </div>
 
-        {/* Mic */}
-        <button className={`control-btn ${micOn ? "on" : "off"}`} onClick={async () => { unlockAudio(); await toggleMic(); }} title={micOn ? "Mute" : "Unmute"}>
-          {micOn ? "🎙️" : "🔇"}
-        </button>
-
-        {/* Camera */}
-        <button className={`control-btn ${camOn ? "on" : "off"}`} onClick={toggleCam} title={camOn ? "Stop Camera" : "Start Camera"}>
-          {camOn ? "📹" : "📷"}
-        </button>
-
-        {/* Captions / TTS toggle */}
-        <button className={`control-btn ${captionsEnabled ? "on" : "off"}`} onClick={() => { unlockAudio(); setCaptionsEnabled(p => !p); }} title="Toggle Captions + Voice">
-          {captionsEnabled ? "CC" : "cc"}
-        </button>
-
-        {/* Hand raise */}
-        <button className={`control-btn ${handRaised ? "on raised" : "off"}`} onClick={() => setHandRaised(p => !p)} title={handRaised ? "Lower Hand" : "Raise Hand"}>
-          ✋
-        </button>
-
-        {/* Participants */}
-        <button className="control-btn on" onClick={() => setShowPeople(true)} title="Participants">👥</button>
-
-        {/* Chat */}
-        <button className="control-btn on chat-btn" onClick={handleOpenChat} title="Chat">
-          💬
-          {unreadCount > 0 && <span className="chat-badge">{unreadCount}</span>}
-        </button>
-
-        {/* Screen share */}
-        <button className={`control-btn ${isSharing ? "on" : "off"}`} onClick={isSharing ? stopScreenShare : startScreenShare} title={isSharing ? "Stop Sharing" : "Share Screen"}>
-          🖥️
-        </button>
-
-        {/* More */}
-        <button className="control-btn on" onClick={() => setShowPopup(true)} title="More options">⚙️</button>
-
-        {/* End call */}
-        <button className="control-btn end" onClick={endMeeting} title="End Meeting">📵</button>
+        {/* Side Panels */}
+        <div className="side-panels">
+          {showPeople && (
+            <ParticipantsPanel 
+              participants={rtcParticipants}
+              onClose={() => setShowPeople(false)}
+            />
+          )}
+          
+          {showChat && (
+            <ChatPanel 
+              messages={rtcMessages}
+              onSendMessage={handleSendMessage}
+              onClose={() => setShowChat(false)}
+            />
+          )}
+        </div>
       </div>
 
-      <Popup open={showPopup} onClose={() => setShowPopup(false)} />
-      <ParticipantsPanel open={showPeople} onClose={() => setShowPeople(false)} participants={participants} />
-      <ChatPanel open={showChat} onClose={() => setShowChat(false)} messages={messages} onSend={sendMessage} />
+      {/* Popup */}
+      {showPopup && <Popup onClose={() => setShowPopup(false)} />}
     </div>
   );
 }

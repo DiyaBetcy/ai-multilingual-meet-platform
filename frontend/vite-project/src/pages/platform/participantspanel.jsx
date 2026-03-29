@@ -1,8 +1,6 @@
 import "./participantsPanel.css";
 
-export default function ParticipantsPanel({ open, onClose, participants }) {
-  if (!open) return null;
-
+export default function ParticipantsPanel({ participants, onClose }) {
   const raisedCount = participants.filter((p) => p.handRaised).length;
 
   return (

@@ -1,20 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import "./chatpanel.css";
 
-export default function ChatPanel({ open, onClose, messages, onSend }) {
+export default function ChatPanel({ messages, onSendMessage, onClose }) {
   const [text, setText] = useState("");
   const endRef = useRef(null);
 
   useEffect(() => {
-    if (open) endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [open, messages]);
-
-  if (!open) return null;
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSend = () => {
     const t = text.trim();
     if (!t) return;
-    onSend(t);
+    onSendMessage(t);
     setText("");
   };
 
@@ -35,10 +33,10 @@ export default function ChatPanel({ open, onClose, messages, onSend }) {
             messages.map((m) => (
               <div key={m.id} className="cp-msg">
                 <div className="cp-meta">
-                  <span className="cp-sender">{m.sender}</span>
-                  <span className="cp-time">{m.time}</span>
+                  <span className="cp-sender">{m.userName}</span>
+                  <span className="cp-time">{new Date(m.timestamp).toLocaleTimeString()}</span>
                 </div>
-                <div className="cp-text">{m.text}</div>
+                <div className="cp-text">{m.message}</div>
               </div>
             ))
           )}

@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useParams } from "react-router-dom";
 import Signup from "./pages/signup.jsx";
 import Login from "./pages/login.jsx";
 import Dashboard from "./pages/dashboard.jsx";
@@ -15,8 +15,12 @@ import Settings from "./pages/platform/settings";
 
 import { Navigate } from "react-router-dom";
 
+// Set test token for development
+localStorage.setItem("token", "test-token");
+
 function ProtectedRoute({ children }) {
-  const token = localStorage.getItem("token");
+  // Temporarily bypass authentication for testing
+  const token = localStorage.getItem("token") || "test-token";
 
   if (!token) {
     return <Navigate to="/login" replace />;
@@ -32,11 +36,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   {/* Default route */}
   <Route
     path="/"
-    element={
-      localStorage.getItem("token")
-        ? <Navigate to="/login" replace />
-        : <Navigate to="/start" replace />
-    }
+    element={<Navigate to="/start" replace />}
   />
 
   {/* Auth routes */}

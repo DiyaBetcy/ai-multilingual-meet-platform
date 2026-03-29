@@ -5,6 +5,8 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+package-lock.json
+yarn.lock
 
 # =====================
 # Python
@@ -15,21 +17,35 @@ __pycache__/
 *.pyd
 venv/
 .venv/
+*.egg-info/
 
 # =====================
-# Environment Variables
+# Environment Variables & Secrets
 # =====================
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+*.key
+*.pem
+secrets.json
+config.json
+
+# =====================
+# API Keys & Credentials (NEVER commit these)
+# =====================
+# Add your API key files here
+sarvamai.key
+google-credentials.json
+aws-credentials.json
 
 # =====================
 # Build / Output
 # =====================
 dist/
 build/
+*.tsbuildinfo
 
 # =====================
 # Audio / Temp Files
@@ -38,17 +54,34 @@ build/
 *.mp3
 *.ogg
 *.flac
+*.m4a
+*.aac
 temp/
 tmp/
+uploads/
+cache/
+
+# =====================
+# Logs
+# =====================
+logs/
+*.log
+log.txt
+error.log
+debug.log
 
 # =====================
 # Editor / IDE
 # =====================
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
 # =====================
 # OS Files
 # =====================
 .DS_Store
 Thumbs.db
+desktop.ini
