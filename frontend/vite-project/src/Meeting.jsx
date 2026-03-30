@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useLocation } from "react-router-dom";
-import io from "socket.io-client";
+import { io } from "socket.io-client";
 
 export default function Meeting() {
   const { meetingId } = useParams();
@@ -8,103 +8,65 @@ export default function Meeting() {
 
   const socketRef = useRef(null);
   const audioRef = useRef(null);
-  console.log("JOINING ROOM:", meetingId);
+
   const [participants, setParticipants] = useState([]);
 
-  // ---------- SOCKET CONNECT ----------
   useEffect(() => {
-  if (socketRef.current) return; // ✅ PREVENT MULTIPLE SOCKETS
+    if (!meetingId) return;
 
-  const socket = io("http://localhost:5000", {
-    transports: ["websocket"],
-  });
-
-  socketRef.current = socket;
-
-  socket.on("connect", () => {
-    console.log("✅ Connected:", socket.id);
-
-    if (!meetingId) {
-      console.log("❌ No meetingId");
-      return;
-    }
-
-    console.log("🚪 Joining room:", meetingId);
-
-    socket.emit("register_participant", {
-      name: location.state?.name || "Guest",
-      language: location.state?.language || "en",
-      roomId: meetingId.trim().toUpperCase(),
+    const socket = io("http://localhost:5000", {
+      transports: ["websocket"],
     });
-  });
 
-  socket.on("participant_list", ({ participants }) => {
-    console.log("👥 Participants:", participants);
-    setParticipants(participants);
-  });
+    socketRef.current = socket;
 
-  return () => {
-    socket.disconnect();
-    socketRef.current = null;
-  };
-}, []);
+    socket.on("connect", () => {
+      const room = meetingId.trim().toUpperCase();
 
-  // ---------- START AI ANCHOR AFTER JOIN ----------
-  useEffect(() => {
-    if (!location.state?.aiAnchor) return;
+      console.log("🚪 Joining:", room);
 
-    console.log("🎤 Starting AI Anchor AFTER join");
-
-    const fullAgenda = `Welcome everyone to ${
-      location.state.meetingTitle
-    }. Today we have speakers: ${location.state.sessions
-      .map((s) => `${s.speaker} on ${s.topic}`)
-      .join(", ")}.`;
-
-    setTimeout(() => {
-      fetch("http://localhost:5000/start-anchor", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sessions: location.state.sessions,
-          time: location.state.timePerSpeaker,
-          full_agenda: fullAgenda,
-          roomId: meetingId   // 🔥 ADD THIS
-        }),
+      socket.emit("register_participant", {
+        name: location.state?.name || "Guest",
+        roomId: room,
       });
-    }, 1500); // 🔥 IMPORTANT DELAY
-  }, []);
+    });
 
-  // ---------- UNLOCK AUDIO BUTTON ----------
-  const unlockAudio = async () => {
-    const audio = new Audio();
-    try {
-      await audio.play();
-      console.log("🔓 Audio unlocked");
-    } catch {}
-  };
+    socket.on("participant_list", ({ participants }) => {
+      console.log("👥", participants);
+      setParticipants(participants);
+    });
+
+    socket.on("ai_audio", ({ audio }) => {
+      console.log("🔊 audio received");
+
+      const blob = new Blob(
+        [Uint8Array.from(atob(audio), (c) => c.charCodeAt(0))],
+        { type: "audio/mp3" }
+      );
+
+      const url = URL.createObjectURL(blob);
+
+      if (audioRef.current) {
+        audioRef.current.src = url;
+        audioRef.current.play().catch(console.error);
+      }
+    });
+
+    return () => socket.disconnect();
+  }, [meetingId]);
 
   return (
-    <div style={{ padding: "20px" }}>
+    <div style={{ padding: 20 }}>
       <h2>Meeting ID: {meetingId}</h2>
 
-      {/* 🔥 AUDIO UNLOCK BUTTON */}
-      <button onClick={unlockAudio}>Enable Audio 🔊</button>
-
-      {/* 🎧 AUDIO PLAYER */}
       <audio ref={audioRef} />
 
-      {/* 👥 PARTICIPANTS */}
-      <div style={{ marginTop: "20px" }}>
-        <h3>Participants ({participants.length})</h3>
-        <ul>
-          {participants.map((p, i) => (
-            <li key={i}>👤 {p}</li>
-          ))}
-        </ul>
-      </div>
+      <h3>Participants ({participants.length})</h3>
+      <ul>
+        {participants.map((p, i) => (
+          <li key={i}>{p}</li>
+        ))}
+      </ul>
     </div>
   );
 }

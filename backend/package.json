@@ -14,7 +14,10 @@
   "license": "ISC",
   "dependencies": {
     "@deepgram/sdk": "^3.13.0",
+    "@google-cloud/text-to-speech": "^6.4.0",
+    "@vitalets/google-translate-api": "^9.2.1",
     "bcryptjs": "^3.0.3",
+    "body-parser": "^2.2.2",
     "cors": "^2.8.5",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
@@ -22,10 +25,8 @@
     "mongoose": "^9.2.1",
     "nodemailer": "^8.0.1",
     "otp-generator": "^4.0.1",
-<<<<<<< HEAD
-=======
     "peer": "^1.0.2",
->>>>>>> 1f20fac (updated meetdashboard, webrtc fixes and debugging logs)
+    "sarvamai": "^1.1.6",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {

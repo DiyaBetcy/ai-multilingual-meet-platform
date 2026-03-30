@@ -4,12 +4,20 @@ from gtts import gTTS
 import base64
 import io
 from flask import Flask, request
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, join_room
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# ---------- Helper to generate TTS audio and return base64 ----------
+# ---------- JOIN ROOM ----------
+@socketio.on("register_participant")
+def handle_register(data):
+    room_id = data.get("roomId")
+    if room_id:
+        join_room(room_id)
+        print("👤 Joined room:", room_id)
+
+# ---------- Helper ----------
 def text_to_audio_base64(text, language="en"):
     tts = gTTS(text=text, lang=language)
     fp = io.BytesIO()
@@ -17,61 +25,52 @@ def text_to_audio_base64(text, language="en"):
     fp.seek(0)
     return base64.b64encode(fp.read()).decode("utf-8")
 
+# ---------- ANCHOR ----------
 def run_anchor(data):
     meeting_title = data.get("meeting_title", "Meeting")
     sessions = data.get("sessions", [])
     host_language = data.get("language", "en")
     time_per_speaker = data.get("time", 30)
     full_agenda = data.get("full_agenda", "")
+    room_id = data.get("roomId")  # 🔥 IMPORTANT
 
-    # Speak full agenda
+    def speak(text):
+        audio_b64 = text_to_audio_base64(text, host_language)
+        print("🔊 Speaking:", text)
+
+        # ✅ SEND TO ROOM ONLY
+        socketio.emit("ai_audio", {"audio": audio_b64}, room=room_id)
+
+    # 1️⃣ Agenda
     if full_agenda:
-        audio_b64 = text_to_audio_base64(full_agenda, host_language)
-        print(f"[BACKEND] Emitting full agenda ({len(audio_b64)} bytes)...")
-        socketio.emit("ai_audio", {"audio": audio_b64})
+        speak(full_agenda)
 
-    # Loop through speakers
+    # 2️⃣ Speakers
     for session in sessions:
-        intro_text = f"Now I invite {session['speaker']} to present on {session['topic']}."
-        audio_b64 = text_to_audio_base64(intro_text, host_language)
-        print(f"[BACKEND] Emitting intro audio for {session['speaker']} ({len(audio_b64)} bytes)...")
-        socketio.emit("ai_audio", {"audio": audio_b64})
+        speak(f"Now I invite {session['speaker']} to present on {session['topic']}.")
+        speak("You may begin now.")
 
-        begin_text = "You may begin now."
-        audio_b64 = text_to_audio_base64(begin_text, host_language)
-        print(f"[BACKEND] Emitting start audio for {session['speaker']} ({len(audio_b64)} bytes)...")
-        socketio.emit("ai_audio", {"audio": audio_b64})
-
-        # ... rest of your timer code
-        
-        # Timer for speaker
         if time_per_speaker > 10:
             time.sleep(time_per_speaker - 10)
-            warning_text = "10 seconds remaining!"
-            audio_b64 = text_to_audio_base64(warning_text, host_language)
-            socketio.emit("ai_audio", {"audio": audio_b64})
+            speak("10 seconds remaining!")
             time.sleep(10)
         else:
             time.sleep(time_per_speaker)
 
-        end_text = "Time is up. Thank you."
-        audio_b64 = text_to_audio_base64(end_text, host_language)
-        socketio.emit("ai_audio", {"audio": audio_b64})
+        speak("Time is up. Thank you.")
         time.sleep(2)
 
     # 3️⃣ Closing
-    closing_text = "Thank you all for participating. The conference is now concluded."
-    audio_b64 = text_to_audio_base64(closing_text, host_language)
-    socketio.emit("ai_audio", {"audio": audio_b64})
+    speak("Thank you all for participating. The conference is now concluded.")
 
-# ---------- Endpoint to start AI Anchor ----------
+# ---------- START ----------
 @app.route("/start-anchor", methods=["POST"])
 def start_anchor():
     data = request.json
-    # Run the anchor in a separate thread so Flask doesn't block
     threading.Thread(target=run_anchor, args=(data,), daemon=True).start()
     return {"status": "started"}
 
+# ---------- RUN ----------
 if __name__ == "__main__":
-    # Use allow_unsafe_werkzeug=True to prevent SocketIO warnings on Windows
     socketio.run(app, host="0.0.0.0", port=5000, allow_unsafe_werkzeug=True)
+
