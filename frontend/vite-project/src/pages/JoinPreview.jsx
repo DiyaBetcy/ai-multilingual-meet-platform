@@ -12,18 +12,26 @@ export default function JoinPreview() {
   const navigate = useNavigate();
   const location = useLocation();
 
+<<<<<<< HEAD
   const [introText, setIntroText] = useState(
     "Welcome everyone to today's meeting. We will now start the session."
   );
 
+=======
+  /* ---------- HELPERS ---------- */
+>>>>>>> 5dc4dd52aee6a07e504a8702c018b8066770eca7
   const generateMeetingId = () =>
     Math.random().toString(36).substring(2, 8).toUpperCase();
   const generatePassword = () =>
     Math.random().toString(36).substring(2, 10);
 
+<<<<<<< HEAD
   // Languages not supported by browser
   const cloudTTSLanguages = ["hi", "ml", "ta"];
 
+=======
+  /* ---------- STATE ---------- */
+>>>>>>> 5dc4dd52aee6a07e504a8702c018b8066770eca7
   const [name, setName] = useState("");
   const [meetingId, setMeetingId] = useState("");
   const [password, setPassword] = useState("");
@@ -34,6 +42,7 @@ export default function JoinPreview() {
   const [stream, setStream] = useState(null);
   const videoRef = useRef(null);
 
+<<<<<<< HEAD
   // Agenda text
   const [agendaText, setAgendaText] = useState("");
 
@@ -114,6 +123,41 @@ export default function JoinPreview() {
 
       // Wait for speaker's allocated time
       await new Promise((resolve) => setTimeout(resolve, speaker.time * 1000));
+=======
+  /* ---------- AUTO GENERATE FOR CREATE ---------- */
+useEffect(() => {
+  if (mode === "create") {
+    setMeetingId(generateMeetingId());
+    setPassword(generatePassword());
+  }
+
+  if (mode === "join" && location.state?.meetingId) {
+    setMeetingId(location.state.meetingId);
+  }
+}, [mode, location.state]);
+
+  /* ---------- AUTO GENERATE FOR CREATE ---------- */
+ useEffect(() => {
+  let localStream;
+
+  const getMedia = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+
+      localStream = mediaStream;
+      setStream(mediaStream);
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+
+      setCamOn(true);
+    } catch (err) {
+      console.error(err);
+>>>>>>> 5dc4dd52aee6a07e504a8702c018b8066770eca7
     }
 
     // Conclude meeting
@@ -132,6 +176,7 @@ export default function JoinPreview() {
     setMicOn(audioTrack.enabled);
   };
 
+<<<<<<< HEAD
   const toggleCam = async () => {
     try {
       if (camOn) {
@@ -149,10 +194,69 @@ export default function JoinPreview() {
       }
     } catch (err) {
       console.error(err);
+=======
+  getMedia();
+
+  return () => {
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+>>>>>>> 5dc4dd52aee6a07e504a8702c018b8066770eca7
     }
   };
+}, []);
 
+<<<<<<< HEAD
   // ------------------ Meeting Start ------------------
+=======
+/* ---------- MICROPHONE TOGGLE ---------- */
+const toggleMic = () => {
+  if (!stream) return;
+
+  const audioTrack = stream.getAudioTracks()[0];
+  if (!audioTrack) return;
+
+  audioTrack.enabled = !audioTrack.enabled;
+  setMicOn(audioTrack.enabled);
+};
+
+/* ---------- CAMERA TOGGLE ---------- */
+
+const toggleCam = async () => {
+  try {
+    if (camOn) {
+      // 🔥 TURN OFF CAMERA COMPLETELY
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+
+      setStream(null);
+      setCamOn(false);
+
+    } else {
+      // 🔥 START BRAND NEW CAMERA STREAM
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false,
+      });
+
+      setStream(newStream);
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = newStream;
+      }
+
+      setCamOn(true);
+    }
+  } catch (err) {
+    console.error("Camera toggle error:", err);
+  }
+};
+  /* ---------- HANDLE START / JOIN ---------- */
+>>>>>>> 5dc4dd52aee6a07e504a8702c018b8066770eca7
   const handleMeetingStart = () => {
     if (!name.trim()) {
       alert("Please enter your name");
@@ -164,6 +268,7 @@ export default function JoinPreview() {
       return;
     }
 
+<<<<<<< HEAD
     if (aiAnchor) {
       startAnchorFlow(); // Start AI anchor sequence
     }
@@ -172,13 +277,22 @@ export default function JoinPreview() {
       state: {
         username: name,
         meetingId,
+=======
+    navigate(`/meeting/${meetingId}`, {
+      state: {
+        meetingId,
+        name,
+>>>>>>> 5dc4dd52aee6a07e504a8702c018b8066770eca7
         mode,
         micOn,
         camOn,
         aiAnchor,
         waitingRoom,
+<<<<<<< HEAD
         password,
         speakers,
+=======
+>>>>>>> 5dc4dd52aee6a07e504a8702c018b8066770eca7
       },
     });
   };
@@ -215,6 +329,7 @@ export default function JoinPreview() {
   // ------------------ Render ------------------
   return (
     <div className="jp-container">
+<<<<<<< HEAD
       <h2>{mode === "create" ? "Create Meeting" : "Join Meeting"}</h2>
 
       <div
@@ -227,6 +342,20 @@ export default function JoinPreview() {
       >
         {/* Left Column */}
         <div className="jp-details" style={{ flex: 1, minWidth: "280px" }}>
+=======
+
+      {/* ---------- TOP BAR ---------- */}
+      <div className="jp-top-info">
+        <h2>{mode === "create" ? "Create Meeting" : "Join Meeting"}</h2>
+      </div>
+
+      {/* ---------- MAIN CONTENT ---------- */}
+      <div className="jp-main">
+
+        {/* ---------- LEFT DETAILS ---------- */}
+        <div className="jp-details">
+
+>>>>>>> 5dc4dd52aee6a07e504a8702c018b8066770eca7
           <input
             placeholder="Your Name"
             value={name}
@@ -238,29 +367,53 @@ export default function JoinPreview() {
             onChange={(e) => setMeetingId(e.target.value)}
           />
           {mode === "create" && (
+<<<<<<< HEAD
             <button onClick={() => setMeetingId(generateMeetingId())}>
               New Meeting ID
             </button>
           )}
+=======
+            <div className="jp-regenerate">
+              <button onClick={() => setMeetingId(generateMeetingId())}>
+                New Meeting ID
+              </button>
+            </div>
+          )}
+
+>>>>>>> 5dc4dd52aee6a07e504a8702c018b8066770eca7
           <input
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+<<<<<<< HEAD
           {mode === "create" && (
             <button onClick={() => setPassword(generatePassword())}>
               Set Default Password
             </button>
+=======
+
+          {mode === "create" && (
+            <div className="jp-regenerate">
+              <button onClick={() => setPassword(generatePassword())}>
+                Set Default Password
+              </button>
+            </div>
+>>>>>>> 5dc4dd52aee6a07e504a8702c018b8066770eca7
           )}
 
           {mode === "create" && (
             <>
+<<<<<<< HEAD
               <textarea
                 placeholder="Meeting Agenda"
                 value={agendaText}
                 onChange={(e) => setAgendaText(e.target.value)}
               />
+=======
+              <textarea placeholder="Meeting Agenda" />
+>>>>>>> 5dc4dd52aee6a07e504a8702c018b8066770eca7
 
               <label>
                 <input
@@ -335,6 +488,7 @@ export default function JoinPreview() {
               </button>
             </>
           )}
+<<<<<<< HEAD
         </div>
 
         {/* Right Column: Video Preview & Controls */}
@@ -391,6 +545,54 @@ export default function JoinPreview() {
           </div>
         </div>
       </div>
+=======
+
+          {mode === "join" && (
+            <div className="jp-field">
+              <select>
+                <option value="en">English</option>
+                <option value="hi">Hindi</option>
+                <option value="ml">Malayalam</option>
+                <option value="ta">Tamil</option>
+              </select>
+            </div>
+          )}
+
+        </div>
+
+        {/* ---------- RIGHT VIDEO ---------- */}
+        <div className="jp-video-section">
+          <div className="jp-video-box">
+  <video
+    ref={videoRef}
+    autoPlay
+    playsInline
+    muted
+    style={{ width: "100%", height: "100%" }}
+  />
+</div>
+
+          <div className="jp-controls">
+            <button onClick={toggleMic}>
+  <img src={micOn ? micOnIcon : micOffIcon} alt="mic" />
+</button>
+
+            <button onClick={toggleCam}>
+  <img src={camOn ? camOnIcon : camOffIcon} alt="cam" />
+</button>
+          </div>
+        </div>
+      </div>
+
+      {/* ---------- ACTION BUTTON ---------- */}
+      <button
+        className="jp-action-btn"
+        onClick={handleMeetingStart}
+      >
+        {mode === "create" ? "Start" : "Join"}
+      </button>
+
+>>>>>>> 5dc4dd52aee6a07e504a8702c018b8066770eca7
     </div>
   );
 }

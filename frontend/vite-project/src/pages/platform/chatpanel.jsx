@@ -1,33 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import "./chatpanel.css";
 
-export default function ChatPanel({
-  open,
-  onClose,
-  messages = [],
-  onSend,
-}) {
+export default function ChatPanel({ messages, onSendMessage, onClose }) {
   const [text, setText] = useState("");
   const endRef = useRef(null);
 
-  const safeMessages = Array.isArray(messages) ? messages : [];
-
   useEffect(() => {
-    if (open) {
-      endRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [open, safeMessages]);
-
-  if (!open) return null;
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSend = () => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-
-    if (typeof onSend === "function") {
-      onSend(trimmed);
-    }
-
+    const t = text.trim();
+    if (!t) return;
+    onSendMessage(t);
     setText("");
   };
 
@@ -42,25 +27,18 @@ export default function ChatPanel({
         </div>
 
         <div className="cp-messages">
-          {safeMessages.length === 0 ? (
+          {messages.length === 0 ? (
             <div className="cp-empty">No messages yet.</div>
           ) : (
-            safeMessages.map((m, index) => {
-              const key = m?.id || `${m?.sender || "msg"}-${index}`;
-              const sender = m?.sender || "Unknown";
-              const time = m?.time || "";
-              const textValue = m?.text || "";
-
-              return (
-                <div key={key} className="cp-msg">
-                  <div className="cp-meta">
-                    <span className="cp-sender">{sender}</span>
-                    <span className="cp-time">{time}</span>
-                  </div>
-                  <div className="cp-text">{textValue}</div>
+            messages.map((m) => (
+              <div key={m.id} className="cp-msg">
+                <div className="cp-meta">
+                  <span className="cp-sender">{m.userName}</span>
+                  <span className="cp-time">{new Date(m.timestamp).toLocaleTimeString()}</span>
                 </div>
-              );
-            })
+                <div className="cp-text">{m.message}</div>
+              </div>
+            ))
           )}
           <div ref={endRef} />
         </div>
@@ -72,9 +50,7 @@ export default function ChatPanel({
             placeholder="Send a message to everyone"
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleSend();
-              }
+              if (e.key === "Enter") handleSend();
             }}
           />
           <button className="cp-send" onClick={handleSend}>
