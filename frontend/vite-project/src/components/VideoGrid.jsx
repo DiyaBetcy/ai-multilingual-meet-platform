@@ -70,29 +70,56 @@ const VideoGrid = ({
 
       {/* Other Participants */}
       {otherParticipants.map((participant) => (
-        <div key={participant.id} className="video-container remote-video">
-          <video
-            ref={(el) => {
-              if (el) {
-                remoteVideoRefs.current[participant.id] = el;
-              }
-            }}
-            autoPlay
-            playsInline
-            className="video-element"
-            id={`video-${participant.id}`}
-          />
+        <div 
+          key={participant.id} 
+          className={`video-container remote-video ${participant.isAnchor ? 'anchor-participant' : ''}`}
+        >
+          {participant.isAnchor ? (
+            // AI Anchor - Show avatar instead of video
+            <div className="anchor-avatar">
+              <div className="avatar-circle">
+                <span className="avatar-emoji">{participant.avatar || '🎤'}</span>
+              </div>
+              <div className="anchor-status">
+                <span className="pulse-ring"></span>
+              </div>
+            </div>
+          ) : (
+            // Regular participant - Show video
+            <video
+              ref={(el) => {
+                if (el) {
+                  remoteVideoRefs.current[participant.id] = el;
+                }
+              }}
+              autoPlay
+              playsInline
+              className="video-element"
+              id={`video-${participant.id}`}
+            />
+          )}
           <div className="video-info">
-            <span className="participant-name">{participant.name || participant.userName}</span>
+            <span className="participant-name">
+              {participant.name || participant.userName}
+              {participant.isAnchor && <span className="anchor-badge">AI</span>}
+            </span>
             <div className="participant-status">
-              <span className={`status-icon ${participant.micOn ? 'on' : 'off'}`}>
-                {participant.micOn ? '🎤' : '🔇'}
-              </span>
-              <span className={`status-icon ${participant.camOn ? 'on' : 'off'}`}>
-                {participant.camOn ? '📹' : '📵'}
-              </span>
-              {participant.isScreenSharing && <span className="status-icon">🖥️</span>}
-              {participant.handRaised && <span className="status-icon hand">✋</span>}
+              {participant.isAnchor ? (
+                <span className={`status-icon ${participant.isSpeaking ? 'speaking' : 'on'}`}>
+                  🎤
+                </span>
+              ) : (
+                <>
+                  <span className={`status-icon ${participant.micOn ? 'on' : 'off'}`}>
+                    {participant.micOn ? '🎤' : '🔇'}
+                  </span>
+                  <span className={`status-icon ${participant.camOn ? 'on' : 'off'}`}>
+                    {participant.camOn ? '📹' : '📵'}
+                  </span>
+                  {participant.isScreenSharing && <span className="status-icon">🖥️</span>}
+                  {participant.handRaised && <span className="status-icon hand">✋</span>}
+                </>
+              )}
             </div>
           </div>
           {participant.isScreenSharing && <div className="screen-badge">Sharing Screen</div>}

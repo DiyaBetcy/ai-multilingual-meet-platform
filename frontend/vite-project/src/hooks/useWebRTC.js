@@ -123,20 +123,29 @@ export const useWebRTC = (roomId, userName, userId) => {
 
   // Create peer connection
   const createPeerConnection = useCallback(async (participantId, isInitiator) => {
+    console.log('Creating peer connection for:', participantId, 'isInitiator:', isInitiator);
     const pc = new RTCPeerConnection({ iceServers });
     
     // Add local stream
     if (localStreamRef.current) {
+      console.log('Adding local stream to peer connection:', localStreamRef.current.getTracks().length, 'tracks');
       localStreamRef.current.getTracks().forEach(track => {
+        console.log('Adding track:', track.kind);
         pc.addTrack(track, localStreamRef.current);
       });
+    } else {
+      console.warn('No local stream available to add to peer connection');
     }
 
     // Handle remote stream
     pc.ontrack = (event) => {
+      console.log('Received remote track for:', participantId, event.streams[0]);
       const remoteVideo = document.getElementById(`video-${participantId}`);
       if (remoteVideo) {
+        console.log('Setting remote stream to video element');
         remoteVideo.srcObject = event.streams[0];
+      } else {
+        console.warn('Remote video element not found for:', participantId);
       }
     };
 
@@ -177,10 +186,19 @@ export const useWebRTC = (roomId, userName, userId) => {
       });
       
       localStreamRef.current = stream;
+      console.log('Local media initialized:', stream.getTracks().length, 'tracks');
       
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
       }
+
+      // Add stream to existing peer connections
+      peerConnectionsRef.current.forEach((pc, participantId) => {
+        console.log('Adding stream to existing peer connection for:', participantId);
+        stream.getTracks().forEach(track => {
+          pc.addTrack(track, stream);
+        });
+      });
 
       // Update current user in participants
       setParticipants(prev => {

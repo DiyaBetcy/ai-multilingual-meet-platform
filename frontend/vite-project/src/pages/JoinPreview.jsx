@@ -7,6 +7,171 @@ import micOffIcon from "../assets/mic-off.jpg";
 import camOnIcon from "../assets/cam-on.webp";
 import camOffIcon from "../assets/cam-off.jpg";
 
+// Schedule Setup Modal Component
+const ScheduleSetupModal = ({ isOpen, onClose, onSave, meetingTitle, setMeetingTitle }) => {
+  const [scheduleItems, setScheduleItems] = useState([
+    { speakerName: '', topic: '', duration: 5, role: '' }
+  ]);
+  const [anchorLanguage, setAnchorLanguage] = useState('en-US');
+
+  const languages = [
+    { code: 'en-US', name: 'English' },
+    { code: 'hi-IN', name: 'Hindi' },
+    { code: 'ml-IN', name: 'Malayalam' },
+    { code: 'ta-IN', name: 'Tamil' }
+  ];
+
+  const addScheduleItem = () => {
+    setScheduleItems([...scheduleItems, { speakerName: '', topic: '', duration: 5, role: '' }]);
+  };
+
+  const removeScheduleItem = (index) => {
+    if (scheduleItems.length > 1) {
+      setScheduleItems(scheduleItems.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateScheduleItem = (index, field, value) => {
+    const updated = [...scheduleItems];
+    updated[index][field] = value;
+    setScheduleItems(updated);
+  };
+
+  const handleSave = () => {
+    const validSchedule = scheduleItems.filter(item => item.speakerName.trim() !== '');
+    if (validSchedule.length === 0) {
+      alert('Please add at least one speaker to the schedule');
+      return;
+    }
+    onSave({
+      meetingTitle: meetingTitle || 'Meeting',
+      schedule: validSchedule,
+      language: anchorLanguage
+    });
+  };
+
+  const totalDuration = scheduleItems.reduce((sum, item) => sum + (parseInt(item.duration) || 0), 0);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="schedule-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>🎤 Set Up AI Anchor Schedule</h2>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
+
+        <div className="modal-content">
+          <div className="form-group">
+            <label>Meeting Title</label>
+            <input
+              type="text"
+              value={meetingTitle}
+              onChange={(e) => setMeetingTitle(e.target.value)}
+              placeholder="Enter meeting title"
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Anchor Language</label>
+            <select value={anchorLanguage} onChange={(e) => setAnchorLanguage(e.target.value)}>
+              {languages.map(lang => (
+                <option key={lang.code} value={lang.code}>{lang.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="schedule-section">
+            <div className="section-header">
+              <h3>Speaker Schedule</h3>
+              <span className="total-time">Total: {totalDuration} min</span>
+            </div>
+
+            <div className="schedule-list">
+              {scheduleItems.map((item, index) => (
+                <div key={index} className="schedule-item-form">
+                  <div className="item-number">{index + 1}</div>
+                  
+                  <div className="item-fields">
+                    <div className="field-row">
+                      <input
+                        type="text"
+                        placeholder="Speaker Name"
+                        value={item.speakerName}
+                        onChange={(e) => updateScheduleItem(index, 'speakerName', e.target.value)}
+                        className="name-input"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Role (e.g., Presenter, Host)"
+                        value={item.role}
+                        onChange={(e) => updateScheduleItem(index, 'role', e.target.value)}
+                        className="role-input"
+                      />
+                    </div>
+
+                    <div className="field-row">
+                      <input
+                        type="text"
+                        placeholder="Topic / Content"
+                        value={item.topic}
+                        onChange={(e) => updateScheduleItem(index, 'topic', e.target.value)}
+                        className="topic-input"
+                      />
+                      <div className="duration-field">
+                        <input
+                          type="number"
+                          min="1"
+                          max="120"
+                          value={item.duration}
+                          onChange={(e) => updateScheduleItem(index, 'duration', parseInt(e.target.value) || 5)}
+                          className="duration-input"
+                        />
+                        <span>min</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button 
+                    className="remove-btn"
+                    onClick={() => removeScheduleItem(index)}
+                    disabled={scheduleItems.length === 1}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button className="add-btn" onClick={addScheduleItem}>
+              + Add Speaker
+            </button>
+          </div>
+
+          <div className="info-box">
+            <h4>How AI Anchoring Works:</h4>
+            <ul>
+              <li>🎤 AI anchor introduces each speaker automatically</li>
+              <li>⏱️ Timer tracks each speaker's allocated time</li>
+              <li>🔔 1-minute and 30-second warnings announced</li>
+              <li>🔇 Auto-mutes speaker when time is up</li>
+              <li>🗣️ Smooth transitions between speakers</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="modal-footer">
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" onClick={handleSave}>
+            Start Meeting with AI Anchor
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function JoinPreview() {
   const { mode } = useParams(); // create | join
   const navigate = useNavigate();
@@ -28,6 +193,9 @@ export default function JoinPreview() {
   const [aiAnchor, setAiAnchor] = useState(false);
   const [waitingRoom, setWaitingRoom] = useState(false);
   const [stream, setStream] = useState(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [meetingTitle, setMeetingTitle] = useState("");
+  const [anchoringSchedule, setAnchoringSchedule] = useState(null);
   const videoRef = useRef(null);
 
   /* ---------- AUTO GENERATE FOR CREATE ---------- */
@@ -134,6 +302,17 @@ const toggleCam = async () => {
       return;
     }
 
+    // If AI anchor is enabled, show schedule setup first
+    if (aiAnchor) {
+      setShowScheduleModal(true);
+      return;
+    }
+
+    // Otherwise, navigate directly to meeting
+    navigateToMeeting();
+  };
+
+  const navigateToMeeting = (scheduleData = null) => {
     navigate(`/meeting/${meetingId}`, {
       state: {
         meetingId,
@@ -143,8 +322,17 @@ const toggleCam = async () => {
         camOn,
         aiAnchor,
         waitingRoom,
+        isCreator: mode === "create",
+        userId: 'user_' + Math.random().toString(36).substr(2, 9),
+        anchoringSchedule: scheduleData,
       },
     });
+  };
+
+  const handleScheduleSave = (scheduleData) => {
+    setAnchoringSchedule(scheduleData);
+    setShowScheduleModal(false);
+    navigateToMeeting(scheduleData);
   };
 
   return (
@@ -264,6 +452,15 @@ const toggleCam = async () => {
       >
         {mode === "create" ? "Start" : "Join"}
       </button>
+
+      {/* ---------- SCHEDULE SETUP MODAL ---------- */}
+      <ScheduleSetupModal
+        isOpen={showScheduleModal}
+        onClose={() => setShowScheduleModal(false)}
+        onSave={handleScheduleSave}
+        meetingTitle={meetingTitle}
+        setMeetingTitle={setMeetingTitle}
+      />
 
     </div>
   );
