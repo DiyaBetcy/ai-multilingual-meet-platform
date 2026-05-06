@@ -16,7 +16,7 @@ import Settings from "./pages/platform/settings.jsx";
 import { Navigate } from "react-router-dom";
 
 // Set test token for development
-localStorage.setItem("token", "test-token");
+localStorage.setItem("token", "test-token"); // Updated for Vercel deployment
 
 function ProtectedRoute({ children }) {
   // Temporarily bypass authentication for testing
