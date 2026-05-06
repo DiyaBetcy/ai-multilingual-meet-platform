@@ -11,7 +11,7 @@ app.use(express.json());
 
 // Sarvam AI Client with correct API key
 const client = new SarvamAIClient({ 
-  apiSubscriptionKey: "sk_xbi0i64z_BihO9CdiDsUV4O19SnvXf9mO" 
+  apiSubscriptionKey: "sk_1ku0hjgj_imfH0GRztZnc8CsNWJiJ0lQr" 
 });
 
 const server = http.createServer(app);

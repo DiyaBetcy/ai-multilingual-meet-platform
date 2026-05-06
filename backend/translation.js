@@ -11,7 +11,7 @@ app.use(express.json());
 
 // Sarvam AI Client with correct API key
 const client = new SarvamAIClient({ 
-  apiSubscriptionKey: "sk_xbi0i64z_BihO9CdiDsUV4O19SnvXf9mO" 
+  apiSubscriptionKey: "sk_1ku0hjgj_imfH0GRztZnc8CsNWJiJ0lQr" 
 });
 
 const server = http.createServer(app);
@@ -27,9 +27,9 @@ const io = new Server(server, {
 // Store user language preferences: userId -> { socketId, language, name, roomId }
 const userLanguages = new Map();
 
-// Language code mapping for Google Cloud TTS
+// Language code mapping for Sarvam AI TTS
 const languageCodeMap = {
-  'en': 'en-US',
+  'en': 'en-IN',
   'ml': 'ml-IN',
   'hi': 'hi-IN',
   'ta': 'ta-IN',
@@ -40,7 +40,7 @@ const languageCodeMap = {
   'mr': 'mr-IN',
   'pa': 'pa-IN',
   'ur': 'ur-IN',
-  'or': 'or-IN',
+  'or': 'od-IN',
   'as': 'as-IN',
   'od': 'od-IN'
 };
@@ -102,7 +102,11 @@ io.on("connection", (socket) => {
 
   // Handle incoming speech text from a user
   socket.on("speech-text", async ({ userId, text, originalLanguage }) => {
-    if (!text || text.trim().length < 2) return;
+    console.log(`📥 Received speech-text event from ${userId}: "${text}"`);
+    if (!text || text.trim().length < 2) {
+      console.log(`⚠️ Speech text too short or empty, skipping`);
+      return;
+    }
     
     const speaker = userLanguages.get(userId);
     if (!speaker) {
@@ -155,13 +159,16 @@ io.on("connection", (socket) => {
             // Translate to target user's language
             const translation = await translate(text, { 
               to: targetUser.language,
-              from: originalLanguage || 'en'
+              from: originalLanguage || 'en',
+              tld: 'com',
+              client: 'webapp'
             });
             
             const translatedText = translation.text;
             console.log(`🔄 Translated for ${targetUser.name}: "${translatedText}"`);
             
             // Generate TTS using Sarvam AI
+            console.log(`🎤 Starting TTS for ${targetUser.name} with text: "${translatedText}"`);
             const ttsResponse = await client.textToSpeech.convert({
               text: translatedText,
               target_language_code: languageCodeMap[targetUser.language] || 'en-IN'
@@ -170,6 +177,10 @@ io.on("connection", (socket) => {
             console.log('🔊 Sarvam AI TTS Response:', JSON.stringify(ttsResponse, null, 2));
             const base64Audio = ttsResponse?.audio || ttsResponse?.data || ttsResponse?.audios?.[0];
             console.log('🔊 Extracted base64 audio length:', base64Audio?.length || 0);
+            
+            if (!base64Audio) {
+              console.error('❌ No audio data received from Sarvam AI TTS');
+            }
             
             return {
               targetUser,
