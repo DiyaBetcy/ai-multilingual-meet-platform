@@ -1,65 +1,76 @@
-# anchor.py
-
+import threading
 import time
-from pipeline import speak_pipeline
+from gtts import gTTS
+import base64
+import io
+from flask import Flask, request
+from flask_socketio import SocketIO, join_room
 
+app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-def get_host_input():
-    meeting_title = input("Enter meeting title: ")
-    language = input("Enter preferred language: ").lower().strip()
-    
+# ---------- JOIN ROOM ----------
+@socketio.on("register_participant")
+def handle_register(data):
+    room_id = data.get("roomId")
+    if room_id:
+        join_room(room_id)
+        print("👤 Joined room:", room_id)
 
-    sessions = []
-    n = int(input("Enter number of sessions: "))
+# ---------- Helper ----------
+def text_to_audio_base64(text, language="en"):
+    tts = gTTS(text=text, lang=language)
+    fp = io.BytesIO()
+    tts.write_to_fp(fp)
+    fp.seek(0)
+    return base64.b64encode(fp.read()).decode("utf-8")
 
-    for i in range(n):
-        speaker = input(f"Enter speaker {i+1} name: ")
-        topic = input(f"Enter topic for speaker {i+1}: ")
-        sessions.append({
-            "speaker": speaker,
-            "topic": topic
-        })
+# ---------- ANCHOR ----------
+def run_anchor(data):
+    meeting_title = data.get("meeting_title", "Meeting")
+    sessions = data.get("sessions", [])
+    host_language = data.get("language", "en")
+    time_per_speaker = data.get("time", 30)
+    full_agenda = data.get("full_agenda", "")
+    room_id = data.get("roomId")  # 🔥 IMPORTANT
 
-    time_per_speaker = int(input("Enter time per speaker (seconds): "))
+    def speak(text):
+        audio_b64 = text_to_audio_base64(text, host_language)
+        print("🔊 Speaking:", text)
 
-    return {
-        "meeting_title": meeting_title,
-        "language": language,
-        "sessions": sessions,
-        "time": time_per_speaker
-    }
+        # ✅ SEND TO ROOM ONLY
+        socketio.emit("ai_audio", {"audio": audio_b64}, room=room_id)
 
+    # 1️⃣ Agenda
+    if full_agenda:
+        speak(full_agenda)
 
-def run_anchor():
-    data = get_host_input()
-    lang = data["language"]
-    t = data["time"]
+    # 2️⃣ Speakers
+    for session in sessions:
+        speak(f"Now I invite {session['speaker']} to present on {session['topic']}.")
+        speak("You may begin now.")
 
-    # 🎬 Opening
-    speak_pipeline(f"Welcome everyone to {data['meeting_title']}.", lang)
-    speak_pipeline(f"The session language is {lang}.", lang)
-    speak_pipeline("I am your AI anchor for this conference.", lang)
-
-    # 🔁 Speaker loop
-    for session in data["sessions"]:
-        speak_pipeline(f"Now inviting {session['speaker']} to present.", lang)
-        speak_pipeline(f"The topic is {session['topic']}.", lang)
-        speak_pipeline("You may begin now.", lang)
-
-        if t > 10:
-            time.sleep(t - 10)
-            print("⚠️ 10 seconds remaining!")
+        if time_per_speaker > 10:
+            time.sleep(time_per_speaker - 10)
+            speak("10 seconds remaining!")
             time.sleep(10)
         else:
-            time.sleep(t)
+            time.sleep(time_per_speaker)
 
-        speak_pipeline(" Thank you.", lang)
+        speak("Time is up. Thank you.")
         time.sleep(2)
 
-    # 🎬 Closing
-    speak_pipeline("Thank you all for participating.", lang)
-    speak_pipeline("The conference is now concluded.", lang)
+    # 3️⃣ Closing
+    speak("Thank you all for participating. The conference is now concluded.")
 
+# ---------- START ----------
+@app.route("/start-anchor", methods=["POST"])
+def start_anchor():
+    data = request.json
+    threading.Thread(target=run_anchor, args=(data,), daemon=True).start()
+    return {"status": "started"}
 
+# ---------- RUN ----------
 if __name__ == "__main__":
-    run_anchor()
+    socketio.run(app, host="0.0.0.0", port=5000, allow_unsafe_werkzeug=True)
+

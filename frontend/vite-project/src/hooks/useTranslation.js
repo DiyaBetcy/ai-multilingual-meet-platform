@@ -17,26 +17,30 @@ const languageNames = {
   'ur': 'Urdu'
 };
 
-export const useTranslation = (roomId, userName, userId, preferredLanguage = 'en') => {
+export const useTranslation = (roomId, userName, userId, initialLanguage = 'en') => {
   const socketRef = useRef(null);
   const recognitionRef = useRef(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [currentLanguage, setCurrentLanguage] = useState(preferredLanguage);
+  const [currentLanguage, setCurrentLanguage] = useState(initialLanguage);
   const [availableLanguages, setAvailableLanguages] = useState(languageNames);
   const [caption, setCaption] = useState({
     speaker: '',
     originalText: '',
     translatedText: '',
     isOriginal: false,
-    targetLanguage: preferredLanguage
+    targetLanguage: initialLanguage
   });
   const [isListening, setIsListening] = useState(false);
+
+  // Get server URL from environment variable or use localhost
+  const SERVER_URL = import.meta.env.VITE_SERVER_URL || window.location.hostname || 'localhost';
+  const TRANSLATION_PORT = import.meta.env.VITE_TRANSLATION_PORT || '5000';
 
   // Connect to translation server
   useEffect(() => {
     if (!roomId || !userName || !userId) return;
 
-    socketRef.current = io("http://localhost:5000", {
+    socketRef.current = io(`http://${SERVER_URL}:${TRANSLATION_PORT}`, {
       transports: ['websocket', 'polling'],
       timeout: 10000
     });

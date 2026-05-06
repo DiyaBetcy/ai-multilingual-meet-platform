@@ -1,16 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 
-const ANCHORING_SERVER_URL = 'http://localhost:3002';
-
-export const useAnchoring = (roomId, userId, userName, isCreator, language = 'en-US') => {
+export const useAnchoring = (roomId, userId, userName, isCreator, initialLanguage = 'en') => {
   const socketRef = useRef(null);
-  
   const [isAnchoringEnabled, setIsAnchoringEnabled] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [schedule, setSchedule] = useState([]);
   const [currentSpeaker, setCurrentSpeaker] = useState(null);
-  const [currentIndex, setCurrentIndex] = useState(-1);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [announcement, setAnnouncement] = useState(null);
   const [isMutedByAnchor, setIsMutedByAnchor] = useState(false);
@@ -18,11 +15,15 @@ export const useAnchoring = (roomId, userId, userName, isCreator, language = 'en
   const [anchorTtsAudio, setAnchorTtsAudio] = useState(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
 
+  // Get server URL from environment variable or use localhost
+  const SERVER_URL = import.meta.env.VITE_SERVER_URL || window.location.hostname || 'localhost';
+  const ANCHORING_PORT = import.meta.env.VITE_ANCHORING_PORT || '3002';
+
   useEffect(() => {
     if (!roomId) return;
 
     // Connect to anchoring service
-    socketRef.current = io(ANCHORING_SERVER_URL);
+    socketRef.current = io(`http://${SERVER_URL}:${ANCHORING_PORT}`);
 
     socketRef.current.on('connect', () => {
       console.log('Connected to anchoring service');
@@ -47,7 +48,7 @@ export const useAnchoring = (roomId, userId, userName, isCreator, language = 'en
       setAnchorTtsAudio(audio);
       // Set speaking state
       setIsSpeaking(true);
-      // Play the audio as base64 like translation
+      // Play the audio as base64 from Sarvam AI
       if (audio) {
         try {
           const audioEl = new Audio(`data:audio/mpeg;base64,${audio}`);

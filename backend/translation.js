@@ -5,19 +5,20 @@ const { translate } = require("@vitalets/google-translate-api");
 const { SarvamAIClient } = require("sarvamai");
 const cors = require("cors");
 
-const client = new SarvamAIClient({
-  apiSubscriptionKey: "sk_xbi0i64z_BihO9CdiDsUV4O19SnvXf9mO"
-});
-
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Sarvam AI Client with correct API key
+const client = new SarvamAIClient({ 
+  apiSubscriptionKey: "sk_xbi0i64z_BihO9CdiDsUV4O19SnvXf9mO" 
+});
 
 const server = http.createServer(app);
 
 const io = new Server(server, { 
   cors: { 
-    origin: ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"],
+    origin: ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173", "*"],
     methods: ["GET", "POST"],
     credentials: true
   } 
@@ -26,9 +27,9 @@ const io = new Server(server, {
 // Store user language preferences: userId -> { socketId, language, name, roomId }
 const userLanguages = new Map();
 
-// Language code mapping for Sarvam AI TTS
+// Language code mapping for Google Cloud TTS
 const languageCodeMap = {
-  'en': 'en-IN',
+  'en': 'en-US',
   'ml': 'ml-IN',
   'hi': 'hi-IN',
   'ta': 'ta-IN',
@@ -37,10 +38,11 @@ const languageCodeMap = {
   'bn': 'bn-IN',
   'gu': 'gu-IN',
   'mr': 'mr-IN',
-  'od': 'od-IN',
   'pa': 'pa-IN',
+  'ur': 'ur-IN',
+  'or': 'or-IN',
   'as': 'as-IN',
-  'ur': 'ur-IN'
+  'od': 'od-IN'
 };
 
 // Language names for display
@@ -109,12 +111,23 @@ io.on("connection", (socket) => {
     }
     
     console.log(`🎤 ${speaker.name} (${speaker.roomId}): "${text}"`);
+    console.log(`🔍 Speaker language: ${speaker.language}, Original language: ${originalLanguage}`);
+    
+    // Normalize language codes (convert 'en-US' to 'en', 'ml-IN' to 'ml')
+    const normalizeLangCode = (lang) => {
+      if (!lang) return 'en';
+      const shortCode = lang.split('-')[0];
+      return shortCode;
+    };
+    
+    const speakerLang = normalizeLangCode(speaker.language);
+    const originalLang = normalizeLangCode(originalLanguage || 'en');
     
     try {
       // Get all users in the same room
       const roomUsers = Array.from(userLanguages.values()).filter(u => u.roomId === speaker.roomId);
       console.log(`👥 Room ${speaker.roomId} has ${roomUsers.length} users with languages:`, 
-        roomUsers.map(u => `${u.name}:${u.language}`).join(', '));
+        roomUsers.map(u => `${u.name}:${u.language} (${normalizeLangCode(u.language)})`).join(', '));
       
       // Send original text to speaker (for their own caption)
       socket.emit("translated-caption", {
@@ -148,13 +161,15 @@ io.on("connection", (socket) => {
             const translatedText = translation.text;
             console.log(`🔄 Translated for ${targetUser.name}: "${translatedText}"`);
             
-            // Generate TTS for target user's language
+            // Generate TTS using Sarvam AI
             const ttsResponse = await client.textToSpeech.convert({
               text: translatedText,
               target_language_code: languageCodeMap[targetUser.language] || 'en-IN'
             });
             
+            console.log('🔊 Sarvam AI TTS Response:', JSON.stringify(ttsResponse, null, 2));
             const base64Audio = ttsResponse?.audio || ttsResponse?.data || ttsResponse?.audios?.[0];
+            console.log('🔊 Extracted base64 audio length:', base64Audio?.length || 0);
             
             return {
               targetUser,
@@ -189,12 +204,14 @@ io.on("connection", (socket) => {
           
           // Send TTS audio if available
           if (audio) {
+            console.log(`🔊 Sending TTS audio to ${targetUser.name}, audio length: ${audio.length}`);
             targetSocket.emit("tts-audio", {
               speaker: speaker.name,
               audio: audio,
               language: targetUser.language
             });
-            console.log(`🔊 Sent TTS to ${targetUser.name} in ${targetUser.language}`);
+          } else {
+            console.log(`⚠️ No TTS audio for ${targetUser.name}`);
           }
         }
       });

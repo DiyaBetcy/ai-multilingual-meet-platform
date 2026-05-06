@@ -13,7 +13,15 @@ export const useWebRTC = (roomId, userName, userId) => {
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
+  const [speakingUser, setSpeakingUser] = useState(null);
   const currentUserIdRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const analyserRef = useRef(null);
+  const speakingIntervalRef = useRef(null);
+
+  // Get server URL from environment variable or use localhost
+  const SERVER_URL = import.meta.env.VITE_SERVER_URL || window.location.hostname || 'localhost';
+  const WEBRTC_PORT = import.meta.env.VITE_WEBRTC_PORT || '3001';
 
   // ICE servers configuration
   const iceServers = [
@@ -21,11 +29,46 @@ export const useWebRTC = (roomId, userName, userId) => {
     { urls: "stun:stun1.l.google.com:19302" }
   ];
 
+  // Setup audio level detection for a stream
+  const setupAudioLevelDetection = useCallback((stream, userId) => {
+    if (!stream || !userId) return;
+    
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      
+      const checkAudioLevel = () => {
+        analyser.getByteFrequencyData(dataArray);
+        const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+        
+        // If audio level is above threshold, mark as speaking
+        if (average > 20) {
+          setSpeakingUser(userId);
+        }
+      };
+      
+      const intervalId = setInterval(checkAudioLevel, 100);
+      
+      return () => {
+        clearInterval(intervalId);
+        source.disconnect();
+        audioContext.close();
+      };
+    } catch (error) {
+      console.error('Audio level detection error:', error);
+    }
+  }, []);
+
   // Initialize socket connection
   useEffect(() => {
     if (!roomId || !userName) return;
 
-    socketRef.current = io("http://localhost:3001", {
+    socketRef.current = io(`http://${SERVER_URL}:${WEBRTC_PORT}`, {
       transports: ['websocket', 'polling'],
       timeout: 10000,
       forceNew: true
@@ -192,6 +235,11 @@ export const useWebRTC = (roomId, userName, userId) => {
         localVideoRef.current.srcObject = stream;
       }
 
+      // Setup audio level detection for local user
+      if (audio) {
+        setupAudioLevelDetection(stream, currentUserIdRef.current);
+      }
+
       // Add stream to existing peer connections
       peerConnectionsRef.current.forEach((pc, participantId) => {
         console.log('Adding stream to existing peer connection for:', participantId);
@@ -237,16 +285,17 @@ export const useWebRTC = (roomId, userName, userId) => {
       const audioTrack = localStreamRef.current.getAudioTracks()[0];
       if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled;
-        setIsMuted(!audioTrack.enabled);
+        const newState = !audioTrack.enabled;
+        setIsMuted(newState);
         
         // Notify others
         if (socketRef.current) {
           socketRef.current.emit("media-state-change", {
-            micOn: audioTrack.enabled,
+            micOn: !newState,
             camOn: !isVideoOff
           });
         }
-        return audioTrack.enabled;
+        return !newState;
       }
     }
     return false;
@@ -377,13 +426,14 @@ export const useWebRTC = (roomId, userName, userId) => {
   }, []);
 
   return {
-    isConnected,
     participants,
+    isConnected,
     messages,
     isMuted,
     isVideoOff,
     isScreenSharing,
     handRaised,
+    speakingUser,
     initializeLocalMedia,
     toggleMicrophone,
     toggleCamera,

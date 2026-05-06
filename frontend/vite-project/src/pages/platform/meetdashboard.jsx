@@ -41,6 +41,7 @@ export default function MeetDashboard() {
     isVideoOff,
     isScreenSharing,
     handRaised,
+    speakingUser,
     initializeLocalMedia,
     toggleMicrophone,
     toggleCamera,
@@ -302,6 +303,7 @@ export default function MeetDashboard() {
             isVideoOff={isVideoOff}
             isScreenSharing={isScreenSharing}
             handRaised={handRaised}
+            speakingUser={speakingUser}
           />
           
           <TranslatedCaption 

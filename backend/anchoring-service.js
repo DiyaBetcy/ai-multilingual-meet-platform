@@ -9,17 +9,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Sarvam AI Client with correct API key
+const client = new SarvamAIClient({ 
+  apiSubscriptionKey: "sk_xbi0i64z_BihO9CdiDsUV4O19SnvXf9mO" 
+});
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000"],
+    origin: ["http://localhost:5173", "http://localhost:5174", "http://localhost:3000", "*"],
     methods: ["GET", "POST"]
   }
-});
-
-// Sarvam AI Client
-const client = new SarvamAIClient({
-  apiSubscriptionKey: "sk_xbi0i64z_BihO9CdiDsUV4O19SnvXf9mO"
 });
 
 // Store anchoring sessions
@@ -28,17 +28,17 @@ const anchoringSessions = new Map();
 // Store user language preferences: roomId -> [{ userId, socketId, language }]
 const userLanguages = new Map();
 
-// Language mapping for Sarvam TTS
+// Language mapping for Sarvam AI
 const languageMapping = {
   'en-US': 'en-IN',
   'hi-IN': 'hi-IN',
-  'ml-IN': 'ml-IN',
   'ta-IN': 'ta-IN',
+  'ml-IN': 'ml-IN',
   'te-IN': 'te-IN',
   'kn-IN': 'kn-IN',
-  'bn-IN': 'bn-IN',
   'gu-IN': 'gu-IN',
   'mr-IN': 'mr-IN',
+  'bn-IN': 'bn-IN',
   'pa-IN': 'pa-IN',
   'ur-IN': 'ur-IN',
   'or-IN': 'or-IN',
@@ -98,21 +98,16 @@ class AIScriptGenerator {
 
 const scriptGenerator = new AIScriptGenerator();
 
-// TTS function using Sarvam AI client with timeout
+// TTS function using Sarvam AI
 async function generateTTS(text, language) {
   try {
     const sarvamLang = languageMapping[language] || 'en-IN';
     console.log('Generating TTS:', { text, language: sarvamLang });
     
-    const ttsResponse = await Promise.race([
-      client.textToSpeech.convert({
-        text: text,
-        target_language_code: sarvamLang
-      }),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('TTS API timeout')), 10000)
-      )
-    ]);
+    const ttsResponse = await client.textToSpeech.convert({
+      text: text,
+      target_language_code: sarvamLang
+    });
     
     const base64Audio = ttsResponse?.audio || ttsResponse?.data || ttsResponse?.audios?.[0];
     console.log('Generated base64 audio:', !!base64Audio);
@@ -251,11 +246,12 @@ class AnchoringSession {
       console.log('Room users for translation:', roomUsers.length, 'users');
       
       if (roomUsers.length === 0) {
-        // Fallback: send original script to all if no language preferences
+        // Send original script with TTS to all
         const audioUrl = await generateTTS(script, this.language);
-        io.to(this.roomId).emit('anchor-announcement', {
+        io.to(this.roomId).emit('anchor-tts', {
           script: script,
-          audioUrl: audioUrl,
+          audio: audioUrl,
+          language: this.language,
           speakerName: 'AI Anchor',
           timestamp: new Date().toISOString()
         });
@@ -326,7 +322,7 @@ class AnchoringSession {
       
     } catch (error) {
       console.error('Error speaking script:', error);
-      // Still emit the script even if TTS fails
+      // Still emit the script even if translation fails
       io.to(this.roomId).emit('anchor-announcement', {
         script: script,
         audioUrl: null,

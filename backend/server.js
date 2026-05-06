@@ -5,20 +5,20 @@ import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import nodemailer from "nodemailer";
-<<<<<<< HEAD
+
 import bcrypt from "bcryptjs";
 import http from "http";
 import { Server } from "socket.io";
 
 import Otp from "./models/Otp.js";
 import User from "./models/User.js";
-=======
+
 import Otp from "./models/Otp.js";
 import User from "./models/User.js";
 import bcrypt from "bcryptjs";
 import http from "http";
 import { Server } from "socket.io";
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
+
 
 const app = express();
 const server = http.createServer(app);
@@ -33,11 +33,11 @@ const allowedOrigins = [
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 const corsOptions = {
-<<<<<<< HEAD
+
   origin: FRONTEND_URL,
-=======
+
   origin: allowedOrigins,
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
+
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
@@ -46,7 +46,7 @@ app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
 app.use(express.json());
 
-<<<<<<< HEAD
+
 /* ---------------- HTTP + SOCKET SERVER ---------------- */
 
 const httpServer = http.createServer(app);
@@ -80,19 +80,19 @@ mongoose
   });
 
 /* ---------------- TEST ROUTE ---------------- */
-=======
+
 // MongoDB connection
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.log(err));
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
+
 
 app.get("/", (req, res) => {
   res.send("Backend is working 🚀");
 });
 
-<<<<<<< HEAD
+
 /* ---------------- OTP HELPERS ---------------- */
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000);
@@ -149,7 +149,7 @@ app.post("/verify-otp", async (req, res) => {
   if (!email || !otp) {
     return res.status(400).json({ message: "Email and OTP are required" });
   }
-=======
+
 // OTP + Signup routes (keep your existing routes here)
 
 // ------------------ SOCKET.IO ------------------
@@ -162,12 +162,12 @@ const io = new Server(server, {
 
 // roomId -> [{ id, name }]
 const rooms = {};
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
+
 
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
-<<<<<<< HEAD
+
     if (!otpRecord) {
       return res.status(400).json({ message: "Invalid OTP or expired" });
     }
@@ -859,6 +859,6 @@ httpServer.listen(PORT, () => {
 // ------------------ START SERVER ------------------
 const PORT = 5000;
 server.listen(PORT, () => {
->>>>>>> 8c7b860f831dc606110b96b1a4aa3425d749e81e
+
   console.log(`Server running on http://localhost:${PORT}`);
 });

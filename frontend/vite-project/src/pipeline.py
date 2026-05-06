@@ -6,22 +6,13 @@ from gtts import gTTS
 from deep_translator import GoogleTranslator
 import pygame
 
-# 🎧 Initialize once
 pygame.mixer.init()
 
-# 🌍 Language mapping
 LANG_MAP = {
-    "english": "en",
-    "en": "en",
-
-    "malayalam": "ml",
-    "ml": "ml",
-
-    "hindi": "hi",
-    "hi": "hi",
-
-    "tamil": "ta",
-    "ta": "ta"
+    "english": "en", "en": "en",
+    "hindi": "hi", "hi": "hi",
+    "malayalam": "ml", "ml": "ml",
+    "tamil": "ta", "ta": "ta"
 }
 
 
@@ -29,27 +20,18 @@ def translate_text(text, target_language):
     target_language = target_language.lower().strip()
     lang_code = LANG_MAP.get(target_language, "en")
 
-    print("Target language code:", lang_code)
-
     if lang_code == "en":
         return text, lang_code
 
     try:
-        translated = GoogleTranslator(
-            source='auto',
-            target=lang_code
-        ).translate(text)
-
-        print("Translated text:", translated)
-
+        translated = GoogleTranslator(source='auto', target=lang_code).translate(text)
         return translated, lang_code
-
-    except Exception as e:
-        print("Translation failed:", e)
+    except:
         return text, "en"
 
 
-def text_to_speech(text, lang_code, filename="temp.mp3"):
+def text_to_speech(text, lang_code):
+    filename = "temp.mp3"
     tts = gTTS(text=text, lang=lang_code)
     tts.save(filename)
     return filename
@@ -72,22 +54,13 @@ def cleanup(filename):
         pass
 
 
-# 🎤 MAIN PIPELINE FUNCTION
-def speak_pipeline(text, target_language="english"):
-    try:
-        # Step 1: Translate
-        translated_text, lang_code = translate_text(text, target_language)
-        print(f"[Translated]: {translated_text}")
+def speak_pipeline(text, language="english"):
+    print("Original:", text)
 
-        print("Original:", text)
-        # Step 2: TTS
-        file = text_to_speech(translated_text, lang_code)
+    translated_text, lang_code = translate_text(text, language)
 
-        # Step 3: Play
-        play_audio(file)
+    print("Translated:", translated_text)
 
-        # Step 4: Cleanup
-        cleanup(file)
-
-    except Exception as e:
-        print("Pipeline Error:", e)
+    file = text_to_speech(translated_text, lang_code)
+    play_audio(file)
+    cleanup(file)

@@ -9,7 +9,8 @@ const VideoGrid = ({
   isMuted,
   isVideoOff,
   isScreenSharing,
-  handRaised
+  handRaised,
+  speakingUser
 }) => {
   const remoteVideoRefs = useRef({});
   const localVideoRef = useRef(null);
@@ -102,6 +103,7 @@ const VideoGrid = ({
             <span className="participant-name">
               {participant.name || participant.userName}
               {participant.isAnchor && <span className="anchor-badge">AI</span>}
+              {speakingUser === participant.id && <span className="speaking-badge">🔊 Speaking</span>}
             </span>
             <div className="participant-status">
               {participant.isAnchor ? (
@@ -110,7 +112,7 @@ const VideoGrid = ({
                 </span>
               ) : (
                 <>
-                  <span className={`status-icon ${participant.micOn ? 'on' : 'off'}`}>
+                  <span className={`status-icon ${participant.micOn ? 'on' : 'off'} ${speakingUser === participant.id ? 'speaking' : ''}`}>
                     {participant.micOn ? '🎤' : '🔇'}
                   </span>
                   <span className={`status-icon ${participant.camOn ? 'on' : 'off'}`}>
