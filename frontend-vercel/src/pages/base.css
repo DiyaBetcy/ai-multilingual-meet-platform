@@ -1,0 +1,25 @@
+.base-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+
+.top-bar {
+  background-color: #19E5D8;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+}
+
+.logo-image {
+  height: 40px;
+  width: auto;
+}
+
+.main-content {
+  display: flex;
+  background-color: black;
+  flex: 1;
+}
+

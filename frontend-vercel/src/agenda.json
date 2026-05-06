@@ -1,0 +1,21 @@
+{
+  "meeting_title": "International AI Conference",
+  "date": "2026-02-10",
+  "sessions": [
+    {
+      "start_time": "10:00",
+      "speaker": "Dr. A",
+      "topic": "Opening Remarks"
+    },
+    {
+      "start_time": "10:15",
+      "speaker": "Ms. B",
+      "topic": "AI Anchoring Systems"
+    },
+    {
+      "start_time": "10:45",
+      "speaker": "Mr. C",
+      "topic": "Future of Multilingual AI"
+    }
+  ]
+}

@@ -1,0 +1,421 @@
+/* ROOT */
+.jp-container {
+  height: 100vh;
+  background: #0e1419;
+  color: white;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* TOP INFO */
+.jp-top-info {
+  padding: 20px 30px;
+}
+
+.jp-top-info h2 {
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+
+.jp-top-info p {
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+/* MAIN LAYOUT */
+.jp-main {
+  flex: 1;
+  display: flex;
+  gap: 40px;
+  padding: 0 40px;
+}
+
+/* LEFT PANEL */
+.jp-details {
+  width: 320px;
+  background: #151c22;
+  padding: 20px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.jp-details input,
+.jp-details textarea,
+.jp-details select {
+  background: #0e1419;
+  border: 1px solid #333;
+  color: white;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.jp-details textarea {
+  resize: none;
+  height: 70px;
+}
+
+.jp-toggle {
+  font-size: 14px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* VIDEO SECTION */
+.jp-video-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.jp-video-box {
+  width: 100%;
+  max-width: 820px;
+  aspect-ratio: 16 / 9;
+  background: #a3a3a3;
+  border-radius: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* CONTROLS */
+.jp-controls {
+  margin-top: 14px;
+  display: flex;
+  gap: 22px;
+}
+
+.jp-controls button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: white;
+  border: none;
+  cursor: pointer;
+}
+
+.jp-controls img {
+  width: 22px;
+  height: 22px;
+}
+
+/* ACTION BUTTON */
+.jp-action-btn {
+  align-self: flex-end;
+  margin: 20px 30px;
+  background: #19e5d8;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 22px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* SCHEDULE MODAL STYLES */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.schedule-modal {
+  background: #1f1f1f;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #333;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: white;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: #333;
+  color: white;
+}
+
+.modal-content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  color: #aaa;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 12px 16px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #19e5d8;
+}
+
+.schedule-section {
+  margin-bottom: 24px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: white;
+}
+
+.total-time {
+  background: #19e5d8;
+  color: #000;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.schedule-item-form {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: #2a2a2a;
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.item-number {
+  width: 28px;
+  height: 28px;
+  background: #19e5d8;
+  color: #000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.item-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.field-row {
+  display: flex;
+  gap: 10px;
+}
+
+.name-input,
+.role-input,
+.topic-input {
+  flex: 1;
+  padding: 10px 12px;
+  background: #1f1f1f;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: white;
+  font-size: 13px;
+}
+
+.duration-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.duration-field span {
+  color: #aaa;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.duration-input {
+  width: 60px;
+  padding: 10px;
+  background: #1f1f1f;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: white;
+  font-size: 13px;
+  text-align: center;
+}
+
+.remove-btn {
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.remove-btn:hover:not(:disabled) {
+  background: #d32f2f;
+}
+
+.remove-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.add-btn {
+  width: 100%;
+  padding: 12px;
+  background: #333;
+  color: white;
+  border: 2px dashed #555;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.add-btn:hover {
+  background: #444;
+  border-color: #666;
+}
+
+.info-box {
+  background: rgba(25, 229, 216, 0.1);
+  border-left: 4px solid #19e5d8;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.info-box h4 {
+  margin: 0 0 12px 0;
+  color: #19e5d8;
+  font-size: 14px;
+}
+
+.info-box ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #aaa;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.info-box li {
+  margin-bottom: 4px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #333;
+}
+
+.btn-secondary {
+  padding: 12px 24px;
+  background: transparent;
+  color: #aaa;
+  border: 1px solid #555;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #333;
+  color: white;
+}
+
+.btn-primary {
+  padding: 12px 32px;
+  background: #19e5d8;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background: #17d0c4;
+}
