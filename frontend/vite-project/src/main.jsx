@@ -8,6 +8,7 @@ import MeetDash from "./pages/platform/meetdashboard.jsx";
 import Start from "./pages/start.jsx";
 import QAPanel from "./pages/platform/QAPanel.jsx";
 import JoinPreview from "./pages/JoinPreview.jsx";
+import Home from "./pages/platform/home.jsx";
 import Meetings from "./pages/platform/meetings.jsx";
 import Profile from "./pages/platform/profile.jsx";
 import Settings from "./pages/platform/settings.jsx";
