@@ -498,13 +498,17 @@ io.on('connection', (socket) => {
     if (session) {
       callback({
         isActive: session.isActive,
+        isAnchoringEnabled: true, // Always true when session exists
         currentSpeaker: session.currentSpeaker,
         currentIndex: session.currentIndex,
         schedule: session.schedule,
         timeRemaining: session.timeRemaining
       });
     } else {
-      callback({ isActive: false });
+      callback({ 
+        isActive: false,
+        isAnchoringEnabled: false
+      });
     }
   });
   

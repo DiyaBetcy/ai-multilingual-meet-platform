@@ -34,13 +34,14 @@ export const useAnchoring = (roomId, userId, userName, isCreator, initialLanguag
       
       // Get current anchoring status
       socketRef.current.emit('get-anchoring-status', { roomId }, (status) => {
-        if (status.isActive) {
-          setIsAnchoringEnabled(true);
-          setIsActive(true);
+        console.log('📊 Anchoring status received:', status);
+        if (status.isAnchoringEnabled || status.schedule) {
+          setIsAnchoringEnabled(status.isAnchoringEnabled || true);
+          setIsActive(status.isActive || false);
           setSchedule(status.schedule || []);
           setCurrentSpeaker(status.currentSpeaker);
-          setCurrentIndex(status.currentIndex);
-          setTimeRemaining(status.timeRemaining);
+          setCurrentIndex(status.currentIndex || 0);
+          setTimeRemaining(status.timeRemaining || 0);
         }
       });
     });
