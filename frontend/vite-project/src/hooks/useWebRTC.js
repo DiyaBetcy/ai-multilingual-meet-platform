@@ -142,10 +142,11 @@ export const useWebRTC = (roomId, userName, userId) => {
       setMessages(prev => [...prev, message]);
     });
 
-    // Handle media state changes
-    socketRef.current.on("media-state-changed", ({ userId, mediaState }) => {
+    // Handle media state changes from server
+    socketRef.current.on("media-state-changed", ({ userId, micOn, camOn, isScreenSharing }) => {
+      console.log(`📢 Media state changed for ${userId}: mic=${micOn}, cam=${camOn}`);
       setParticipants(prev => prev.map(p => 
-        p.id === userId ? { ...p, ...mediaState } : p
+        p.id === userId ? { ...p, micOn, camOn, isScreenSharing } : p
       ));
     });
 
@@ -182,11 +183,24 @@ export const useWebRTC = (roomId, userName, userId) => {
 
     // Handle remote stream
     pc.ontrack = (event) => {
-      console.log('Received remote track for:', participantId, event.streams[0]);
+      console.log('🔊 Received remote track for:', participantId, event.streams[0]);
+      const stream = event.streams[0];
+      
+      // Log audio track info
+      const audioTracks = stream.getAudioTracks();
+      console.log(`🔊 Audio tracks received: ${audioTracks.length}`);
+      audioTracks.forEach((track, i) => {
+        console.log(`🔊 Audio track ${i}: enabled=${track.enabled}, muted=${track.muted}, readyState=${track.readyState}`);
+      });
+      
       const remoteVideo = document.getElementById(`video-${participantId}`);
       if (remoteVideo) {
         console.log('Setting remote stream to video element');
-        remoteVideo.srcObject = event.streams[0];
+        remoteVideo.srcObject = stream;
+        // Ensure audio is not muted
+        remoteVideo.muted = false;
+        // Try to play to ensure audio is active
+        remoteVideo.play().catch(err => console.warn('Autoplay prevented:', err));
       } else {
         console.warn('Remote video element not found for:', participantId);
       }

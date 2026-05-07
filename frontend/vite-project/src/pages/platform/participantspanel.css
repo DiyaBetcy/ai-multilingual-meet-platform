@@ -103,3 +103,21 @@
   margin-left: 6px;
   font-size: 18px;
 }
+
+.pp-speaking-inline {
+  margin-left: 6px;
+  font-size: 14px;
+  color: #4caf50;
+  font-weight: 600;
+  animation: pulse 1s infinite;
+}
+
+.pp-row.speaking {
+  background: rgba(76, 175, 80, 0.15);
+  border-left: 3px solid #4caf50;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}

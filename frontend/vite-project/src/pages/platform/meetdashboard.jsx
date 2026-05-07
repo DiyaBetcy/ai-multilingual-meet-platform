@@ -336,6 +336,7 @@ export default function MeetDashboard() {
             <ParticipantsPanel 
               participants={allParticipants}
               onClose={() => setShowPeople(false)}
+              speakingUser={speakingUser}
             />
           )}
           

@@ -157,8 +157,15 @@ export const useTranslation = (roomId, userName, userId, initialLanguage = 'en')
 
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
-    recognition.interimResults = true; // Enable interim results for faster capture
-    recognition.maxAlternatives = 3; // Get multiple alternatives for better accuracy
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    // Reduce silence threshold for faster final results (real-time like GMeet)
+    if (recognition.hasOwnProperty('speechSegmentation')) {
+      recognition.speechSegmentation = {
+        silenceThreshold: 500, // 500ms silence = end of speech (default is much longer)
+        pauseThreshold: 500
+      };
+    }
     
     // Set language based on current preference
     const langMap = {
@@ -188,6 +195,10 @@ export const useTranslation = (roomId, userName, userId, initialLanguage = 'en')
       interimTranscript = '';
     };
 
+    // Real-time speech processing - send chunks for immediate response
+    let lastSentTranscript = '';
+    let processingTimeout = null;
+    
     recognition.onresult = (event) => {
       interimTranscript = '';
       
@@ -199,19 +210,31 @@ export const useTranslation = (roomId, userName, userId, initialLanguage = 'en')
           console.log("🎤 Final recognized:", transcript);
           
           if (transcript && transcript.trim().length > 1) {
-            // Send to translation server immediately
+            // Send immediately for real-time translation
             socketRef.current.emit("speech-text", {
               userId,
               text: transcript.trim(),
               originalLanguage: currentLanguage
             });
+            lastSentTranscript = transcript.trim();
           }
         } else {
           interimTranscript += transcript;
+          // Send interim results for real-time captions (optional, for speed)
+          if (transcript && transcript.trim().length > 3 && transcript.trim() !== lastSentTranscript) {
+            clearTimeout(processingTimeout);
+            processingTimeout = setTimeout(() => {
+              socketRef.current.emit("speech-text", {
+                userId,
+                text: transcript.trim(),
+                originalLanguage: currentLanguage,
+                isInterim: true // Flag as interim result
+              });
+            }, 300); // 300ms delay for real-time feel
+          }
         }
       }
       
-      // Log interim results for debugging
       if (interimTranscript) {
         console.log("🎤 Interim:", interimTranscript);
       }

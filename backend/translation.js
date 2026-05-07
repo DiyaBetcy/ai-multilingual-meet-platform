@@ -27,6 +27,10 @@ const io = new Server(server, {
 // Store user language preferences: userId -> { socketId, language, name, roomId }
 const userLanguages = new Map();
 
+// Simple translation cache: "text:from:to" -> "translatedText"
+const translationCache = new Map();
+const CACHE_SIZE = 100; // Keep last 100 translations
+
 // Language code mapping for Sarvam AI TTS
 const languageCodeMap = {
   'en': 'en-IN',
@@ -101,8 +105,8 @@ io.on("connection", (socket) => {
   });
 
   // Handle incoming speech text from a user
-  socket.on("speech-text", async ({ userId, text, originalLanguage }) => {
-    console.log(`📥 Received speech-text event from ${userId}: "${text}"`);
+  socket.on("speech-text", async ({ userId, text, originalLanguage, isInterim }) => {
+    console.log(`📥 Received speech-text event from ${userId}: "${text}" ${isInterim ? '(interim)' : '(final)'}`);
     if (!text || text.trim().length < 2) {
       console.log(`⚠️ Speech text too short or empty, skipping`);
       return;
@@ -156,16 +160,32 @@ io.on("connection", (socket) => {
               };
             }
             
-            // Translate to target user's language
-            const translation = await translate(text, { 
-              to: targetUser.language,
-              from: originalLanguage || 'en',
-              tld: 'com',
-              client: 'webapp'
-            });
+            // Check cache first for faster translation
+            const cacheKey = `${text}:${originalLanguage || 'en'}:${targetUser.language}`;
+            let translatedText;
             
-            const translatedText = translation.text;
-            console.log(`🔄 Translated for ${targetUser.name}: "${translatedText}"`);
+            if (translationCache.has(cacheKey)) {
+              translatedText = translationCache.get(cacheKey);
+              console.log(`⚡ Cache hit for ${targetUser.name}: "${translatedText}"`);
+            } else {
+              // Translate to target user's language
+              const translation = await translate(text, { 
+                to: targetUser.language,
+                from: originalLanguage || 'en',
+                tld: 'com',
+                client: 'webapp'
+              });
+              translatedText = translation.text;
+              
+              // Store in cache
+              translationCache.set(cacheKey, translatedText);
+              // Limit cache size
+              if (translationCache.size > CACHE_SIZE) {
+                const firstKey = translationCache.keys().next().value;
+                translationCache.delete(firstKey);
+              }
+              console.log(`🔄 Translated for ${targetUser.name}: "${translatedText}"`);
+            }
             
             // Generate TTS using Sarvam AI
             console.log(`🎤 Starting TTS for ${targetUser.name} with text: "${translatedText}"`);

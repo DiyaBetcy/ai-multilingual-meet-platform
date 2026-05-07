@@ -1,6 +1,6 @@
 import "./participantsPanel.css";
 
-export default function ParticipantsPanel({ participants, onClose }) {
+export default function ParticipantsPanel({ participants, onClose, speakingUser }) {
   const raisedCount = participants.filter((p) => p.handRaised).length;
 
   return (
@@ -21,13 +21,14 @@ export default function ParticipantsPanel({ participants, onClose }) {
 
         <div className="pp-list">
           {participants.map((p) => (
-            <div className="pp-row" key={p.id}>
+            <div className={`pp-row ${speakingUser === p.id ? 'speaking' : ''}`} key={p.id}>
               <div className="pp-avatar">{p.name[0]?.toUpperCase()}</div>
 
               <div className="pp-info">
                 <div className="pp-name">
   {p.name} {p.isYou ? <span className="pp-you">(You)</span> : null}
   {p.handRaised && <span className="pp-hand-inline"> ✋</span>}
+  {speakingUser === p.id && <span className="pp-speaking-inline"> 🔊 Speaking</span>}
 </div>
 
                 <div className="pp-status">
