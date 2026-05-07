@@ -14,6 +14,9 @@ export const useAnchoring = (roomId, userId, userName, isCreator, initialLanguag
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [anchorTtsAudio, setAnchorTtsAudio] = useState(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  
+  // Debounce time updates to prevent flickering
+  const timeUpdateTimeoutRef = useRef(null);
 
   // Get server URL from environment variable or use localhost
   const SERVER_URL = import.meta.env.VITE_SERVER_URL || window.location.hostname || 'localhost';
@@ -96,8 +99,22 @@ export const useAnchoring = (roomId, userId, userName, isCreator, initialLanguag
     });
 
     socketRef.current.on('time-update', ({ timeRemaining: time, timestamp }) => {
-      console.log('⏰ Time update:', { timeRemaining: time, timestamp });
-      setTimeRemaining(time);
+      // Clear existing timeout
+      if (timeUpdateTimeoutRef.current) {
+        clearTimeout(timeUpdateTimeoutRef.current);
+      }
+      
+      // Debounce time update to prevent flickering
+      timeUpdateTimeoutRef.current = setTimeout(() => {
+        console.log('⏰ Time update (debounced):', { timeRemaining: time, timestamp });
+        setTimeRemaining(prevTime => {
+          // Only update if time actually changed
+          if (prevTime !== time) {
+            return time;
+          }
+          return prevTime;
+        });
+      }, 100); // 100ms debounce
     });
 
     socketRef.current.on('anchor-announcement', ({ script, audioUrl, speakerName, timestamp }) => {
@@ -151,6 +168,9 @@ export const useAnchoring = (roomId, userId, userName, isCreator, initialLanguag
     });
 
     return () => {
+      if (timeUpdateTimeoutRef.current) {
+        clearTimeout(timeUpdateTimeoutRef.current);
+      }
       if (socketRef.current) {
         socketRef.current.disconnect();
       }

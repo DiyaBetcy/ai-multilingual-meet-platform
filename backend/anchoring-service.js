@@ -129,6 +129,7 @@ class AnchoringSession {
     this.isActive = false;
     this.currentSpeaker = null;
     this.timerInterval = null;
+    this.isTimerRunning = false;
     this.timeRemaining = 0;
     this.language = settings.language || 'en-US';
   }
@@ -189,16 +190,28 @@ class AnchoringSession {
   startTimer(io) {
     if (this.timerInterval) clearInterval(this.timerInterval);
     
+    // Prevent multiple timers
+    if (this.isTimerRunning) return;
+    this.isTimerRunning = true;
+    
     this.timerInterval = setInterval(async () => {
+      if (!this.isActive || this.timeRemaining <= 0) {
+        clearInterval(this.timerInterval);
+        this.isTimerRunning = false;
+        return;
+      }
+      
       this.timeRemaining--;
       
-      // Emit time update with synchronized timestamp
-      io.to(this.roomId).emit('time-update', {
-        timeRemaining: this.timeRemaining,
-        currentSpeaker: this.currentSpeaker,
-        timestamp: Date.now(),
-        serverTime: new Date().toISOString()
-      });
+      // Emit time update with synchronized timestamp (throttled)
+      if (this.timeRemaining % 1 === 0) { // Only update every second
+        io.to(this.roomId).emit('time-update', {
+          timeRemaining: this.timeRemaining,
+          currentSpeaker: this.currentSpeaker,
+          timestamp: Date.now(),
+          serverTime: new Date().toISOString()
+        });
+      }
       
       // Time warnings
       if (this.timeRemaining === 60) {
@@ -356,12 +369,17 @@ class AnchoringSession {
   }
   
   pause() {
-    if (this.timerInterval) clearInterval(this.timerInterval);
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
     this.isActive = false;
+    this.isTimerRunning = false;
   }
   
   resume(io) {
     this.isActive = true;
+    this.isTimerRunning = false;
     this.startTimer(io);
   }
 }
