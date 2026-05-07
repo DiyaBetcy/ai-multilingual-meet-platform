@@ -33,6 +33,27 @@ io.on("connection", (socket) => {
     const { roomId, userName, userId } = data;
     console.log(`User ${userName} joining room ${roomId}`);
     
+    // Check if this user already exists (page refresh scenario)
+    // Remove old socket entry if same userId is found
+    const existingSocketId = Array.from(participants.entries())
+      .find(([sid, p]) => p.userId === userId)?.[0];
+    
+    if (existingSocketId && existingSocketId !== socket.id) {
+      console.log(`User ${userName} refreshing - removing old socket ${existingSocketId}`);
+      const oldParticipant = participants.get(existingSocketId);
+      if (oldParticipant) {
+        // Remove from room
+        const room = rooms.get(roomId);
+        if (room) {
+          room.delete(existingSocketId);
+        }
+        // Clean up old participant
+        participants.delete(existingSocketId);
+        // Notify others about the old socket leaving
+        socket.to(roomId).emit("user-left", { userId: existingSocketId });
+      }
+    }
+    
     // Join socket room
     socket.join(roomId);
     
@@ -62,10 +83,16 @@ io.on("connection", (socket) => {
     // Notify existing participants
     socket.to(roomId).emit("user-joined", participant);
     
-    // Send current participants list to new user
+    // Send current participants list to new user (filter out duplicates by userId)
+    const seenUserIds = new Set();
     const roomParticipants = Array.from(rooms.get(roomId))
       .map(id => participants.get(id))
-      .filter(p => p && p.id !== socket.id);
+      .filter(p => {
+        if (!p || p.id === socket.id) return false;
+        if (seenUserIds.has(p.userId)) return false; // Skip duplicate userIds
+        seenUserIds.add(p.userId);
+        return true;
+      });
     
     console.log("Sending participants list to new user:", roomParticipants);
     socket.emit("participants-list", roomParticipants);
