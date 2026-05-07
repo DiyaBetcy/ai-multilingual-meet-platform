@@ -49,8 +49,12 @@ io.on("connection", (socket) => {
         }
         // Clean up old participant
         participants.delete(existingSocketId);
-        // Notify others about the old socket leaving
-        socket.to(roomId).emit("user-left", { userId: existingSocketId });
+        // Notify others about the old socket leaving (send userId for proper removal)
+        socket.to(roomId).emit("user-left", { 
+          userId: existingSocketId,
+          actualUserId: userId,
+          isRefresh: true 
+        });
       }
     }
     

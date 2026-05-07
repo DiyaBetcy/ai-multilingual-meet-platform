@@ -106,12 +106,22 @@ export const useWebRTC = (roomId, userName, userId) => {
     });
 
     // Handle user leaving
-    socketRef.current.on("user-left", (participantId) => {
-      if (peerConnectionsRef.current.has(participantId)) {
-        peerConnectionsRef.current.get(participantId).close();
-        peerConnectionsRef.current.delete(participantId);
+    socketRef.current.on("user-left", (data) => {
+      const { userId, actualUserId, isRefresh } = data;
+      console.log("👋 User left:", { userId, actualUserId, isRefresh });
+      
+      if (peerConnectionsRef.current.has(userId)) {
+        peerConnectionsRef.current.get(userId).close();
+        peerConnectionsRef.current.delete(userId);
       }
-      setParticipants(prev => prev.filter(p => p.id !== participantId));
+      
+      if (isRefresh && actualUserId) {
+        // For refresh, remove by actualUserId
+        setParticipants(prev => prev.filter(p => p.userId !== actualUserId));
+      } else {
+        // Normal leave, remove by socketId
+        setParticipants(prev => prev.filter(p => p.id !== userId));
+      }
     });
 
     // Handle WebRTC signaling
