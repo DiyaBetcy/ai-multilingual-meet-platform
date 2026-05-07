@@ -170,7 +170,9 @@ class AnchoringSession {
       currentSpeaker: this.currentSpeaker,
       currentIndex: this.currentIndex,
       totalSpeakers: this.schedule.length,
-      timeRemaining: this.timeRemaining
+      timeRemaining: this.timeRemaining,
+      timestamp: Date.now(),
+      serverTime: new Date().toISOString()
     });
     
     // Unmute current speaker and mute others
@@ -190,10 +192,12 @@ class AnchoringSession {
     this.timerInterval = setInterval(async () => {
       this.timeRemaining--;
       
-      // Emit time update
+      // Emit time update with synchronized timestamp
       io.to(this.roomId).emit('time-update', {
         timeRemaining: this.timeRemaining,
-        currentSpeaker: this.currentSpeaker
+        currentSpeaker: this.currentSpeaker,
+        timestamp: Date.now(),
+        serverTime: new Date().toISOString()
       });
       
       // Time warnings
@@ -438,8 +442,36 @@ io.on('connection', (socket) => {
     if (session) {
       if (session.timerInterval) clearInterval(session.timerInterval);
       session.isActive = false;
+      session.currentIndex = 0;
+      session.timeRemaining = 0;
+      session.currentSpeaker = null;
     }
-    io.to(roomId).emit('anchoring-reset');
+    io.to(roomId).emit('anchoring-reset', {
+      timestamp: Date.now(),
+      serverTime: new Date().toISOString()
+    });
+  });
+
+  // Restart anchoring from beginning
+  socket.on('restart-anchoring', async ({ roomId }) => {
+    console.log('Restarting anchoring for room:', roomId);
+    const session = anchoringSessions.get(roomId);
+    if (session) {
+      if (session.timerInterval) clearInterval(session.timerInterval);
+      session.currentIndex = 0;
+      session.timeRemaining = 0;
+      session.currentSpeaker = null;
+      session.isActive = true;
+      
+      // Notify all participants about restart
+      io.to(roomId).emit('anchoring-restarted', {
+        timestamp: Date.now(),
+        serverTime: new Date().toISOString()
+      });
+      
+      // Start from first speaker
+      await session.moveToNextSpeaker(io);
+    }
   });
   
   // Get anchoring status

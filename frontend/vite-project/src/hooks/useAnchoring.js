@@ -87,14 +87,16 @@ export const useAnchoring = (roomId, userId, userName, isCreator, initialLanguag
       setIsMutedByAnchor(false);
     });
 
-    socketRef.current.on('speaker-changed', ({ currentSpeaker: speaker, currentIndex: index, timeRemaining: time }) => {
+    socketRef.current.on('speaker-changed', ({ currentSpeaker: speaker, currentIndex: index, timeRemaining: time, timestamp }) => {
+      console.log('🎤 Speaker changed:', { speaker, index, timeRemaining: time, timestamp });
       setCurrentSpeaker(speaker);
       setCurrentIndex(index);
       setTimeRemaining(time);
       setIsMutedByAnchor(false);
     });
 
-    socketRef.current.on('time-update', ({ timeRemaining: time }) => {
+    socketRef.current.on('time-update', ({ timeRemaining: time, timestamp }) => {
+      console.log('⏰ Time update:', { timeRemaining: time, timestamp });
       setTimeRemaining(time);
     });
 
@@ -130,6 +132,22 @@ export const useAnchoring = (roomId, userId, userName, isCreator, initialLanguag
 
     socketRef.current.on('anchoring-resumed', () => {
       setIsActive(true);
+    });
+
+    socketRef.current.on('anchoring-reset', ({ timestamp }) => {
+      console.log('🔄 Anchoring reset:', { timestamp });
+      setIsActive(false);
+      setCurrentSpeaker(null);
+      setCurrentIndex(0);
+      setTimeRemaining(0);
+      setIsMutedByAnchor(false);
+    });
+
+    socketRef.current.on('anchoring-restarted', ({ timestamp }) => {
+      console.log('🔄 Anchoring restarted:', { timestamp });
+      setIsActive(true);
+      setCurrentIndex(0);
+      setIsMutedByAnchor(false);
     });
 
     return () => {
@@ -196,6 +214,12 @@ export const useAnchoring = (roomId, userId, userName, isCreator, initialLanguag
     }
   }, [roomId, isCreator]);
 
+  const restartAnchoring = useCallback(() => {
+    if (socketRef.current && isCreator) {
+      socketRef.current.emit('restart-anchoring', { roomId });
+    }
+  }, [roomId, isCreator]);
+
   const updateSchedule = useCallback((newSchedule) => {
     if (socketRef.current && isCreator) {
       socketRef.current.emit('update-schedule', { roomId, schedule: newSchedule });
@@ -240,6 +264,7 @@ export const useAnchoring = (roomId, userId, userName, isCreator, initialLanguag
     skipSpeaker,
     stopAnchoring,
     resetAnchoring,
+    restartAnchoring,
     updateSchedule,
     updateAnchorLanguage,
     
