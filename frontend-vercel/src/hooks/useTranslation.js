@@ -220,24 +220,44 @@ export const useTranslation = (roomId, userName, userId, initialLanguage = 'en')
 
     recognition.onerror = (event) => {
       console.error("Recognition error:", event.error);
-      
+
       // Don't stop on non-critical errors
       if (event.error === 'no-speech') {
         console.log("No speech detected, continuing...");
         return;
       }
-      
+
       if (event.error === 'audio-capture') {
         console.error("No microphone detected");
         return;
       }
-      
+
       if (event.error === 'not-allowed') {
         alert("Microphone access denied. Please allow microphone access.");
         setIsListening(false);
         return;
       }
-      
+
+      if (event.error === 'network') {
+        console.error("Speech recognition network error - speech service unavailable");
+        // Fall back to English if network error occurs with non-English language
+        if (recognition.lang !== 'en-US') {
+          console.log("Falling back to English for speech recognition");
+          recognition.lang = 'en-US';
+          setTimeout(() => {
+            try {
+              recognition.start();
+            } catch (e) {
+              console.error("Failed to restart with English:", e);
+            }
+          }, 1000);
+        } else {
+          console.log("Speech recognition service unavailable - please check your internet connection");
+          setIsListening(false);
+        }
+        return;
+      }
+
       // For other errors, try to restart
       console.log("Attempting to restart recognition after error...");
     };
