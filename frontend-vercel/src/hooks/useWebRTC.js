@@ -116,25 +116,25 @@ export const useWebRTC = (roomId, userName, userId) => {
     });
 
     // Handle WebRTC signaling
-    socketRef.current.on("offer", async ({ senderId, offer }) => {
-      const pc = await createPeerConnection(senderId, false);
+    socketRef.current.on("offer", async ({ fromId, offer }) => {
+      const pc = await createPeerConnection(fromId, false);
       await pc.setRemoteDescription(offer);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      socketRef.current.emit("answer", { targetId: senderId, answer });
+      socketRef.current.emit("answer", { targetId: fromId, answer });
     });
 
-    socketRef.current.on("answer", async ({ senderId, answer }) => {
-      const pc = peerConnectionsRef.current.get(senderId);
+    socketRef.current.on("answer", async ({ fromId, answer }) => {
+      const pc = peerConnectionsRef.current.get(fromId);
       if (pc) {
         await pc.setRemoteDescription(answer);
       }
     });
 
-    socketRef.current.on("ice-candidate", async ({ senderId, candidate }) => {
-      const pc = peerConnectionsRef.current.get(senderId);
+    socketRef.current.on("ice-candidate", async ({ fromId, candidate }) => {
+      const pc = peerConnectionsRef.current.get(fromId);
       if (pc) {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        await pc.addIceCandidate(candidate);
       }
     });
 
