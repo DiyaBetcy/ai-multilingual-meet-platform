@@ -33,14 +33,15 @@ export const useTranslation = (roomId, userName, userId, initialLanguage = 'en')
   const [isListening, setIsListening] = useState(false);
 
   // Get server URL from environment variable or use localhost
-  const SERVER_URL = import.meta.env.VITE_SERVER_URL || window.location.hostname || 'localhost';
-  const TRANSLATION_PORT = import.meta.env.VITE_TRANSLATION_PORT || '5000';
+  const TRANSLATION_URL =
+    import.meta.env.VITE_TRANSLATION_URL ||
+    `http://${import.meta.env.VITE_SERVER_URL || window.location.hostname || 'localhost'}:${import.meta.env.VITE_TRANSLATION_PORT || '5000'}`;
 
   // Connect to translation server
   useEffect(() => {
     if (!roomId || !userName || !userId) return;
 
-    socketRef.current = io(`http://${SERVER_URL}:${TRANSLATION_PORT}`, {
+    socketRef.current = io(TRANSLATION_URL, {
       transports: ['websocket', 'polling'],
       timeout: 10000
     });

@@ -25,6 +25,11 @@ export const useAnchoring = (roomId, userId, userName, isCreator, initialLanguag
   useEffect(() => {
     if (!roomId || !userId) return;
 
+    // Disable anchoring connection - backend is translation-only
+    // Keep UI components but don't connect to socket
+    console.log('⚠️ Anchoring disabled - backend is translation-only');
+    return;
+
     socketRef.current = io(ANCHORING_URL, {
       transports: ['websocket', 'polling'],
     });

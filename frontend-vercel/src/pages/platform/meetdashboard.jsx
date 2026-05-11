@@ -17,20 +17,13 @@ export default function MeetDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const { meetingId: urlMeetingId } = useParams();
-  
-  // Debug navigation state
-  console.log("Navigation state:", location.state);
-  console.log("URL params meetingId:", urlMeetingId);
-  
+
   // Get meeting info from navigation state
   const meetingInfo = location.state || {};
   const { name: userName, mode, micOn: previewMicOn, camOn: previewCamOn, meetingId: stateMeetingId } = meetingInfo;
-  
+
   // Use meeting ID from URL first, then from state
   const meetingId = urlMeetingId || stateMeetingId;
-  
-  console.log("Meeting info extracted:", meetingInfo);
-  console.log("Final meeting ID:", meetingId);
   
   // WebRTC hook
   const {

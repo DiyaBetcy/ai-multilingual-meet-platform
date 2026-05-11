@@ -20,8 +20,9 @@ export const useWebRTC = (roomId, userName, userId) => {
   const speakingIntervalRef = useRef(null);
 
   // Get server URL from environment variable or use localhost
-  const SERVER_URL = import.meta.env.VITE_SERVER_URL || window.location.hostname || 'localhost';
-  const WEBRTC_PORT = import.meta.env.VITE_WEBRTC_PORT || '3001';
+  const WEBRTC_URL =
+    import.meta.env.VITE_WEBRTC_URL ||
+    `http://${import.meta.env.VITE_SERVER_URL || window.location.hostname || 'localhost'}:${import.meta.env.VITE_WEBRTC_PORT || '3001'}`;
 
   // ICE servers configuration
   const iceServers = [
@@ -68,7 +69,7 @@ export const useWebRTC = (roomId, userName, userId) => {
   useEffect(() => {
     if (!roomId || !userName) return;
 
-    socketRef.current = io(`http://${SERVER_URL}:${WEBRTC_PORT}`, {
+    socketRef.current = io(WEBRTC_URL, {
       transports: ['websocket', 'polling'],
       timeout: 10000,
       forceNew: true
@@ -98,9 +99,9 @@ export const useWebRTC = (roomId, userName, userId) => {
     });
 
     // Handle new user joining
-    socketRef.current.on("user-joined", (participant) => {
+    socketRef.current.on("user-joined", async (participant) => {
       if (participant.id !== currentUserIdRef.current) {
-        createPeerConnection(participant.id, true);
+        await createPeerConnection(participant.id, true);
         setParticipants(prev => [...prev, participant]);
       }
     });
@@ -116,7 +117,7 @@ export const useWebRTC = (roomId, userName, userId) => {
 
     // Handle WebRTC signaling
     socketRef.current.on("offer", async ({ senderId, offer }) => {
-      const pc = createPeerConnection(senderId, false);
+      const pc = await createPeerConnection(senderId, false);
       await pc.setRemoteDescription(offer);
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);

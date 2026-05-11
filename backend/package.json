@@ -1,10 +1,10 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "translation-with-anchor.js",
+  "main": "translation.js",
   "scripts": {
-    "start": "node translation-with-anchor.js",
-    "dev": "nodemon translation-with-anchor.js",
+    "start": "node translation.js",
+    "dev": "nodemon translation.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
