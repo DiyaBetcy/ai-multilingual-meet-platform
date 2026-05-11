@@ -96,6 +96,21 @@ export default function MeetDashboard() {
   const [anchorAudioUrl, setAnchorAudioUrl] = useState(null);
   const anchorAudioRef = useRef(null);
 
+  // Translation mode: mute original remote audio when translation is ON
+  useEffect(() => {
+    window.translationModeOn = isListening;
+    const remoteVideos = document.querySelectorAll("video[id^='video-']");
+    remoteVideos.forEach((video) => {
+      video.muted = isListening;
+      video.volume = isListening ? 0 : 1;
+    });
+    console.log(
+      isListening
+        ? "Translation ON: original audio muted"
+        : "Translation OFF: original audio unmuted"
+    );
+  }, [isListening]);
+
   // Initialize local media
   useEffect(() => {
     if (isConnected && userName) {
