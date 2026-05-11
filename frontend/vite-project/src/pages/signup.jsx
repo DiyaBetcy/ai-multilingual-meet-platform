@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./signup.css";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_TRANSLATION_URL;
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);

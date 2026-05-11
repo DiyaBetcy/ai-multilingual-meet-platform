@@ -583,8 +583,13 @@ app.post('/api/anchoring/schedule', (req, res) => {
   }
 });
 
-const PORT = process.env.ANCHORING_PORT || 3002;
-server.listen(PORT, () => {
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
+});
+
+const PORT = process.env.PORT || process.env.ANCHORING_PORT || 3002;
+
+server.listen(PORT, "0.0.0.0", () => {
   console.log(`🎤 AI Anchoring Service running on port ${PORT}`);
 });
 

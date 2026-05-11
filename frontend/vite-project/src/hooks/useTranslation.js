@@ -2,303 +2,348 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { io } from "socket.io-client";
 
 const languageNames = {
-  'en': 'English',
-  'ml': 'Malayalam',
-  'hi': 'Hindi',
-  'ta': 'Tamil',
-  'te': 'Telugu',
-  'kn': 'Kannada',
-  'bn': 'Bengali',
-  'gu': 'Gujarati',
-  'mr': 'Marathi',
-  'od': 'Odia',
-  'pa': 'Punjabi',
-  'as': 'Assamese',
-  'ur': 'Urdu'
+  en: "English",
+  ml: "Malayalam",
+  hi: "Hindi",
+  ta: "Tamil",
+  te: "Telugu",
+  kn: "Kannada",
+  bn: "Bengali",
+  gu: "Gujarati",
+  mr: "Marathi",
+  od: "Odia",
+  pa: "Punjabi",
+  as: "Assamese",
+  ur: "Urdu",
 };
 
-export const useTranslation = (roomId, userName, userId, initialLanguage = 'en') => {
+export const useTranslation = (
+  roomId,
+  userName,
+  userId,
+  initialLanguage = "en"
+) => {
   const socketRef = useRef(null);
   const recognitionRef = useRef(null);
+  const shouldListenRef = useRef(false);
+  const audioQueueRef = useRef([]);
+  const isPlayingAudioRef = useRef(false);
+  const lastFinalSentTimeRef = useRef(0);
+
   const [isConnected, setIsConnected] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState(initialLanguage);
   const [availableLanguages, setAvailableLanguages] = useState(languageNames);
   const [caption, setCaption] = useState({
-    speaker: '',
-    originalText: '',
-    translatedText: '',
+    speaker: "",
+    originalText: "",
+    translatedText: "",
     isOriginal: false,
-    targetLanguage: initialLanguage
+    targetLanguage: initialLanguage,
   });
   const [isListening, setIsListening] = useState(false);
 
-  // Get server URL from environment variable or use localhost
-  const SERVER_URL = import.meta.env.VITE_SERVER_URL || window.location.hostname || 'localhost';
-  const TRANSLATION_PORT = import.meta.env.VITE_TRANSLATION_PORT || '5000';
+  const TRANSLATION_URL =
+    import.meta.env.VITE_TRANSLATION_URL || "http://localhost:5000";
 
-  // Connect to translation server
+  const playNextAudio = useCallback(() => {
+    if (isPlayingAudioRef.current) return;
+
+    const nextAudio = audioQueueRef.current.shift();
+    if (!nextAudio) return;
+
+    try {
+      isPlayingAudioRef.current = true;
+
+      let audioSrc = nextAudio;
+
+      if (!nextAudio.startsWith("data:audio")) {
+        audioSrc = `data:audio/wav;base64,${nextAudio}`;
+      }
+
+      const audio = new Audio(audioSrc);
+      audio.volume = 1.0;
+
+      audio.onended = () => {
+        isPlayingAudioRef.current = false;
+        playNextAudio();
+      };
+
+      audio.onerror = (err) => {
+        console.error("Translated audio playback error:", err);
+        isPlayingAudioRef.current = false;
+        playNextAudio();
+      };
+
+      audio.play().catch((err) => {
+        console.error("Audio play blocked/error:", err);
+        isPlayingAudioRef.current = false;
+        playNextAudio();
+      });
+    } catch (error) {
+      console.error("Audio playback setup error:", error);
+      isPlayingAudioRef.current = false;
+    }
+  }, []);
+
+  const enqueueTranslatedAudio = useCallback(
+    (base64Audio) => {
+      if (!base64Audio) return;
+
+      console.log("Adding translated audio to queue, length:", base64Audio.length);
+
+      audioQueueRef.current.push(base64Audio);
+      playNextAudio();
+    },
+    [playNextAudio]
+  );
+
   useEffect(() => {
     if (!roomId || !userName || !userId) return;
 
-    socketRef.current = io(`http://${SERVER_URL}:${TRANSLATION_PORT}`, {
-      transports: ['websocket', 'polling'],
-      timeout: 10000
+    socketRef.current = io(TRANSLATION_URL, {
+      transports: ["websocket", "polling"],
+      timeout: 10000,
     });
 
     socketRef.current.on("connect", () => {
-      console.log("✅ Connected to translation server");
+      console.log("Connected to translation server");
       setIsConnected(true);
-      
-      // Join with preferred language
+
       socketRef.current.emit("join-translation", {
         userId,
         userName,
         roomId,
-        preferredLanguage: currentLanguage
+        preferredLanguage: currentLanguage,
       });
     });
 
     socketRef.current.on("disconnect", () => {
+      console.log("Disconnected from translation server");
       setIsConnected(false);
     });
 
-    // Handle translation joined confirmation
     socketRef.current.on("translation-joined", (data) => {
-      console.log("🌍 Translation joined:", data);
-      setCurrentLanguage(data.language);
+      console.log("Translation joined:", data);
+      if (data?.language) setCurrentLanguage(data.language);
     });
 
-    // Handle language change confirmation
     socketRef.current.on("language-changed", (data) => {
-      console.log("🔄 Language changed to:", data.languageName);
-      setCurrentLanguage(data.language);
+      console.log("Language changed:", data);
+      if (data?.language) setCurrentLanguage(data.language);
     });
 
-    // Handle translated captions
     socketRef.current.on("translated-caption", (data) => {
-      console.log("📝 Caption received:", data);
+      console.log("Caption received:", data);
+
+      const translatedText = data.translatedText || data.text || "";
+
       setCaption({
-        speaker: data.speaker,
-        originalText: data.text,
-        translatedText: data.translatedText,
-        isOriginal: data.isOriginal,
-        targetLanguage: data.targetLanguage
+        speaker: data.speaker || "",
+        originalText: data.text || "",
+        translatedText,
+        isOriginal: data.isOriginal || false,
+        targetLanguage: data.targetLanguage || currentLanguage,
       });
-      
-      // Auto-clear caption after 5 seconds
+
       setTimeout(() => {
-        setCaption(prev => ({
+        setCaption((prev) => ({
           ...prev,
-          translatedText: ''
+          translatedText: "",
         }));
-      }, 5000);
+      }, 7000);
     });
 
-    // Handle TTS audio
     socketRef.current.on("tts-audio", (data) => {
-      console.log("🔊 TTS audio received from:", data.speaker);
-      playAudio(data.audio);
+      console.log("TTS audio received:", data);
+
+      if (data?.audio) {
+        enqueueTranslatedAudio(data.audio);
+      } else {
+        console.warn("tts-audio event received but no audio found");
+      }
     });
 
-    // Get available languages
     socketRef.current.emit("get-languages");
+
     socketRef.current.on("available-languages", (languages) => {
-      setAvailableLanguages(languages);
+      if (languages) setAvailableLanguages(languages);
     });
 
     return () => {
+      shouldListenRef.current = false;
+
+      audioQueueRef.current = [];
+      isPlayingAudioRef.current = false;
+
       if (socketRef.current) {
         socketRef.current.disconnect();
       }
+
       if (recognitionRef.current) {
         recognitionRef.current.stop();
+        recognitionRef.current = null;
       }
     };
-  }, [roomId, userName, userId]);
+  }, [
+    roomId,
+    userName,
+    userId,
+    TRANSLATION_URL,
+    currentLanguage,
+    enqueueTranslatedAudio,
+  ]);
 
-  // Play base64 audio
-  const playAudio = useCallback((base64Audio) => {
-    try {
-      const audio = new Audio(`data:audio/mpeg;base64,${base64Audio}`);
-      audio.volume = 0.8;
-      audio.play().catch(err => console.error("Audio play error:", err));
-    } catch (e) {
-      console.error("Audio error:", e);
-    }
-  }, []);
+  const changeLanguage = useCallback(
+    (newLanguage) => {
+      setCurrentLanguage(newLanguage);
 
-  // Change language
-  const changeLanguage = useCallback((newLanguage) => {
-    if (socketRef.current && isConnected) {
-      socketRef.current.emit("change-language", {
-        userId,
-        newLanguage
-      });
-    }
-  }, [userId, isConnected]);
+      if (socketRef.current && isConnected) {
+        socketRef.current.emit("change-language", {
+          userId,
+          newLanguage,
+        });
+      }
+    },
+    [userId, isConnected]
+  );
 
-  // Start speech recognition
   const startListening = useCallback(() => {
     if (!socketRef.current || !isConnected) {
-      console.error("❌ Not connected to translation server");
+      console.error("Not connected to translation server");
       return;
     }
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
     if (!SpeechRecognition) {
-      alert("Speech Recognition not supported in this browser");
+      alert("Speech Recognition not supported. Use Chrome.");
       return;
     }
 
-    // Stop existing recognition
     if (recognitionRef.current) {
       recognitionRef.current.stop();
+      recognitionRef.current = null;
     }
+
+    shouldListenRef.current = true;
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = true;
+
+    // More stable for sentence-by-sentence demo
+    recognition.continuous = false;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
-    // Reduce silence threshold for faster final results (real-time like GMeet)
-    if (recognition.hasOwnProperty('speechSegmentation')) {
-      recognition.speechSegmentation = {
-        silenceThreshold: 500, // 500ms silence = end of speech (default is much longer)
-        pauseThreshold: 500
-      };
-    }
-    
-    // Set language based on current preference
-    const langMap = {
-      'en': 'en-US',
-      'ml': 'ml-IN',
-      'hi': 'hi-IN',
-      'ta': 'ta-IN',
-      'te': 'te-IN',
-      'kn': 'kn-IN',
-      'bn': 'bn-IN',
-      'gu': 'gu-IN',
-      'mr': 'mr-IN',
-      'od': 'or-IN',
-      'pa': 'pa-IN',
-      'as': 'as-IN',
-      'ur': 'ur-IN'
-    };
-    recognition.lang = langMap[currentLanguage] || 'en-US';
+    recognition.lang = "en-US";
 
-    let finalTranscript = '';
-    let interimTranscript = '';
+    let processingTimeout = null;
 
     recognition.onstart = () => {
-      console.log("🎤 Speech recognition started");
+      console.log("Speech recognition started");
       setIsListening(true);
-      finalTranscript = '';
-      interimTranscript = '';
     };
 
-    // Real-time speech processing - send chunks for immediate response
-    let lastSentTranscript = '';
-    let processingTimeout = null;
-    
     recognition.onresult = (event) => {
-      interimTranscript = '';
-      
+      let interimTranscript = "";
+
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        
+        const transcript = event.results[i][0].transcript.trim();
+
+        if (!transcript) continue;
+
         if (event.results[i].isFinal) {
-          finalTranscript += transcript;
-          console.log("🎤 Final recognized:", transcript);
-          
-          if (transcript && transcript.trim().length > 1) {
-            // Send immediately for real-time translation
-            socketRef.current.emit("speech-text", {
-              userId,
-              text: transcript.trim(),
-              originalLanguage: currentLanguage
-            });
-            lastSentTranscript = transcript.trim();
+          console.log("Final transcript:", transcript);
+
+          const now = Date.now();
+
+          // Prevent rapid duplicate/flood requests to Google Translate
+          if (now - lastFinalSentTimeRef.current < 3500) {
+            console.log("Skipping final transcript to avoid rate limit:", transcript);
+            return;
           }
+
+          lastFinalSentTimeRef.current = now;
+
+          socketRef.current.emit("speech-text", {
+            userId,
+            text: transcript,
+            originalLanguage: "en",
+            targetLanguage: currentLanguage,
+            isInterim: false,
+          });
         } else {
           interimTranscript += transcript;
-          // Send interim results for real-time captions (optional, for speed)
-          if (transcript && transcript.trim().length > 3 && transcript.trim() !== lastSentTranscript) {
-            clearTimeout(processingTimeout);
-            processingTimeout = setTimeout(() => {
-              socketRef.current.emit("speech-text", {
-                userId,
-                text: transcript.trim(),
-                originalLanguage: currentLanguage,
-                isInterim: true // Flag as interim result
-              });
-            }, 300); // 300ms delay for real-time feel
-          }
+
+          // Do not send interim text to backend.
+          // This avoids request spam and improves 2–3 sentence demo stability.
+          clearTimeout(processingTimeout);
         }
       }
-      
+
       if (interimTranscript) {
-        console.log("🎤 Interim:", interimTranscript);
+        console.log("Interim:", interimTranscript);
       }
     };
 
     recognition.onerror = (event) => {
       console.error("Recognition error:", event.error);
-      
-      // Don't stop on non-critical errors
-      if (event.error === 'no-speech') {
-        console.log("No speech detected, continuing...");
-        return;
-      }
-      
-      if (event.error === 'audio-capture') {
-        console.error("No microphone detected");
-        return;
-      }
-      
-      if (event.error === 'not-allowed') {
-        alert("Microphone access denied. Please allow microphone access.");
+
+      if (event.error === "no-speech") return;
+
+      if (event.error === "audio-capture") {
+        alert("No microphone detected.");
         setIsListening(false);
+        shouldListenRef.current = false;
         return;
       }
-      
-      // For other errors, try to restart
-      console.log("Attempting to restart recognition after error...");
+
+      if (event.error === "not-allowed") {
+        alert("Microphone access denied.");
+        setIsListening(false);
+        shouldListenRef.current = false;
+        return;
+      }
     };
 
     recognition.onend = () => {
-      console.log("🎤 Speech recognition ended");
-      // Always restart if we're supposed to be listening
-      if (isListening) {
-        console.log("🔄 Restarting recognition...");
+      console.log("Speech recognition ended");
+
+      if (shouldListenRef.current) {
         setTimeout(() => {
           try {
             recognition.start();
-          } catch (e) {
-            console.error("Failed to restart recognition:", e);
-            // If restart fails, try creating a new instance
-            setTimeout(() => startListening(), 500);
+          } catch (error) {
+            console.error("Restart failed:", error);
           }
-        }, 100);
+        }, 1500);
+      } else {
+        setIsListening(false);
       }
     };
 
     try {
       recognition.start();
       recognitionRef.current = recognition;
-    } catch (e) {
-      console.error("Failed to start recognition:", e);
+    } catch (error) {
+      console.error("Failed to start recognition:", error);
+      setIsListening(false);
+      shouldListenRef.current = false;
     }
-  }, [currentLanguage, isConnected, userId, isListening]);
+  }, [isConnected, userId, currentLanguage]);
 
-  // Stop speech recognition
   const stopListening = useCallback(() => {
+    shouldListenRef.current = false;
     setIsListening(false);
+
+    audioQueueRef.current = [];
+    isPlayingAudioRef.current = false;
+
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       recognitionRef.current = null;
     }
   }, []);
 
-  // Toggle listening
   const toggleListening = useCallback(() => {
     if (isListening) {
       stopListening();
@@ -316,6 +361,6 @@ export const useTranslation = (roomId, userName, userId, initialLanguage = 'en')
     changeLanguage,
     startListening,
     stopListening,
-    toggleListening
+    toggleListening,
   };
 };

@@ -1,4 +1,4 @@
-import "./participantsPanel.css";
+import "./ParticipantsPanel.css";
 
 export default function ParticipantsPanel({ participants, onClose, speakingUser }) {
   const raisedCount = participants.filter((p) => p.handRaised).length;
@@ -26,24 +26,25 @@ export default function ParticipantsPanel({ participants, onClose, speakingUser 
 
               <div className="pp-info">
                 <div className="pp-name">
-  {p.name} {p.isYou ? <span className="pp-you">(You)</span> : null}
-  {p.handRaised && <span className="pp-hand-inline"> ✋</span>}
-  {speakingUser === p.id && <span className="pp-speaking-inline"> 🔊 Speaking</span>}
-</div>
+                  {p.name} {p.isYou ? <span className="pp-you">(You)</span> : null}
+                  {p.handRaised && <span className="pp-hand-inline"> ✋</span>}
+                  {speakingUser === p.id && (
+                    <span className="pp-speaking-inline"> 🔊 Speaking</span>
+                  )}
+                </div>
 
                 <div className="pp-status">
-  <span style={{ color: p.micOn ? "#4caf50" : "red" }}>
-    {p.micOn ? "🎤 On" : "🎤 Muted"}
-  </span>
-  {" • "}
-  <span style={{ color: p.camOn ? "#4caf50" : "#aaa" }}>
-    {p.camOn ? "📷 On" : "📷 Off"}
-  </span>
-</div>
+                  <span style={{ color: p.micOn ? "#4caf50" : "red" }}>
+                    {p.micOn ? "🎤 On" : "🎤 Muted"}
+                  </span>
 
+                  {" • "}
+
+                  <span style={{ color: p.camOn ? "#4caf50" : "#aaa" }}>
+                    {p.camOn ? "📷 On" : "📷 Off"}
+                  </span>
+                </div>
               </div>
-
-              
             </div>
           ))}
         </div>

@@ -44,7 +44,7 @@ export default function MeetDashboard() {
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   /* ---- SOCKET ---- */
   useEffect(() => {
-    socketRef.current = io("http://localhost:5000");
+    socketRef.current = io(import.meta.env.VITE_TRANSLATION_URL);
 
     socketRef.current.on("translated-caption", (text) => {
       console.log("CAPTION RECEIVED ✅", text);

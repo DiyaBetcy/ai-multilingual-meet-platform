@@ -17,22 +17,32 @@ export default function MeetDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const { meetingId: urlMeetingId } = useParams();
-  
-  // Debug navigation state
+
+  const meetingInfo = location.state || {};
+
+  const {
+    name,
+    mode,
+    micOn: previewMicOn,
+    camOn: previewCamOn,
+    meetingId: stateMeetingId,
+  } = meetingInfo;
+
+  const meetingId = urlMeetingId || stateMeetingId;
+
+  const [tempUserId] = useState(
+    () => "user_" + Math.random().toString(36).substr(2, 9)
+  );
+
+  const finalUserId = meetingInfo.userId || tempUserId;
+  const userName = name || "Guest";
+
   console.log("Navigation state:", location.state);
   console.log("URL params meetingId:", urlMeetingId);
-  
-  // Get meeting info from navigation state
-  const meetingInfo = location.state || {};
-  const { name: userName, mode, micOn: previewMicOn, camOn: previewCamOn, meetingId: stateMeetingId } = meetingInfo;
-  
-  // Use meeting ID from URL first, then from state
-  const meetingId = urlMeetingId || stateMeetingId;
-  
-  console.log("Meeting info extracted:", meetingInfo);
   console.log("Final meeting ID:", meetingId);
-  
-  // WebRTC hook
+  console.log("Final user ID:", finalUserId);
+  console.log("User name:", userName);
+
   const {
     isConnected,
     participants: rtcParticipants,
@@ -50,12 +60,9 @@ export default function MeetDashboard() {
     sendMessage: rtcSendMessage,
     cleanup,
     setLocalVideoRef,
-    localStream
-  } = useWebRTC(meetingId, userName, meetingInfo.userId);
+    localStream,
+  } = useWebRTC(meetingId, userName, finalUserId);
 
-  // Translation hook
-  const [tempUserId] = useState(() => 'user_' + Math.random().toString(36).substr(2, 9));
-  
   const {
     isConnected: translationConnected,
     currentLanguage,
@@ -63,11 +70,28 @@ export default function MeetDashboard() {
     caption,
     isListening,
     changeLanguage,
-    toggleListening
-  } = useTranslation(meetingId, userName, meetingInfo.userId || tempUserId, 'en');
+    toggleListening,
+  } = useTranslation(meetingId, userName, finalUserId, "en");
 
-  // Anchoring hook
+  useEffect(() => {
+  window.translationModeOn = isListening;
+
+  const remoteVideos = document.querySelectorAll("video[id^='video-']");
+
+  remoteVideos.forEach((video) => {
+    video.muted = isListening;
+    video.volume = isListening ? 0 : 1;
+  });
+
+  console.log(
+    isListening
+      ? "Translation ON: original audio muted"
+      : "Translation OFF: original audio unmuted"
+  );
+}, [isListening]);
+
   const isCreator = meetingInfo.isCreator || false;
+
   const {
     isAnchoringEnabled,
     isActive: isAnchoringActive,
@@ -88,8 +112,14 @@ export default function MeetDashboard() {
     stopAnchoring,
     resetAnchoring,
     updateAnchorLanguage,
-    isSpeaking
-  } = useAnchoring(meetingId, meetingInfo.userId, userName, isCreator, currentLanguage);
+    isSpeaking,
+  } = useAnchoring(
+    meetingId,
+    finalUserId,
+    userName,
+    isCreator,
+    currentLanguage
+  );
 
   const [showPopup, setShowPopup] = useState(false);
   const [showPeople, setShowPeople] = useState(false);
@@ -101,36 +131,40 @@ export default function MeetDashboard() {
   const [captionsEnabled, setCaptionsEnabled] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [anchorAudioUrl, setAnchorAudioUrl] = useState(null);
+
   const anchorAudioRef = useRef(null);
 
-  // Initialize local media
   useEffect(() => {
-    if (isConnected && userName) {
+    if (isConnected && userName && meetingId) {
       initializeLocalMedia(camOn, micOn);
     }
-  }, [isConnected, userName, camOn, micOn, initializeLocalMedia]);
+  }, [isConnected, userName, meetingId, camOn, micOn, initializeLocalMedia]);
 
-  // Unlock audio on first user interaction for anchor voice
   const unlockAudio = () => {
     if (!audioUnlocked && anchorAudioRef.current) {
-      anchorAudioRef.current.play().then(() => {
-        anchorAudioRef.current.pause();
-        setAudioUnlocked(true);
-      }).catch(() => {});
+      anchorAudioRef.current
+        .play()
+        .then(() => {
+          anchorAudioRef.current.pause();
+          setAudioUnlocked(true);
+        })
+        .catch(() => {});
     }
   };
 
-  // Add click listener to unlock audio
   useEffect(() => {
     const handleClick = () => unlockAudio();
-    document.addEventListener('click', handleClick, { once: true });
-    return () => document.removeEventListener('click', handleClick);
+    document.addEventListener("click", handleClick, { once: true });
+    return () => document.removeEventListener("click", handleClick);
   }, []);
 
-  // Meeting timer
   useEffect(() => {
     if (!meetingRunning) return;
-    const interval = setInterval(() => setMeetingSeconds(s => s + 1), 1000);
+
+    const interval = setInterval(() => {
+      setMeetingSeconds((s) => s + 1);
+    }, 1000);
+
     return () => clearInterval(interval);
   }, [meetingRunning]);
 
@@ -140,19 +174,16 @@ export default function MeetDashboard() {
     return `${m}:${sec}`;
   };
 
-  // Cleanup
   useEffect(() => {
     return () => cleanup();
   }, [cleanup]);
 
-  // Handle anchor muting
   useEffect(() => {
     if (isMutedByAnchor && !isMuted) {
       toggleMicrophone();
     }
   }, [isMutedByAnchor, isMuted, toggleMicrophone]);
 
-  // Auto-start anchoring for creator with pre-set schedule
   useEffect(() => {
     if (
       isCreator &&
@@ -160,12 +191,16 @@ export default function MeetDashboard() {
       !isAnchoringEnabled &&
       isConnected
     ) {
-      // Enable anchoring with the pre-set schedule
       enableAnchoring(meetingInfo.anchoringSchedule);
     }
-  }, [isCreator, meetingInfo.anchoringSchedule, isAnchoringEnabled, isConnected, enableAnchoring]);
+  }, [
+    isCreator,
+    meetingInfo.anchoringSchedule,
+    isAnchoringEnabled,
+    isConnected,
+    enableAnchoring,
+  ]);
 
-  // Auto-start anchoring once enabled
   useEffect(() => {
     if (
       isCreator &&
@@ -173,19 +208,22 @@ export default function MeetDashboard() {
       !isAnchoringActive &&
       schedule.length > 0
     ) {
-      // Automatically start the anchoring
       startAnchoring();
     }
-  }, [isCreator, isAnchoringEnabled, isAnchoringActive, schedule.length, startAnchoring]);
+  }, [
+    isCreator,
+    isAnchoringEnabled,
+    isAnchoringActive,
+    schedule.length,
+    startAnchoring,
+  ]);
 
-  // Update anchor language when user changes language
   useEffect(() => {
     if (updateAnchorLanguage && currentLanguage) {
       updateAnchorLanguage(currentLanguage);
     }
   }, [currentLanguage, updateAnchorLanguage]);
 
-  // Play AI anchor voice when announcement is received
   useEffect(() => {
     if (announcement && announcement.audioUrl && anchorAudioRef.current) {
       setAnchorAudioUrl(announcement.audioUrl);
@@ -193,30 +231,30 @@ export default function MeetDashboard() {
     }
   }, [announcement]);
 
-  // Add AI anchor as virtual participant when enabled
-  const anchorParticipant = isAnchoringEnabled ? {
-    id: 'ai-anchor',
-    name: 'AI Anchor',
-    userId: 'ai-anchor',
-    isAnchor: true,
-    avatar: '🎤',
-    isSpeaking: isSpeaking,
-    micOn: true
-  } : null;
+  const anchorParticipant = isAnchoringEnabled
+    ? {
+        id: "ai-anchor",
+        name: "AI Anchor",
+        userId: "ai-anchor",
+        isAnchor: true,
+        avatar: "🎤",
+        isSpeaking: isSpeaking,
+        micOn: true,
+      }
+    : null;
 
-  const allParticipants = anchorParticipant 
-    ? [...rtcParticipants, anchorParticipant] 
+  const allParticipants = anchorParticipant
+    ? [...rtcParticipants, anchorParticipant]
     : rtcParticipants;
 
-  // Media controls
   const handleToggleMic = async () => {
-    const newState = await toggleMicrophone();
-    setMicOn(!newState);
+    const micIsNowOn = await toggleMicrophone();
+    setMicOn(micIsNowOn);
   };
 
   const handleToggleCam = async () => {
-    const newState = await toggleCamera();
-    setCamOn(!newState);
+    const camIsNowOn = await toggleCamera();
+    setCamOn(camIsNowOn);
   };
 
   const handleToggleScreenShare = async () => {
@@ -228,6 +266,7 @@ export default function MeetDashboard() {
   };
 
   const handleEndMeeting = () => {
+    window.translationModeOn = false;
     cleanup();
     navigate("/");
   };
@@ -238,9 +277,23 @@ export default function MeetDashboard() {
 
   const testConnection = () => {
     console.log("WebRTC connected:", isConnected);
+    console.log("Translation connected:", translationConnected);
+    console.log("Translation listening:", isListening);
     console.log("Meeting ID:", meetingId);
+    console.log("User ID:", finalUserId);
     console.log("Participants:", rtcParticipants);
   };
+
+  if (!meetingId) {
+    return (
+      <div className="meet-dashboard">
+        <div className="meet-header">
+          <h3>Meeting ID missing</h3>
+          <button onClick={() => navigate("/")}>Go Home</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="meet-dashboard">
@@ -248,11 +301,15 @@ export default function MeetDashboard() {
         <div className="meet-info">
           <h3>Meeting: {meetingId}</h3>
           <span className="timer">{formatTime(meetingSeconds)}</span>
-          <span className={`connection-status ${isConnected ? "connected" : "disconnected"}`}>
+          <span
+            className={`connection-status ${
+              isConnected ? "connected" : "disconnected"
+            }`}
+          >
             {isConnected ? "🟢 Connected" : "🔴 Connecting..."}
           </span>
         </div>
-        
+
         <LanguageSelector
           currentLanguage={currentLanguage}
           availableLanguages={availableLanguages}
@@ -260,32 +317,58 @@ export default function MeetDashboard() {
           isListening={isListening}
           onToggleListening={toggleListening}
         />
-        
+
         <div className="meet-controls">
-          <button onClick={handleToggleMic} className={`control-btn ${!isMuted ? "active" : "muted"}`}>
+          <button
+            onClick={handleToggleMic}
+            className={`control-btn ${!isMuted ? "active" : "muted"}`}
+          >
             {!isMuted ? "🎤" : "🔇"}
           </button>
-          <button onClick={handleToggleCam} className={`control-btn ${!isVideoOff ? "active" : "off"}`}>
+
+          <button
+            onClick={handleToggleCam}
+            className={`control-btn ${!isVideoOff ? "active" : "off"}`}
+          >
             {!isVideoOff ? "📹" : "📵"}
           </button>
-          <button onClick={handleToggleScreenShare} className={`control-btn ${isScreenSharing ? "active" : ""}`}>
+
+          <button
+            onClick={handleToggleScreenShare}
+            className={`control-btn ${isScreenSharing ? "active" : ""}`}
+          >
             🖥️
           </button>
-          <button onClick={handleToggleHandRaise} className={`control-btn ${handRaised ? "raised" : ""}`}>
+
+          <button
+            onClick={handleToggleHandRaise}
+            className={`control-btn ${handRaised ? "raised" : ""}`}
+          >
             ✋
           </button>
-          <button onClick={() => setCaptionsEnabled(!captionsEnabled)} className={`control-btn ${captionsEnabled ? "active" : ""}`}>
+
+          <button
+            onClick={() => setCaptionsEnabled(!captionsEnabled)}
+            className={`control-btn ${captionsEnabled ? "active" : ""}`}
+          >
             📝
           </button>
+
           <button onClick={() => setShowChat(!showChat)} className="control-btn">
             💬
           </button>
-          <button onClick={() => setShowPeople(!showPeople)} className="control-btn">
+
+          <button
+            onClick={() => setShowPeople(!showPeople)}
+            className="control-btn"
+          >
             👥
           </button>
+
           <button onClick={testConnection} className="control-btn debug">
             🐛
           </button>
+
           <button onClick={handleEndMeeting} className="control-btn end-call">
             📞
           </button>
@@ -294,8 +377,8 @@ export default function MeetDashboard() {
 
       <div className="meet-content">
         <div className="video-section">
-          <VideoGrid 
-            participants={allParticipants} 
+          <VideoGrid
+            participants={allParticipants}
             localStream={localStream}
             userName={userName}
             setLocalVideoRef={setLocalVideoRef}
@@ -305,11 +388,8 @@ export default function MeetDashboard() {
             handRaised={handRaised}
             speakingUser={speakingUser}
           />
-          
-          <TranslatedCaption 
-            caption={caption}
-            isVisible={captionsEnabled}
-          />
+
+          <TranslatedCaption caption={caption} isVisible={captionsEnabled} />
         </div>
 
         <div className="side-panels">
@@ -331,17 +411,17 @@ export default function MeetDashboard() {
             onResetAnchoring={resetAnchoring}
             onOpenSchedule={() => setShowScheduleModal(true)}
           />
-          
+
           {showPeople && (
-            <ParticipantsPanel 
+            <ParticipantsPanel
               participants={allParticipants}
               onClose={() => setShowPeople(false)}
               speakingUser={speakingUser}
             />
           )}
-          
+
           {showChat && (
-            <ChatPanel 
+            <ChatPanel
               messages={rtcMessages}
               onSendMessage={handleSendMessage}
               onClose={() => setShowChat(false)}
@@ -350,27 +430,26 @@ export default function MeetDashboard() {
         </div>
       </div>
 
-      {/* AI Anchor Announcement Overlay */}
       {announcement && (
         <div className="anchor-announcement-overlay">
           <div className="announcement-box">
             <div className="announcement-header">
               <span className="announcement-icon">🎤</span>
-              <span className="announcement-speaker">{announcement.speakerName}</span>
+              <span className="announcement-speaker">
+                {announcement.speakerName}
+              </span>
             </div>
             <p className="announcement-text">{announcement.script}</p>
           </div>
         </div>
       )}
 
-      {/* Muted by Anchor Notification */}
       {isMutedByAnchor && (
         <div className="muted-notification">
           🔇 Your time is up! Microphone muted by AI Anchor
         </div>
       )}
 
-      {/* Schedule Setup Modal */}
       {showScheduleModal && (
         <ScheduleSetupModal
           onClose={() => setShowScheduleModal(false)}
@@ -384,13 +463,12 @@ export default function MeetDashboard() {
       )}
 
       {showPopup && <Popup onClose={() => setShowPopup(false)} />}
-      
-      {/* AI Anchor Audio Element */}
-      <audio 
+
+      <audio
         ref={anchorAudioRef}
         src={anchorAudioUrl}
         onEnded={() => setAnchorAudioUrl(null)}
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
       />
     </div>
   );

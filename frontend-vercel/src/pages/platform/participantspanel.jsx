@@ -1,4 +1,4 @@
-import "./participantsPanel.css";
+import "./participantspanel.css";
 
 export default function ParticipantsPanel({ participants, onClose }) {
   const raisedCount = participants.filter((p) => p.handRaised).length;
