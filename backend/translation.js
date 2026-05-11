@@ -1,9 +1,9 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-const { translate } = require("@vitalets/google-translate-api");
 const { SarvamAIClient } = require("sarvamai");
 const cors = require("cors");
+const axios = require("axios");
 
 const app = express();
 
@@ -99,12 +99,12 @@ const translateWithRetry = async (text, sourceLang, targetLang) => {
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const result = await translate(text, {
-        from: sourceLang,
-        to: targetLang,
-      });
-
-      const translatedText = result.text;
+      // Use MyMemory API (free, no rate limits)
+      const langPair = `${sourceLang}|${targetLang}`;
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`;
+      
+      const response = await axios.get(url);
+      const translatedText = response.data.responseData.translatedText;
 
       translationCache.set(cacheKey, translatedText);
 
