@@ -231,9 +231,31 @@ export const useWebRTC = (roomId, userName, userId) => {
 
       setParticipants((prev) => {
         const currentUser = prev.find((p) => p.isYou);
-        return currentUser
-          ? [currentUser, ...otherParticipants]
-          : otherParticipants;
+        
+        // If we have a current user, preserve it and add others
+        if (currentUser) {
+          return [currentUser, ...otherParticipants];
+        }
+        
+        // If no current user in prev, check if our ID is in the list
+        const meInList = participantsList.find((p) => p.id === currentUserIdRef.current);
+        if (meInList) {
+          return participantsList.map((p) => ({
+            ...p,
+            isYou: p.id === currentUserIdRef.current
+          }));
+        }
+        
+        // Fallback: just use the list as-is
+        return participantsList;
+      });
+
+      // Create peer connections with any participants we don't have connections with
+      participantsList.forEach(async (participant) => {
+        if (participant.id !== currentUserIdRef.current && !peerConnectionsRef.current.has(participant.id)) {
+          console.log("Creating peer connection with participant from participants-list:", participant.id);
+          await createPeerConnection(participant.id, true);
+        }
       });
     });
 

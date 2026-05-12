@@ -59,6 +59,13 @@ io.on("connection", (socket) => {
 
     socket.emit("participants-list", roomParticipants);
 
+    // Broadcast full participant list to all users for synchronization
+    const allParticipants = Array.from(rooms.get(roomId))
+      .map((id) => participants.get(id))
+      .filter((p) => p);
+    
+    io.to(roomId).emit("participants-list", allParticipants);
+
     console.log(`Room ${roomId} has ${rooms.get(roomId).size} participants`);
   });
 
@@ -146,6 +153,16 @@ io.on("connection", (socket) => {
       });
 
       participants.delete(socket.id);
+
+      // Broadcast updated participant list to all users for synchronization
+      const remainingRoom = rooms.get(participant.roomId);
+      if (remainingRoom && remainingRoom.size > 0) {
+        const allParticipants = Array.from(remainingRoom)
+          .map((id) => participants.get(id))
+          .filter((p) => p);
+        
+        io.to(participant.roomId).emit("participants-list", allParticipants);
+      }
 
       console.log(`User ${participant.name} left room ${participant.roomId}`);
     }
