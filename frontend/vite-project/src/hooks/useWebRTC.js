@@ -225,6 +225,8 @@ export const useWebRTC = (roomId, userName, userId) => {
     });
 
     socketRef.current.on("participants-list", (participantsList) => {
+      console.log("Received participants-list:", participantsList.map(p => ({ id: p.id, name: p.name })));
+
       const otherParticipants = participantsList.filter(
         (p) => p.id !== currentUserIdRef.current
       );
@@ -253,22 +255,30 @@ export const useWebRTC = (roomId, userName, userId) => {
       // Create peer connections with any participants we don't have connections with
       participantsList.forEach(async (participant) => {
         if (participant.id !== currentUserIdRef.current && !peerConnectionsRef.current.has(participant.id)) {
-          console.log("Creating peer connection with participant from participants-list:", participant.id);
-          await createPeerConnection(participant.id, true);
+          console.log("Creating peer connection with participant from participants-list:", participant.id, participant.name);
+          try {
+            await createPeerConnection(participant.id, true);
+          } catch (error) {
+            console.error("Failed to create peer connection with", participant.id, error);
+          }
         }
       });
     });
 
     socketRef.current.on("user-joined", async (participant) => {
       if (participant.id !== currentUserIdRef.current) {
-        console.log("User joined:", participant);
+        console.log("User joined:", participant.id, participant.name);
 
         setParticipants((prev) => {
           const exists = prev.some((p) => p.id === participant.id);
           return exists ? prev : [...prev, participant];
         });
 
-        await createPeerConnection(participant.id, true);
+        try {
+          await createPeerConnection(participant.id, true);
+        } catch (error) {
+          console.error("Failed to create peer connection for joined user:", participant.id, error);
+        }
       }
     });
 
