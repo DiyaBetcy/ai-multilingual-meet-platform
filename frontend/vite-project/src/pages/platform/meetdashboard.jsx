@@ -16,19 +16,9 @@ import QAPanel from "./QAPanel.jsx";
 import ChatPanel from "./chatpanel.jsx";
 import WaitingRoomPanel from "./WaitingRoomPanel.jsx";
 import { getToken } from "../../lib/session.js";
+import { TRANSLATION_URL } from "../../lib/serviceUrls.js";
 
-const getSummaryApiBase = () => {
-  const envUrl = import.meta.env.VITE_TRANSLATION_URL;
-  if (envUrl) return envUrl;
-  if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    if (host && host !== "localhost" && host !== "127.0.0.1") {
-      return `http://${host}:5000`;
-    }
-  }
-  if (import.meta.env.DEV) return "http://localhost:5000";
-  return "";
-};
+const getSummaryApiBase = () => TRANSLATION_URL;
 
 export default function MeetDashboard() {
   const navigate = useNavigate();
@@ -91,11 +81,17 @@ export default function MeetDashboard() {
 
   const {
     currentLanguage,
+    speakingLanguage,
     availableLanguages,
     caption,
     isListening,
+    translationEnabled,
     changeLanguage,
+    changeSpeakingLanguage,
+    toggleTranslation,
     toggleListening,
+    isConnected: isTranslationConnected,
+    connectionError: translationConnectionError,
   } = useTranslation(
     meetingId,
     userName,
@@ -103,9 +99,21 @@ export default function MeetDashboard() {
     preferredLanguage || "en"
   );
 
+  /* Translation mode is owned by the participant, not by the microphone.
+     Mute only the remote WebRTC audio (the local preview/mic are never
+     touched) so the translated TTS is not overlapped by the speaker's
+     original-language voice. Turning translation off restores it. */
   useEffect(() => {
-    window.translationModeOn = isListening;
-  }, [isListening]);
+    if (typeof window === "undefined") return undefined;
+
+    window.translationModeOn = Boolean(
+      translationEnabled && isTranslationConnected
+    );
+
+    return () => {
+      window.translationModeOn = false;
+    };
+  }, [translationEnabled, isTranslationConnected]);
 
   const {
     isAnchoringEnabled,
@@ -131,6 +139,8 @@ export default function MeetDashboard() {
     anchorAudioStatus,
     anchorAudioError,
     retryAnchorAudio,
+    connectionError: anchoringConnectionError,
+    canResume: canResumeAnchoring,
   } = useAnchoring(
     meetingId,
     finalUserId,
@@ -153,6 +163,7 @@ export default function MeetDashboard() {
   const [captionsEnabled, setCaptionsEnabled] = useState(true);
 
   const hasAutoStartedAnchoringRef = useRef(false);
+  const anchorMutedRef = useRef(false);
   const initialMediaRef = useRef({
     micOn: previewMicOn ?? true,
     camOn: previewCamOn ?? true,
@@ -182,7 +193,19 @@ export default function MeetDashboard() {
   useEffect(() => () => cleanup(), [cleanup]);
 
   useEffect(() => {
-    if (isMutedByAnchor && !isMuted) toggleMicrophone();
+    if (isMutedByAnchor && !isMuted) {
+      anchorMutedRef.current = true;
+      toggleMicrophone();
+      return;
+    }
+
+    /* The anchoring service emits unmute-speaker for the next speaker.
+       Only restore the microphone if the anchor muted it, so a manual
+       mute by the participant is never undone. */
+    if (!isMutedByAnchor && anchorMutedRef.current) {
+      anchorMutedRef.current = false;
+      if (isMuted) toggleMicrophone();
+    }
   }, [isMutedByAnchor, isMuted, toggleMicrophone]);
 
   useEffect(() => {
@@ -280,6 +303,11 @@ export default function MeetDashboard() {
     setSummaryError("");
     try {
       const baseUrl = getSummaryApiBase();
+      if (!baseUrl) {
+        throw new Error(
+          "The summary API is not configured. Set VITE_TRANSLATION_URL and redeploy the frontend."
+        );
+      }
       const token = getToken();
       const res = await fetch(`${baseUrl}/api/summary/${meetingId}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -305,6 +333,11 @@ export default function MeetDashboard() {
     setSummaryError("");
     try {
       const baseUrl = getSummaryApiBase();
+      if (!baseUrl) {
+        throw new Error(
+          "The summary API is not configured. Set VITE_TRANSLATION_URL and redeploy the frontend."
+        );
+      }
       const token = getToken();
       const res = await fetch(`${baseUrl}/api/summary/generate`, {
         method: "POST",
@@ -351,9 +384,13 @@ export default function MeetDashboard() {
 
         <LanguageSelector
           currentLanguage={currentLanguage}
+          speakingLanguage={speakingLanguage}
           availableLanguages={availableLanguages}
           onChangeLanguage={changeLanguage}
+          onChangeSpeakingLanguage={changeSpeakingLanguage}
           isListening={isListening}
+          translationEnabled={translationEnabled}
+          onToggleTranslation={toggleTranslation}
           onToggleListening={toggleListening}
         />
 
@@ -467,7 +504,10 @@ export default function MeetDashboard() {
         </div>
       </div>
 
-      {(connectionError || mediaError) && (
+      {(connectionError ||
+        mediaError ||
+        translationConnectionError ||
+        anchoringConnectionError) && (
         <div className="meet-alert-stack">
           {connectionError && (
             <div className="meet-alert" role="alert">
@@ -477,6 +517,16 @@ export default function MeetDashboard() {
           {mediaError && (
             <div className="meet-alert" role="alert">
               {mediaError}
+            </div>
+          )}
+          {translationConnectionError && (
+            <div className="meet-alert" role="alert">
+              {translationConnectionError}
+            </div>
+          )}
+          {anchoringConnectionError && (
+            <div className="meet-alert" role="alert">
+              {anchoringConnectionError}
             </div>
           )}
         </div>
@@ -545,8 +595,8 @@ export default function MeetDashboard() {
             isSpeaking={isSpeaking}
             audioStatus={anchorAudioStatus}
             audioError={anchorAudioError}
+            canResume={canResumeAnchoring}
             onRetryAudio={retryAnchorAudio}
-            onEnableAnchoring={() => setShowScheduleModal(true)}
             onStartAnchoring={startAnchoring}
             onPauseAnchoring={pauseAnchoring}
             onResumeAnchoring={resumeAnchoring}

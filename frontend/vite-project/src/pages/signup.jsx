@@ -3,24 +3,9 @@ import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logoImg from "../assets/logo.png";
 import "./signup.css";
+import { TRANSLATION_URL } from "../lib/serviceUrls.js";
 
-const getApiBase = () => {
-  if (import.meta.env.VITE_TRANSLATION_URL) {
-    return import.meta.env.VITE_TRANSLATION_URL;
-  }
-  if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    if (host && host !== "localhost" && host !== "127.0.0.1") {
-      return `http://${host}:5000`;
-    }
-  }
-  if (import.meta.env.DEV) {
-    return "http://localhost:5000";
-  }
-  return "";
-};
-
-const API_BASE = getApiBase();
+const API_BASE = TRANSLATION_URL;
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());

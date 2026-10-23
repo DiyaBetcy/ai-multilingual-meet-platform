@@ -59,8 +59,10 @@ const AnchoringControlPanel = ({
   isSpeaking = false,
   audioStatus = 'idle',
   audioError = '',
+  canResume = false,
   onStartAnchoring,
   onPauseAnchoring,
+  onResumeAnchoring,
   onSkipSpeaker,
   onStopAnchoring,
   onResetAnchoring,
@@ -181,12 +183,19 @@ const AnchoringControlPanel = ({
           
           <div className="anchoring-controls">
             {!isActive ? (
-              <button className="btn-control btn-start" onClick={() => {
-                console.log('Start button clicked');
-                onStartAnchoring();
-              }}>
-                ▶️ Start Anchoring
-              </button>
+              <>
+                {canResume && (
+                  <button className="btn-control btn-start" onClick={onResumeAnchoring}>
+                    ▶️ Resume Anchoring
+                  </button>
+                )}
+                <button className="btn-control btn-start" onClick={() => {
+                  console.log('Start button clicked');
+                  onStartAnchoring();
+                }}>
+                  {canResume ? '🔄 Restart from Beginning' : '▶️ Start Anchoring'}
+                </button>
+              </>
             ) : (
               <>
                 <button className="btn-control btn-pause" onClick={onPauseAnchoring}>

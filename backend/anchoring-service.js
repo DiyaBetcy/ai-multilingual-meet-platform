@@ -7,7 +7,20 @@ const { translate } = require('@vitalets/google-translate-api');
 const { SarvamAIClient } = require('sarvamai');
 
 const app = express();
-app.use(cors());
+
+const allowedOrigins = (process.env.CLIENT_ORIGIN || process.env.CORS_ORIGIN)
+  ? (process.env.CLIENT_ORIGIN || process.env.CORS_ORIGIN)
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean)
+  : [
+      'https://meet-ai-anchoring.vercel.app',
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://127.0.0.1:5173',
+    ];
+
+app.use(cors({ origin: allowedOrigins, credentials: false }));
 app.use(express.json());
 
 // Sarvam AI client credentials must come from the environment. Never
@@ -43,12 +56,18 @@ const withTimeout = (promise, ms, label) => {
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: [
-      "https://meet-ai-anchoring.vercel.app",
-      "http://localhost:5173"
-    ],
-    methods: ["GET", "POST"]
-  }
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: false,
+  },
+});
+
+io.engine.on("connection_error", (error) => {
+  console.error("Anchoring Socket.IO connection error:", {
+    code: error?.code,
+    message: error?.message,
+    context: error?.context,
+  });
 });
 
 // Store anchoring sessions
@@ -98,7 +117,8 @@ const languageMapping = {
   'bn-IN': 'bn-IN',
   'pa-IN': 'pa-IN',
   'ur-IN': 'ur-IN',
-  'or-IN': 'or-IN',
+  'or-IN': 'od-IN',
+  'od-IN': 'od-IN',
   'as-IN': 'as-IN'
 };
 
@@ -192,13 +212,14 @@ class AnchoringSession {
     this.roomId = roomId;
     this.creatorId = creatorId;
     this.settings = settings;
-    this.schedule = settings.schedule || [];
+    this.schedule = Array.isArray(settings.schedule) ? settings.schedule : [];
     this.currentIndex = -1;
     this.isActive = false;
     this.currentSpeaker = null;
     this.timerInterval = null;
     this.isTimerRunning = false;
     this.timeRemaining = 0;
+    this.isEnding = false;
     this.language = normalizeAnchorLanguage(settings.language);
     /* Serialize script generation/emission so a skip or timer warning
        cannot overtake the introduction that is still being spoken. */
@@ -206,6 +227,13 @@ class AnchoringSession {
   }
   
   async start(io) {
+    if (!Array.isArray(this.schedule) || this.schedule.length === 0) {
+      io.to(this.roomId).emit('anchoring-error', {
+        message: 'Add at least one speaker before starting AI anchoring.',
+      });
+      return;
+    }
+
     this.isActive = true;
     this.currentIndex = 0;
     
@@ -477,6 +505,9 @@ class AnchoringSession {
   }
   
   async endSession(io) {
+    if (this.isEnding) return;
+
+    this.isEnding = true;
     this.isActive = false;
     if (this.timerInterval) clearInterval(this.timerInterval);
     this.timerInterval = null;
@@ -489,12 +520,20 @@ class AnchoringSession {
     );
     await this.speakScript(closingScript, io);
     
+    const completedIndex = this.currentIndex;
+
     io.to(this.roomId).emit('anchoring-ended', {
-      message: 'Anchoring session completed'
+      message: 'Anchoring session completed',
+      currentIndex: completedIndex,
     });
-    
-    // Clean up
-    anchoringSessions.delete(this.roomId);
+
+    this.currentSpeaker = null;
+    this.currentIndex = this.schedule.length;
+    this.timeRemaining = 0;
+    this.isEnding = false;
+
+    /* Keep the session in the map so restart/skip/status continue to
+       work after Stop. Enabling anchoring again replaces it. */
   }
   
   pause() {
@@ -518,7 +557,15 @@ io.on('connection', (socket) => {
   console.log('Client connected to anchoring service:', socket.id);
   
   // Enable anchoring for a meeting
-  socket.on('enable-anchoring', ({ roomId, creatorId, settings = {} }) => {
+  socket.on('enable-anchoring', ({ roomId, creatorId, settings = {} } = {}) => {
+    if (!roomId) {
+      console.error('enable-anchoring requires a roomId');
+      socket.emit('anchoring-error', {
+        message: 'Cannot enable AI anchoring without a meeting id.',
+      });
+      return;
+    }
+
     console.log('Enabling anchoring for room:', roomId);
 
     /* Enabling again must replace the prior session, not leave its
@@ -533,7 +580,11 @@ io.on('connection', (socket) => {
       existingSession.isTimerRunning = false;
     }
 
-    const session = new AnchoringSession(roomId, creatorId, settings);
+    const normalizedSettings = {
+      ...settings,
+      schedule: Array.isArray(settings.schedule) ? settings.schedule : [],
+    };
+    const session = new AnchoringSession(roomId, creatorId, normalizedSettings);
     anchoringSessions.set(roomId, session);
     
     socket.join(roomId);
@@ -546,61 +597,95 @@ io.on('connection', (socket) => {
     });
   });
   
+  const notifyAnchoringError = (roomId, message) => {
+    console.error('Anchoring error:', message, { roomId });
+    if (roomId) {
+      io.to(roomId).emit('anchoring-error', { message });
+    } else {
+      socket.emit('anchoring-error', { message });
+    }
+  };
+
   // Start anchoring session
-  socket.on('start-anchoring', async ({ roomId }) => {
+  socket.on('start-anchoring', async ({ roomId } = {}) => {
     console.log('Received start-anchoring event for room:', roomId);
     const session = anchoringSessions.get(roomId);
-    console.log('Session found:', !!session, 'Session active:', session?.isActive);
-    if (session && !session.isActive) {
-      console.log('Starting anchoring session...');
-      await session.start(io);
-    } else {
-      console.error('Cannot start anchoring:', { sessionExists: !!session, isActive: session?.isActive });
+
+    if (!session) {
+      notifyAnchoringError(
+        roomId,
+        'AI anchoring has not been enabled for this meeting yet.'
+      );
+      return;
     }
+
+    if (session.isActive) {
+      console.log('Anchoring is already active for room:', roomId);
+      return;
+    }
+
+    console.log('Starting anchoring session...');
+    await session.start(io);
   });
   
   // Pause anchoring
-  socket.on('pause-anchoring', ({ roomId }) => {
+  socket.on('pause-anchoring', ({ roomId } = {}) => {
     const session = anchoringSessions.get(roomId);
-    if (session) {
-      session.pause();
-      io.to(roomId).emit('anchoring-paused');
-    }
+    if (!session || !session.isActive) return;
+
+    session.pause();
+    io.to(roomId).emit('anchoring-paused');
   });
   
   // Resume anchoring
-  socket.on('resume-anchoring', ({ roomId }) => {
+  socket.on('resume-anchoring', async ({ roomId } = {}) => {
     const session = anchoringSessions.get(roomId);
-    if (session) {
-      session.resume(io);
-      io.to(roomId).emit('anchoring-resumed');
+
+    if (!session) {
+      notifyAnchoringError(roomId, 'There is no anchoring session to resume.');
+      return;
     }
+
+    /* After Stop or a completed session there is no current speaker.
+       Resume then means starting the schedule from the beginning. */
+    if (!session.currentSpeaker) {
+      await session.start(io);
+      return;
+    }
+
+    session.resume(io);
+    io.to(roomId).emit('anchoring-resumed');
   });
   
   // Skip to next speaker
-  socket.on('skip-speaker', async ({ roomId }) => {
+  socket.on('skip-speaker', async ({ roomId } = {}) => {
     const session = anchoringSessions.get(roomId);
-    if (session && session.isActive) {
-      clearInterval(session.timerInterval);
-      session.timerInterval = null;
-      session.isTimerRunning = false;
-      session.currentIndex++;
-      await session.moveToNextSpeaker(io);
-    }
+    if (!session || !session.isActive) return;
+
+    if (session.timerInterval) clearInterval(session.timerInterval);
+    session.timerInterval = null;
+    session.isTimerRunning = false;
+    session.currentIndex++;
+    await session.moveToNextSpeaker(io);
   });
   
   // Stop anchoring
-  socket.on('stop-anchoring', async ({ roomId }) => {
+  socket.on('stop-anchoring', async ({ roomId } = {}) => {
     const session = anchoringSessions.get(roomId);
-    if (session) {
-      await session.endSession(io);
+    if (!session) return;
+
+    if (!session.isActive && !session.currentSpeaker) {
+      return;
     }
+
+    await session.endSession(io);
   });
   
   // Reset anchoring (clear stuck sessions)
-  socket.on('reset-anchoring', ({ roomId }) => {
+  socket.on('reset-anchoring', ({ roomId } = {}) => {
     console.log('Resetting anchoring for room:', roomId);
     const session = anchoringSessions.get(roomId);
+
     if (session) {
       if (session.timerInterval) clearInterval(session.timerInterval);
       session.timerInterval = null;
@@ -610,6 +695,7 @@ io.on('connection', (socket) => {
       session.timeRemaining = 0;
       session.currentSpeaker = null;
     }
+
     io.to(roomId).emit('anchoring-reset', {
       timestamp: Date.now(),
       serverTime: new Date().toISOString()
@@ -617,36 +703,77 @@ io.on('connection', (socket) => {
   });
 
   // Restart anchoring from beginning
-  socket.on('restart-anchoring', async ({ roomId }) => {
+  socket.on('restart-anchoring', async ({ roomId } = {}) => {
     console.log('Restarting anchoring for room:', roomId);
     const session = anchoringSessions.get(roomId);
-    if (session) {
-      if (session.timerInterval) clearInterval(session.timerInterval);
-      session.timerInterval = null;
-      session.isTimerRunning = false;
-      session.currentIndex = 0;
-      session.timeRemaining = 0;
-      session.currentSpeaker = null;
-      session.isActive = true;
-      
-      // Notify all participants about restart
-      io.to(roomId).emit('anchoring-restarted', {
-        timestamp: Date.now(),
-        serverTime: new Date().toISOString()
-      });
-      
-      // Start from first speaker
-      await session.moveToNextSpeaker(io);
+
+    if (!session) {
+      notifyAnchoringError(
+        roomId,
+        'There is no anchoring session to restart. Enable anchoring first.'
+      );
+      return;
     }
+
+    if (!Array.isArray(session.schedule) || session.schedule.length === 0) {
+      notifyAnchoringError(
+        roomId,
+        'Add at least one speaker before restarting AI anchoring.'
+      );
+      return;
+    }
+
+    if (session.timerInterval) clearInterval(session.timerInterval);
+    session.timerInterval = null;
+    session.isTimerRunning = false;
+    session.currentIndex = 0;
+    session.timeRemaining = 0;
+    session.currentSpeaker = null;
+    session.isActive = true;
+
+    // Notify all participants about restart
+    io.to(roomId).emit('anchoring-restarted', {
+      timestamp: Date.now(),
+      serverTime: new Date().toISOString()
+    });
+
+    // Start from first speaker
+    await session.moveToNextSpeaker(io);
+  });
+
+  // Update the speaker schedule without losing the session
+  socket.on('update-schedule', ({ roomId, schedule } = {}) => {
+    const session = anchoringSessions.get(roomId);
+
+    if (!session || !Array.isArray(schedule)) {
+      notifyAnchoringError(
+        roomId,
+        'Could not update the anchoring schedule because the session or schedule is missing.'
+      );
+      return;
+    }
+
+    session.schedule = schedule;
+    session.settings.schedule = schedule;
+
+    io.to(roomId).emit('anchoring-schedule-updated', {
+      schedule,
+      timestamp: Date.now(),
+    });
+
+    console.log('Updated anchoring schedule for room:', roomId, schedule.length, 'speakers');
   });
   
   // Get anchoring status
-  socket.on('get-anchoring-status', ({ roomId }, callback) => {
+  socket.on('get-anchoring-status', ({ roomId } = {}, callback) => {
+    if (typeof callback !== 'function') return;
+
     const session = anchoringSessions.get(roomId);
+
     if (session) {
       callback({
         isActive: session.isActive,
-        isAnchoringEnabled: true, // Always true when session exists
+        isAnchoringEnabled: true,
         currentSpeaker: session.currentSpeaker,
         currentIndex: session.currentIndex,
         schedule: session.schedule,
@@ -661,7 +788,15 @@ io.on('connection', (socket) => {
   });
   
   // Join anchoring room with language preference
-  socket.on('join-anchoring-room', ({ roomId, userId, language }) => {
+  socket.on('join-anchoring-room', ({ roomId, userId, language } = {}) => {
+    if (!roomId || !userId) {
+      console.error('join-anchoring-room requires roomId and userId', {
+        roomId,
+        userId,
+      });
+      return;
+    }
+
     socket.join(roomId);
     console.log('Client joined anchoring room:', roomId, 'with language:', language);
     
@@ -671,6 +806,11 @@ io.on('connection', (socket) => {
     }
     const roomUsers = userLanguages.get(roomId);
     const normalizedLanguage = normalizeAnchorLanguage(language);
+    const duplicateIndex = roomUsers.findIndex(
+      (user) => user.socketId === socket.id && user.userId !== userId
+    );
+    if (duplicateIndex !== -1) roomUsers.splice(duplicateIndex, 1);
+
     const existingUser = roomUsers.find(u => u.userId === userId);
     if (existingUser) {
       existingUser.socketId = socket.id;
@@ -729,25 +869,45 @@ app.get('/api/anchoring/status/:roomId', (req, res) => {
 });
 
 app.post('/api/anchoring/schedule', (req, res) => {
-  const { roomId, schedule } = req.body;
+  const { roomId, schedule } = req.body || {};
   const session = anchoringSessions.get(roomId);
   
-  if (session) {
+  if (session && Array.isArray(schedule)) {
     session.schedule = schedule;
+    session.settings.schedule = schedule;
+    io.to(roomId).emit('anchoring-schedule-updated', {
+      schedule,
+      timestamp: Date.now(),
+    });
     res.json({ success: true, schedule });
   } else {
-    res.status(404).json({ error: 'Anchoring session not found' });
+    res.status(404).json({ error: 'Anchoring session not found or schedule invalid' });
   }
 });
 
 app.get("/health", (req, res) => {
-  res.status(200).send("OK");
+  res.status(200).json({
+    status: "ok",
+    service: "anchoring",
+    sessions: anchoringSessions.size,
+    uptime: process.uptime(),
+  });
 });
 
 const PORT = process.env.PORT || process.env.ANCHORING_PORT || 3002;
 
+const shutdown = (signal) => {
+  console.log(`AI Anchoring Service shutting down (${signal})`);
+  io.close();
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 5000).unref();
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`🎤 AI Anchoring Service running on port ${PORT}`);
+  console.log(`🎤 AI Anchoring Service running on port ${PORT} (0.0.0.0)`);
 });
 
 module.exports = { app, server, io };

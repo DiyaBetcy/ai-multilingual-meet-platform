@@ -9,8 +9,11 @@ const app = express();
    wildcard origin must not be combined with credentials: true. That
    invalid CORS combination made preflight/upgrade behavior depend on the
    browser. Restrict origins with CLIENT_ORIGIN when deploying. */
-const allowedOrigins = process.env.CLIENT_ORIGIN
-  ? process.env.CLIENT_ORIGIN.split(",").map((origin) => origin.trim())
+const allowedOrigins = (process.env.CLIENT_ORIGIN || process.env.CORS_ORIGIN)
+  ? (process.env.CLIENT_ORIGIN || process.env.CORS_ORIGIN)
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean)
   : "*";
 
 const corsOptions = {
@@ -25,6 +28,14 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: corsOptions,
+});
+
+io.engine.on("connection_error", (error) => {
+  console.error("Socket.IO connection error:", {
+    code: error?.code,
+    message: error?.message,
+    context: error?.context,
+  });
 });
 
 const rooms = new Map();
@@ -462,7 +473,13 @@ app.get("/room/:roomId", (req, res) => {
   });
 });
 app.get("/health", (req, res) => {
-  res.status(200).send("OK");
+  res.status(200).json({
+    status: "ok",
+    service: "webrtc-signaling",
+    uptime: process.uptime(),
+    rooms: rooms.size,
+    connections: io.engine?.clientsCount ?? 0,
+  });
 });
 const PORT = process.env.PORT || process.env.WEBRTC_PORT || 3001;
 
@@ -478,8 +495,19 @@ server.on("error", (error) => {
   }
 
   process.exitCode = 1;
+  process.exit(1);
 });
 
+const shutdown = (signal) => {
+  console.log(`WebRTC signaling shutting down (${signal})`);
+  io.close();
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 5000).unref();
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`WebRTC signaling server running on port ${PORT}`);
+  console.log(`WebRTC signaling server running on port ${PORT} (0.0.0.0)`);
 });

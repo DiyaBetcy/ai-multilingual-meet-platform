@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io } from "socket.io-client";
+import {
+  TRANSLATION_URL,
+  SERVICE_CONFIG_ERRORS,
+} from "../lib/serviceUrls.js";
 
 const languageNames = {
   en: "English",
@@ -55,12 +59,26 @@ export const useTranslation = (
   const isPlayingAudioRef = useRef(false);
   const playedAudioMessageIdsRef = useRef(new Set());
   const lastFinalTextRef = useRef({ text: "", at: 0 });
+  /* Two independent preferences:
+     - languageRef / currentLanguage: the language this participant wants
+       to READ and HEAR (the translation target).
+     - speakingLanguageRef / speakingLanguage: the language this
+       participant actually SPEAKS (the recognition/source language).
+     They default to the same value but can be changed independently. */
   const languageRef = useRef(normalizeLanguage(initialLanguage));
+  const speakingLanguageRef = useRef(normalizeLanguage(initialLanguage));
+  const currentAudioRef = useRef(null);
   const captionClearTimeoutRef = useRef(null);
   const captionSequenceRef = useRef(0);
 
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionError, setConnectionError] = useState(
+    TRANSLATION_URL ? "" : SERVICE_CONFIG_ERRORS.translation
+  );
   const [currentLanguage, setCurrentLanguage] = useState(() =>
+    normalizeLanguage(initialLanguage)
+  );
+  const [speakingLanguage, setSpeakingLanguage] = useState(() =>
     normalizeLanguage(initialLanguage)
   );
   const [availableLanguages, setAvailableLanguages] = useState(languageNames);
@@ -73,7 +91,16 @@ export const useTranslation = (
     targetLanguage: normalizeLanguage(initialLanguage),
   });
   const [isListening, setIsListening] = useState(false);
+  /* Translation mode is a per-participant choice (on by default): while it
+     is on, the participant receives the translated captions/audio and the
+     original WebRTC audio of the other participants is muted. It is
+     deliberately not tied to whether speech recognition is currently
+     running, so a listener who never presses "Translate" still hears the
+     meeting in their own language. */
+  const [translationEnabled, setTranslationEnabledState] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+
+  const translationEnabledRef = useRef(true);
 
   const unlockAudio = useCallback(() => {
     if (audioUnlocked) return;
@@ -108,21 +135,6 @@ export const useTranslation = (
       }
     };
   }, [unlockAudio]);
-
-  const getTranslationUrl = () => {
-    if (import.meta.env.VITE_TRANSLATION_URL) {
-      return import.meta.env.VITE_TRANSLATION_URL;
-    }
-    if (typeof window !== "undefined") {
-      const host = window.location.hostname;
-      if (host && host !== "localhost" && host !== "127.0.0.1") {
-        return `http://${host}:5000`;
-      }
-    }
-    return "http://localhost:5000";
-  };
-
-  const TRANSLATION_URL = getTranslationUrl();
 
   // Preload voices for browser TTS
   useEffect(() => {
@@ -245,13 +257,16 @@ export const useTranslation = (
 
       const audio = new Audio(audioSrc);
       audio.volume = 1.0;
+      currentAudioRef.current = audio;
 
       audio.onended = () => {
+        if (currentAudioRef.current === audio) currentAudioRef.current = null;
         isPlayingAudioRef.current = false;
         playNextAudio();
       };
 
       audio.onerror = (err) => {
+        if (currentAudioRef.current === audio) currentAudioRef.current = null;
         console.error("Translated audio playback error:", err);
         isPlayingAudioRef.current = false;
         playNextAudio();
@@ -275,12 +290,16 @@ export const useTranslation = (
   }, [speakWithBrowserTTS]);
 
   const enqueueTranslatedAudio = useCallback(
-    (base64Audio) => {
+    (base64Audio, mimeType = "audio/wav") => {
       if (!base64Audio) return;
+
+      const audioSrc = String(base64Audio).startsWith("data:audio")
+        ? String(base64Audio)
+        : `data:${mimeType || "audio/wav"};base64,${base64Audio}`;
 
       console.log("Adding translated audio to queue, length:", base64Audio.length);
 
-      audioQueueRef.current.push(base64Audio);
+      audioQueueRef.current.push(audioSrc);
       playNextAudio();
     },
     [playNextAudio]
@@ -296,17 +315,29 @@ export const useTranslation = (
     [playNextAudio]
   );
 
-  /* The language selector changes the user's preference; it must not
-     recreate the socket (which briefly removed the user from the room). */
+  /* The language selector changes the user's preferred (target) language;
+     it must not recreate the socket or change the language they speak. */
   useEffect(() => {
     languageRef.current = normalizeLanguage(currentLanguage);
   }, [currentLanguage]);
 
-  /* If the preferred language changes while the mic is active, restart
-     recognition with the matching BCP-47 locale. */
+  useEffect(() => {
+    speakingLanguageRef.current = normalizeLanguage(speakingLanguage);
+  }, [speakingLanguage]);
+
+  useEffect(() => {
+    translationEnabledRef.current = translationEnabled;
+    if (typeof window !== "undefined") {
+      window.translationReceivingEnabled = translationEnabled;
+    }
+  }, [translationEnabled]);
+
+  /* If the spoken language changes while the mic is active, restart
+     recognition with the matching BCP-47 locale. The recipient language
+     (currentLanguage) must never drive recognition. */
   useEffect(() => {
     const recognition = recognitionRef.current;
-    const nextLocale = speechLanguageFor(currentLanguage);
+    const nextLocale = speechLanguageFor(speakingLanguage);
 
     if (
       recognition &&
@@ -320,10 +351,16 @@ export const useTranslation = (
         console.error("Could not restart recognition for language change:", error);
       }
     }
-  }, [currentLanguage]);
+  }, [speakingLanguage]);
 
   useEffect(() => {
     if (!roomId || !userName || !userId) return;
+
+    if (!TRANSLATION_URL) {
+      setIsConnected(false);
+      console.error(SERVICE_CONFIG_ERRORS.translation);
+      return;
+    }
 
     const playedAudioMessageIds = playedAudioMessageIdsRef.current;
 
@@ -335,6 +372,7 @@ export const useTranslation = (
     socketRef.current.on("connect", () => {
       console.log("[TRANSLATE] Connected to translation server");
       setIsConnected(true);
+      setConnectionError("");
 
       console.log("[TRANSLATE] Joining room:", { userId, userName, roomId, preferredLanguage: languageRef.current });
       socketRef.current.emit("join-translation", {
@@ -343,6 +381,15 @@ export const useTranslation = (
         roomId,
         preferredLanguage: languageRef.current,
       });
+    });
+
+    socketRef.current.on("connect_error", (error) => {
+      setIsConnected(false);
+      setConnectionError(
+        `Cannot reach the translation server at ${TRANSLATION_URL}. ${
+          error?.message || "connection failed"
+        }`
+      );
     });
 
     socketRef.current.on("disconnect", () => {
@@ -370,6 +417,10 @@ export const useTranslation = (
 
     socketRef.current.on("translated-caption", (data) => {
       console.log("[TRANSLATE] Caption received:", { speaker: data.speaker, hasText: !!data.text, hasTrans: !!data.translatedText, msgId: data.messageId });
+
+      if (!translationEnabledRef.current) {
+        return;
+      }
 
       const translatedText = data.translatedText || "";
       const sequence = captionSequenceRef.current + 1;
@@ -410,6 +461,10 @@ export const useTranslation = (
         hasText: !!data.translatedText,
       });
 
+      if (!translationEnabledRef.current) {
+        return;
+      }
+
       if (
         data.messageId &&
         playedAudioMessageIdsRef.current.has(data.messageId)
@@ -429,11 +484,13 @@ export const useTranslation = (
 
       if (data.audio) {
         console.log("[TRANSLATE] Playing server TTS audio");
-        enqueueTranslatedAudio(data.audio);
+        enqueueTranslatedAudio(data.audio, data.mimeType);
       } else if (data.translatedText) {
         // Fallback to browser TTS when server TTS is unavailable
         console.log("[TRANSLATE] No server audio, using browser TTS fallback");
-        const langForTTS = data.language || speechLanguageFor(normalizeLanguage(data.targetLanguage || languageRef.current));
+        const langForTTS = speechLanguageFor(
+          normalizeLanguage(data.language || languageRef.current)
+        );
         enqueueBrowserTTS(data.translatedText, langForTTS);
       } else {
         console.warn("tts-audio event received but no audio found and no text");
@@ -470,7 +527,12 @@ export const useTranslation = (
         recognitionRef.current = null;
       }
     };
-  }, [roomId, userName, userId, TRANSLATION_URL, enqueueTranslatedAudio]);
+  }, [
+    roomId,
+    userName,
+    userId,
+    enqueueTranslatedAudio,
+  ]);
 
   const changeLanguage = useCallback(
     (newLanguage) => {
@@ -487,6 +549,15 @@ export const useTranslation = (
     },
     [userId, isConnected]
   );
+
+  /* Changing the spoken language never changes the language this
+     participant wants to receive. It only changes recognition and the
+     source language sent with the next transcript. */
+  const changeSpeakingLanguage = useCallback((newLanguage) => {
+    const language = normalizeLanguage(newLanguage);
+    speakingLanguageRef.current = language;
+    setSpeakingLanguage(language);
+  }, []);
 
   const startListening = useCallback(() => {
     if (!socketRef.current || !isConnected) {
@@ -523,7 +594,7 @@ export const useTranslation = (
     recognition.continuous = false;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
-    recognition.lang = speechLanguageFor(languageRef.current);
+    recognition.lang = speechLanguageFor(speakingLanguageRef.current);
 
     recognition.onstart = () => {
       console.log("Speech recognition started");
@@ -562,11 +633,12 @@ export const useTranslation = (
           lastFinalTextRef.current = { text: normalizedText, at: now };
 
           if (socketRef.current && socketRef.current.connected) {
-            console.log("[TRANSLATE] Sending speech-text:", { userId, text: transcript, lang: languageRef.current });
+            console.log("[TRANSLATE] Sending speech-text:", { userId, text: transcript, sourceLanguage: speakingLanguageRef.current });
             socketRef.current.emit("speech-text", {
               userId,
               text: transcript,
-              originalLanguage: languageRef.current,
+              originalLanguage: speakingLanguageRef.current,
+              sourceLanguage: speakingLanguageRef.current,
               isInterim: false,
             });
           }
@@ -658,7 +730,17 @@ export const useTranslation = (
     audioQueueRef.current = [];
     isPlayingAudioRef.current = false;
     lastFinalTextRef.current = { text: "", at: 0 };
-    
+
+    if (currentAudioRef.current) {
+      try {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.currentTime = 0;
+      } catch {
+        // ignore
+      }
+      currentAudioRef.current = null;
+    }
+
     if (typeof window !== "undefined" && window.speechSynthesis) {
       try {
         window.speechSynthesis.cancel();
@@ -680,6 +762,47 @@ export const useTranslation = (
     }
   }, []);
 
+  /* Translation mode controls receiving only. It is intentionally
+     decoupled from the microphone/recognition: a listener may receive
+     translated audio without ever pressing "Translate", and disabling
+     translation restores the original remote audio. */
+  const setTranslationEnabled = useCallback((enabled) => {
+    const next = Boolean(enabled);
+    translationEnabledRef.current = next;
+    setTranslationEnabledState(next);
+
+    if (typeof window !== "undefined") {
+      window.translationReceivingEnabled = next;
+    }
+
+    if (!next) {
+      audioQueueRef.current = [];
+      isPlayingAudioRef.current = false;
+
+      if (currentAudioRef.current) {
+        try {
+          currentAudioRef.current.pause();
+          currentAudioRef.current.currentTime = 0;
+        } catch {
+          // ignore
+        }
+        currentAudioRef.current = null;
+      }
+
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        try {
+          window.speechSynthesis.cancel();
+        } catch {
+          // ignore
+        }
+      }
+    }
+  }, []);
+
+  const toggleTranslation = useCallback(() => {
+    setTranslationEnabled(!translationEnabledRef.current);
+  }, [setTranslationEnabled]);
+
   const toggleListening = useCallback(() => {
     if (isListening) {
       stopListening();
@@ -690,13 +813,19 @@ export const useTranslation = (
 
   return {
     isConnected,
+    connectionError,
     currentLanguage,
+    speakingLanguage,
     availableLanguages,
     caption,
     isListening,
+    translationEnabled,
     changeLanguage,
+    changeSpeakingLanguage,
     startListening,
     stopListening,
     toggleListening,
+    toggleTranslation,
+    setTranslationEnabled,
   };
 };

@@ -4,7 +4,12 @@
   "main": "translation.js",
   "scripts": {
     "start": "node translation.js",
+    "start:translation": "node translation.js",
+    "start:webrtc": "node webrtc-server.js",
+    "start:anchoring": "node anchoring-service.js",
     "dev": "nodemon translation.js",
+    "dev:webrtc": "nodemon webrtc-server.js",
+    "dev:anchoring": "nodemon anchoring-service.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

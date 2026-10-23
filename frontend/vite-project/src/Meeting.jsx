@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { io } from "socket.io-client";
+import { TRANSLATION_URL } from "./lib/serviceUrls.js";
 
 export default function Meeting() {
   const { meetingId } = useParams();
@@ -12,9 +13,9 @@ export default function Meeting() {
   const [participants, setParticipants] = useState([]);
 
   useEffect(() => {
-    if (!meetingId) return;
+    if (!meetingId || !TRANSLATION_URL) return;
 
-    const socket = io(import.meta.env.VITE_TRANSLATION_URL, {
+    const socket = io(TRANSLATION_URL, {
       transports: ["websocket"],
     });
 

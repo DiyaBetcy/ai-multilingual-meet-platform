@@ -1,20 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io } from "socket.io-client";
+import { WEBRTC_URL, SERVICE_CONFIG_ERRORS } from "../lib/serviceUrls.js";
 
-const getWebrtcUrl = () => {
-  if (import.meta.env.VITE_WEBRTC_URL) {
-    return import.meta.env.VITE_WEBRTC_URL;
-  }
-  if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    if (host && host !== "localhost" && host !== "127.0.0.1") {
-      return `http://${host}:3001`;
-    }
-  }
-  return "http://localhost:3001";
-};
-
-const WEBRTC_URL = getWebrtcUrl();
+const WEBRTC_CONFIG_ERROR = SERVICE_CONFIG_ERRORS.webrtc;
 
 /* Public STUN is enough for localhost/LAN testing. A TURN relay is
    required when both peers are behind symmetric NATs; configure it with
@@ -86,7 +74,9 @@ export const useWebRTC = (roomId, userName, userId, options = {}) => {
 
   const [participants, setParticipants] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
-  const [connectionError, setConnectionError] = useState("");
+  const [connectionError, setConnectionError] = useState(
+    WEBRTC_URL ? "" : WEBRTC_CONFIG_ERROR
+  );
   const [mediaError, setMediaError] = useState("");
   const [localStream, setLocalStream] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -311,6 +301,15 @@ export const useWebRTC = (roomId, userName, userId, options = {}) => {
   useEffect(() => {
     if (!roomId || !userName) return;
 
+    /* A production build without VITE_WEBRTC_URL must not connect to
+       the page origin (Vercel), which has no Socket.IO server. Skip the
+       socket and surface a configuration error instead. */
+    if (!WEBRTC_URL) {
+      setIsConnected(false);
+      console.error(WEBRTC_CONFIG_ERROR);
+      return;
+    }
+
     const socket = io(WEBRTC_URL, {
       // Start with HTTP long-polling (the Socket.IO default) and upgrade
       // to WebSocket. This avoids the "WebSocket is closed before the
@@ -359,8 +358,9 @@ export const useWebRTC = (roomId, userName, userId, options = {}) => {
 
     socket.on("connect_error", (error) => {
       setIsConnected(false);
+      const detail = error?.message || "connection failed";
       setConnectionError(
-        `Cannot reach the meeting server at ${WEBRTC_URL}. ${error?.message || ""}`.trim()
+        `Cannot reach the meeting server at ${WEBRTC_URL}. ${detail}`.trim()
       );
     });
 

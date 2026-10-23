@@ -186,3 +186,110 @@
   color: var(--accent);
   font-size: var(--text-xs);
 }
+
+/* Source (spoken) language selection: deliberately separate from the
+   recipient language above so one participant's preference can never
+   change what another participant hears. */
+.language-speaking {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-top: var(--sp-1);
+  padding: var(--sp-3);
+  border-top: 1px solid var(--line-2);
+  font-size: var(--text-2xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.speaking-language-select {
+  min-width: 120px;
+  height: 28px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-xs);
+  border: 1px solid var(--line-2);
+  background: var(--bg-elevated);
+  color: var(--text-1);
+  font-size: var(--text-xs);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.translation-toggle .mic-icon.listening {
+  color: var(--accent);
+}
+
+/* Per-participant receiving mode: translated audio (original remotes
+   muted) vs original audio. Never touches the local microphone. */
+.translation-mode-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  width: 100%;
+  margin-top: var(--sp-1);
+  padding: var(--sp-3);
+  border: 0;
+  border-top: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--text-1);
+  text-align: left;
+  cursor: pointer;
+}
+
+.translation-mode-option:hover {
+  background: var(--bg-hover);
+}
+
+.translation-mode-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.translation-mode-title {
+  font-size: var(--text-xs);
+  font-weight: var(--fw-medium);
+}
+
+.translation-mode-hint {
+  font-size: var(--text-2xs);
+  color: var(--text-3);
+}
+
+.switch-track {
+  position: relative;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 18px;
+  border-radius: var(--r-full);
+  background: var(--bg-raised);
+  border: 1px solid var(--line-2);
+  transition: background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-3);
+  transition: transform var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+.translation-mode-option.enabled .switch-track {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+}
+
+.translation-mode-option.enabled .switch-thumb {
+  transform: translateX(16px);
+  background: var(--accent);
+}

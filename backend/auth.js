@@ -94,6 +94,10 @@ function publicUser(user) {
 /* ---------------- AUTH CONFIGURATION ---------------- */
 
 router.use(async (req, res, next) => {
+  if (req.path === "/health" || req.originalUrl === "/health") {
+    return next();
+  }
+
   try {
     getJwtSecret();
     await connectMongo();

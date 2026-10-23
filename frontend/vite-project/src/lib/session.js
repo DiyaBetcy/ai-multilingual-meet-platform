@@ -7,26 +7,12 @@
    forged or expired tokens.
    ============================================================ */
 
+import { TRANSLATION_URL } from "./serviceUrls.js";
+
 const TOKEN_KEY = "token";
 const USER_KEY = "user";
 
-const getApiBase = () => {
-  if (import.meta.env.VITE_TRANSLATION_URL) {
-    return import.meta.env.VITE_TRANSLATION_URL;
-  }
-  if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    if (host && host !== "localhost" && host !== "127.0.0.1") {
-      return `http://${host}:5000`;
-    }
-  }
-  if (import.meta.env.DEV) {
-    return "http://localhost:5000";
-  }
-  return "";
-};
-
-const API_BASE = getApiBase();
+const API_BASE = TRANSLATION_URL;
 
 export function getToken() {
   try {

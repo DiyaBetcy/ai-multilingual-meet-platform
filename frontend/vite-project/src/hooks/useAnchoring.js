@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
+import {
+  ANCHORING_URL,
+  SERVICE_CONFIG_ERRORS,
+} from '../lib/serviceUrls.js';
 
 const SILENT_AUDIO_DATA_URL =
   'data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQIAAAAAAA==';
@@ -92,24 +96,10 @@ export const useAnchoring = (roomId, userId, userName, isCreator, initialLanguag
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [anchorAudioStatus, setAnchorAudioStatus] = useState('idle');
   const [anchorAudioError, setAnchorAudioError] = useState('');
-
-  const getAnchoringUrl = () => {
-  if (import.meta.env.VITE_ANCHORING_URL) {
-    return import.meta.env.VITE_ANCHORING_URL;
-  }
-  if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    if (host && host !== "localhost" && host !== "127.0.0.1") {
-      return `http://${host}:3002`;
-    }
-  }
-  if (import.meta.env.DEV) {
-    return "http://localhost:3002";
-  }
-  return "";
-};
-
-const ANCHORING_URL = getAnchoringUrl();
+  const [connectionError, setConnectionError] = useState(
+    ANCHORING_URL ? '' : SERVICE_CONFIG_ERRORS.anchoring
+  );
+  const [hasStarted, setHasStarted] = useState(false);
 
   useEffect(() => {
     languageRef.current = initialLanguage || 'en';
@@ -456,9 +446,8 @@ const ANCHORING_URL = getAnchoringUrl();
        Skipping the socket keeps the meeting usable and logs one clear
        message instead of an endless ERR_CONNECTION_REFUSED loop. */
     if (!ANCHORING_URL) {
-      console.warn(
-        'AI Anchoring is not configured: set VITE_ANCHORING_URL to the deployed anchoring service and rebuild.'
-      );
+      console.error(SERVICE_CONFIG_ERRORS.anchoring);
+      setConnectionError(SERVICE_CONFIG_ERRORS.anchoring);
       return undefined;
     }
 
@@ -468,6 +457,7 @@ const ANCHORING_URL = getAnchoringUrl();
 
     socketRef.current.on('connect', () => {
       console.log('✅ Connected to anchoring backend:', socketRef.current.id);
+      setConnectionError('');
 
       socketRef.current.emit('join-anchoring-room', {
         roomId,
@@ -493,16 +483,27 @@ const ANCHORING_URL = getAnchoringUrl();
           setCurrentSpeaker(status.currentSpeaker || null);
           setCurrentIndex(status.currentIndex ?? 0);
           setTimeRemaining(status.timeRemaining ?? 0);
+          setHasStarted(
+            Boolean(status.isActive) ||
+              Boolean(status.currentSpeaker) ||
+              (status.currentIndex ?? 0) > 0
+          );
         }
       });
     });
 
     socketRef.current.on('connect_error', (err) => {
       console.error('❌ Anchoring socket connection error:', err.message);
+      setConnectionError(
+        `Cannot reach the anchoring server at ${ANCHORING_URL}. ${
+          err?.message || 'connection failed'
+        }`
+      );
     });
 
     socketRef.current.on('disconnect', () => {
       console.log('❌ Disconnected from anchoring backend');
+      setConnectionError('');
     });
 
     socketRef.current.on('anchor-tts', (payload = {}) => {
@@ -522,11 +523,18 @@ const ANCHORING_URL = getAnchoringUrl();
       console.log('✅ Anchoring enabled:', newSchedule);
       setIsAnchoringEnabled(true);
       setSchedule(newSchedule || []);
+      setHasStarted(false);
+    });
+
+    socketRef.current.on('anchoring-schedule-updated', ({ schedule: newSchedule } = {}) => {
+      console.log('📋 Anchoring schedule updated:', newSchedule);
+      setSchedule(Array.isArray(newSchedule) ? newSchedule : []);
     });
 
     socketRef.current.on('anchoring-started', ({ schedule: newSchedule, currentIndex: index } = {}) => {
       console.log('▶️ Anchoring started');
       setIsActive(true);
+      setHasStarted(true);
       setSchedule(newSchedule || []);
       setCurrentIndex(index ?? 0);
     });
@@ -535,9 +543,10 @@ const ANCHORING_URL = getAnchoringUrl();
       console.log('⏹️ Anchoring ended');
       setIsActive(false);
       setCurrentSpeaker(null);
-      setCurrentIndex(-1);
+      setCurrentIndex(0);
       setTimeRemaining(0);
       setIsMutedByAnchor(false);
+      setHasStarted(false);
     });
 
     socketRef.current.on('speaker-changed', ({ currentSpeaker: speaker, currentIndex: index, timeRemaining: time, timestamp } = {}) => {
@@ -546,6 +555,7 @@ const ANCHORING_URL = getAnchoringUrl();
       setCurrentIndex(index ?? 0);
       setTimeRemaining(time ?? 0);
       setIsMutedByAnchor(false);
+      setHasStarted(true);
     });
 
     socketRef.current.on('time-update', ({ timeRemaining: time, timestamp } = {}) => {
@@ -613,6 +623,7 @@ const ANCHORING_URL = getAnchoringUrl();
       setCurrentIndex(0);
       setTimeRemaining(0);
       setIsMutedByAnchor(false);
+      setHasStarted(false);
     });
 
     socketRef.current.on('anchoring-restarted', ({ timestamp } = {}) => {
@@ -620,6 +631,7 @@ const ANCHORING_URL = getAnchoringUrl();
       setIsActive(true);
       setCurrentIndex(0);
       setIsMutedByAnchor(false);
+      setHasStarted(true);
     });
 
     socketRef.current.on('anchoring-error', ({ message } = {}) => {
@@ -674,7 +686,6 @@ const ANCHORING_URL = getAnchoringUrl();
     roomId,
     userId,
     userName,
-    ANCHORING_URL,
     enqueueAnchorMessage,
     stopAnchorPlayback,
   ]);
@@ -696,9 +707,14 @@ const ANCHORING_URL = getAnchoringUrl();
       setSchedule(settings.schedule || []);
     } else {
       console.error('❌ Cannot enable anchoring:', {
-        socketConnected: Boolean(socketRef.current),
+        socketConnected: Boolean(socketRef.current?.connected),
         isCreator,
       });
+      setConnectionError(
+        socketRef.current
+          ? 'The AI anchoring server is not connected. Check VITE_ANCHORING_URL and the Render service, then try again.'
+          : SERVICE_CONFIG_ERRORS.anchoring
+      );
     }
   }, [roomId, userId, isCreator]);
 
@@ -716,9 +732,14 @@ const ANCHORING_URL = getAnchoringUrl();
       console.log('✅ Emitted start-anchoring event');
     } else {
       console.error('❌ Cannot start anchoring:', {
-        socketConnected: Boolean(socketRef.current),
+        socketConnected: Boolean(socketRef.current?.connected),
         isCreator,
       });
+      setConnectionError(
+        socketRef.current
+          ? 'The AI anchoring server is not connected. Check VITE_ANCHORING_URL and the Render service, then try again.'
+          : SERVICE_CONFIG_ERRORS.anchoring
+      );
     }
   }, [roomId, isCreator]);
 
@@ -800,6 +821,8 @@ const ANCHORING_URL = getAnchoringUrl();
     isSpeaking,
     anchorAudioStatus,
     anchorAudioError,
+    connectionError,
+    canResume: isAnchoringEnabled && hasStarted && !isActive,
 
     setShowScheduleModal,
 

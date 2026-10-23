@@ -11,8 +11,15 @@ const { connectMongo, describeMongoError } = require("./config/database");
 
 const app = express();
 
+const allowedOrigins = (process.env.CLIENT_ORIGIN || process.env.CORS_ORIGIN)
+  ? (process.env.CLIENT_ORIGIN || process.env.CORS_ORIGIN)
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean)
+  : "*";
+
 app.use(cors({
-  origin: "*",
+  origin: allowedOrigins,
   methods: ["GET", "POST", "OPTIONS"],
   credentials: false
 }));
@@ -81,21 +88,29 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: allowedOrigins,
     methods: ["GET", "POST", "OPTIONS"],
     credentials: false,
   },
 });
 
+const isDatabaseReady = () => mongoose.connection.readyState === 1;
+let databaseWarningLogged = false;
+
+/* Captions, translation and TTS do not depend on MongoDB. A missing or
+   temporarily unavailable database must not terminate the service (that
+   would also take speech translation offline). Auth and transcript/
+   summary persistence report their own 503/unavailable state instead. */
 (async () => {
   try {
     await connectMongo();
+    console.log("Translation service MongoDB connected");
   } catch (error) {
     console.error(
       "Translation service MongoDB initialization failed:",
-      describeMongoError(error)
+      describeMongoError(error),
+      "Translation, captions and TTS will continue; auth, transcript storage and summaries stay unavailable until MongoDB is reachable."
     );
-    process.exit(1);
   }
 })();
 
@@ -436,30 +451,37 @@ const processSpeechText = async ({ speaker, text, sourceLang }) => {
         timestamp: Date.now(),
       });
 
-      // Store transcript in database
-      Transcript.findOneAndUpdate(
-        { meetingId: currentSpeaker.roomId, messageId },
-        {
-          meetingId: currentSpeaker.roomId,
-          speakerId: currentSpeaker.userId,
-          speakerName: currentSpeaker.name,
-          originalText: cleanText,
-          sourceLanguage: sourceLang,
-          timestamp: new Date(),
-          messageId,
-          $push: {
-            translations: {
-              recipientId: targetUser.userId,
-              targetLanguage: targetLang,
-              translatedText,
-              translationError,
+      // Store transcript in database when persistence is available.
+      if (isDatabaseReady()) {
+        Transcript.findOneAndUpdate(
+          { meetingId: currentSpeaker.roomId, messageId },
+          {
+            meetingId: currentSpeaker.roomId,
+            speakerId: currentSpeaker.userId,
+            speakerName: currentSpeaker.name,
+            originalText: cleanText,
+            sourceLanguage: sourceLang,
+            timestamp: new Date(),
+            messageId,
+            $push: {
+              translations: {
+                recipientId: targetUser.userId,
+                targetLanguage: targetLang,
+                translatedText,
+                translationError,
+              },
             },
           },
-        },
-        { upsert: true, new: true }
-      ).catch((dbError) => {
-        console.error("Failed to store transcript:", dbError.message);
-      });
+          { upsert: true, new: true }
+        ).catch((dbError) => {
+          console.error("Failed to store transcript:", dbError.message);
+        });
+      } else if (!databaseWarningLogged) {
+        databaseWarningLogged = true;
+        console.warn(
+          "MongoDB is unavailable; transcripts are not being persisted. Captions and audio still work."
+        );
+      }
 
       if (audio) {
         targetSocket.emit("tts-audio", {
@@ -511,7 +533,15 @@ const enqueueSpeech = ({ speaker, text, sourceLang }) => {
 io.on("connection", (socket) => {
   console.log("✅ Translation user connected:", socket.id);
 
-  socket.on("join-translation", ({ userId, userName, roomId, preferredLanguage }) => {
+  socket.on("join-translation", ({ userId, userName, roomId, preferredLanguage } = {}) => {
+    if (!userId || !roomId) {
+      console.error("❌ join-translation requires userId and roomId", {
+        userId,
+        roomId,
+      });
+      return;
+    }
+
     const language = normalizeLangCode(preferredLanguage || "en");
 
     console.log(`🌍 ${userName} joined translation room ${roomId} with language ${language}`);
@@ -557,7 +587,7 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.on("speech-text", ({ userId, text, originalLanguage, isInterim } = {}) => {
+  socket.on("speech-text", ({ userId, text, originalLanguage, sourceLanguage, isInterim } = {}) => {
     const cleanText = String(text || "").trim();
 
     console.log(
@@ -601,7 +631,7 @@ io.on("connection", (socket) => {
     lastTranscriptByUser.set(userId, { text: normalizedText, at: now });
 
     const sourceLang = normalizeLangCode(
-      originalLanguage || speaker.language || "en"
+      originalLanguage || sourceLanguage || speaker.language || "en"
     );
 
     console.log("[TRANSLATE] Processing speech for room:", speaker.roomId, "from:", speaker.name, "lang:", sourceLang);
@@ -630,6 +660,8 @@ io.on("connection", (socket) => {
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
+    service: "translation",
+    database: isDatabaseReady() ? "connected" : "unavailable",
     activeUsers: userLanguages.size,
     users: Array.from(userLanguages.values()).map((u) => ({
       name: u.name,
@@ -639,8 +671,20 @@ app.get("/health", (req, res) => {
   });
 });
 
+const requireDatabase = (res) => {
+  if (isDatabaseReady()) return false;
+
+  res.status(503).json({
+    success: false,
+    error:
+      "Transcript storage is unavailable because MongoDB is not connected.",
+  });
+  return true;
+};
+
 // Get transcript for a meeting
 app.get("/api/transcript/:meetingId", async (req, res) => {
+  if (requireDatabase(res)) return;
   try {
     const { meetingId } = req.params;
     const transcripts = await Transcript.find({ meetingId })
@@ -655,6 +699,7 @@ app.get("/api/transcript/:meetingId", async (req, res) => {
 
 // Generate meeting summary
 app.post("/api/summary/generate", async (req, res) => {
+  if (requireDatabase(res)) return;
   try {
     const { meetingId, userId } = req.body;
     
@@ -701,6 +746,7 @@ app.post("/api/summary/generate", async (req, res) => {
 
 // Get meeting summary
 app.get("/api/summary/:meetingId", async (req, res) => {
+  if (requireDatabase(res)) return;
   try {
     const { meetingId } = req.params;
     const summary = await MeetingSummary.findOne({ meetingId }).lean();
@@ -718,6 +764,16 @@ app.get("/api/summary/:meetingId", async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
+const shutdown = (signal) => {
+  console.log(`Translation server shutting down (${signal})`);
+  io.close();
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 5000).unref();
+};
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`🌐 Translation Server running on port ${PORT}`);
+  console.log(`🌐 Translation Server running on port ${PORT} (0.0.0.0)`);
 });
