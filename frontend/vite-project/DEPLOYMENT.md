@@ -13,6 +13,15 @@ All three services read `process.env.PORT` and listen on `0.0.0.0`, which is
 required by Render. The same `backend` folder is used for all three Render
 services; set the start command per service in the Render dashboard.
 
+## Test deployment URLs
+
+| Service | URL |
+| --- | --- |
+| Frontend (Vercel) | `https://meet-2-deploying.vercel.app` |
+| WebRTC signaling | `https://meet-2-deploying.onrender.com` |
+| Translation / auth | `https://meet-2-deploying-1.onrender.com` |
+| AI anchoring | `https://meet-2-deploying-2.onrender.com` |
+
 ## Frontend on Vercel
 
 1. Import the repository and set **Root Directory** to `frontend/vite-project`.
@@ -22,9 +31,9 @@ services; set the start command per service in the Render dashboard.
 5. Add these environment variables (Production and Preview):
 
 ```text
-VITE_WEBRTC_URL=https://meet-ai-anchoring-1.onrender.com
-VITE_TRANSLATION_URL=https://meet-ai-backend-nvgv.onrender.com
-VITE_ANCHORING_URL=https://meet-ai-anchoring.onrender.com
+VITE_WEBRTC_URL=https://meet-2-deploying.onrender.com
+VITE_TRANSLATION_URL=https://meet-2-deploying-1.onrender.com
+VITE_ANCHORING_URL=https://meet-2-deploying-2.onrender.com
 ```
 
 Optional TURN relay:
@@ -50,7 +59,7 @@ Each service can use the `backend` folder as its root directory.
 ### WebRTC signaling
 
 - Start command: `npm run start:webrtc`
-- Environment: `CLIENT_ORIGIN=https://meet-ai-anchoring.vercel.app` (optional;
+- Environment: `CLIENT_ORIGIN=https://meet-2-deploying.vercel.app` (optional;
   when omitted, any origin is allowed because credentials are disabled).
 - Health check path: `/health`
 
@@ -58,7 +67,8 @@ Each service can use the `backend` folder as its root directory.
 
 - Start command: `npm run start:translation`
 - Environment:
-  - `SARVAM_API_KEY` (translated speech; captions still work without it)
+  - `SARVAM_API_KEY` (translated speech and primary translation provider;
+    captions still work without it)
   - `MONGO_URI`, `MONGO_DB_NAME`, `JWT_SECRET` (auth, transcripts, summaries)
   - `FRONTEND_URL` / `CLIENT_ORIGIN`
 - Health check path: `/health`
@@ -71,17 +81,36 @@ Each service can use the `backend` folder as its root directory.
 - Start command: `npm run start:anchoring`
 - Environment:
   - `SARVAM_API_KEY` (server-side speech; the browser voice is the fallback)
-  - `CLIENT_ORIGIN=https://meet-ai-anchoring.vercel.app`
+  - `CLIENT_ORIGIN=https://meet-2-deploying.vercel.app`
 - Health check path: `/health`
+
+## Translation providers
+
+Both backend services use `backend/lib/multilingual.js`, which tries the
+providers in this order:
+
+1. **Sarvam AI** (`sarvam-translate:v1`, same `SARVAM_API_KEY` as TTS)
+2. **MyMemory**
+3. **Google Translate**
+
+Sarvam is first because it is reachable from Render and covered by the API key
+that already powers TTS. MyMemory and Google remain fallbacks. If every
+provider fails, the recipient receives the original text labelled as
+untranslated and **no audio**; the service never speaks the original language
+as if it were the translation.
+
+Sarvam TTS does not currently expose Assamese (`as`) or Urdu (`ur`) voices on
+all accounts. Translation still works for both languages and the browser
+speech-synthesis fallback speaks the translated text.
 
 ## Verification
 
 After deploying:
 
 ```text
-https://meet-ai-anchoring-1.onrender.com/health
-https://meet-ai-backend-nvgv.onrender.com/health
-https://meet-ai-anchoring.onrender.com/health
+https://meet-2-deploying.onrender.com/health
+https://meet-2-deploying-1.onrender.com/health
+https://meet-2-deploying-2.onrender.com/health
 ```
 
 Each should return HTTP 200 with a JSON `status: "ok"`.

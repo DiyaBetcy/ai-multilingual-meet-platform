@@ -86,6 +86,7 @@ export default function MeetDashboard() {
     caption,
     isListening,
     translationEnabled,
+    audioError: translationAudioError,
     changeLanguage,
     changeSpeakingLanguage,
     toggleTranslation,
@@ -507,6 +508,7 @@ export default function MeetDashboard() {
       {(connectionError ||
         mediaError ||
         translationConnectionError ||
+        translationAudioError ||
         anchoringConnectionError) && (
         <div className="meet-alert-stack">
           {connectionError && (
@@ -522,6 +524,11 @@ export default function MeetDashboard() {
           {translationConnectionError && (
             <div className="meet-alert" role="alert">
               {translationConnectionError}
+            </div>
+          )}
+          {translationAudioError && (
+            <div className="meet-alert" role="alert">
+              {translationAudioError}
             </div>
           )}
           {anchoringConnectionError && (

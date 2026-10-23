@@ -60,11 +60,11 @@ export const ANCHORING_URL = parseServiceUrl(
 
 export const SERVICE_CONFIG_ERRORS = {
   webrtc:
-    "WebRTC is not configured for this deployment. Set VITE_WEBRTC_URL to the Render signaling URL (https://meet-ai-anchoring-1.onrender.com) and redeploy the frontend.",
+    "WebRTC is not configured for this deployment. Set VITE_WEBRTC_URL to the Render signaling URL (https://meet-2-deploying.onrender.com) and redeploy the frontend.",
 
   translation:
-    "Live translation is not configured for this deployment. Set VITE_TRANSLATION_URL to the Render translation URL (https://meet-ai-backend-nvgv.onrender.com) and redeploy the frontend.",
+    "Live translation is not configured for this deployment. Set VITE_TRANSLATION_URL to the Render translation URL (https://meet-2-deploying-1.onrender.com) and redeploy the frontend.",
 
   anchoring:
-    "AI anchoring is not configured for this deployment. Set VITE_ANCHORING_URL to the Render anchoring URL (https://meet-ai-anchoring.onrender.com) and redeploy the frontend.",
+    "AI anchoring is not configured for this deployment. Set VITE_ANCHORING_URL to the Render anchoring URL (https://meet-2-deploying-2.onrender.com) and redeploy the frontend.",
 };

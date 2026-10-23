@@ -3,8 +3,12 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
-const { translate } = require('@vitalets/google-translate-api');
 const { SarvamAIClient } = require('sarvamai');
+const {
+  createTranslator,
+  normalizeLangCode,
+  synthesizeSpeech,
+} = require('./lib/multilingual');
 
 const app = express();
 
@@ -14,6 +18,7 @@ const allowedOrigins = (process.env.CLIENT_ORIGIN || process.env.CORS_ORIGIN)
       .map((origin) => origin.trim())
       .filter(Boolean)
   : [
+      'https://meet-2-deploying.vercel.app',
       'https://meet-ai-anchoring.vercel.app',
       'http://localhost:5173',
       'http://localhost:3000',
@@ -38,20 +43,7 @@ const client = sarvamApiKey
   ? new SarvamAIClient({ apiSubscriptionKey: sarvamApiKey })
   : null;
 
-const withTimeout = (promise, ms, label) => {
-  let timeoutId;
-
-  const timeoutPromise = new Promise((_, reject) => {
-    timeoutId = setTimeout(
-      () => reject(new Error(`${label} timed out after ${ms}ms`)),
-      ms
-    );
-  });
-
-  return Promise.race([promise, timeoutPromise]).finally(() =>
-    clearTimeout(timeoutId)
-  );
-};
+const translator = createTranslator({ sarvamClient: client });
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -104,107 +96,36 @@ const normalizeAnchorLanguage = (language) => {
   return anchorLanguageByCode[raw.toLowerCase()] || 'en-US';
 };
 
-// Language mapping for Sarvam AI
-const languageMapping = {
-  'en-US': 'en-IN',
-  'hi-IN': 'hi-IN',
-  'ta-IN': 'ta-IN',
-  'ml-IN': 'ml-IN',
-  'te-IN': 'te-IN',
-  'kn-IN': 'kn-IN',
-  'gu-IN': 'gu-IN',
-  'mr-IN': 'mr-IN',
-  'bn-IN': 'bn-IN',
-  'pa-IN': 'pa-IN',
-  'ur-IN': 'ur-IN',
-  'or-IN': 'od-IN',
-  'od-IN': 'od-IN',
-  'as-IN': 'as-IN'
-};
-
 // AI Script Generator
+//
+// Scripts are authored in English only. Per-recipient translation at
+// speech time guarantees every participant hears the announcement in
+// their own selected language, even when the meeting base language is
+// not English. The previous hardcoded Hindi/Malayalam/Tamil strings
+// were corrupted and fell back to English anyway.
 class AIScriptGenerator {
-  generateIntroductionScript(scheduleItem, language) {
+  generateIntroductionScript(scheduleItem) {
     const { speakerName, topic, duration } = scheduleItem;
-    
-    const scripts = {
-      'en-US': `Welcome everyone! Our next presenter is ${speakerName}, who will be speaking on "${topic}". You have ${duration} minutes. Please begin when ready.`,
-      'hi-IN': `नमस्ते सभी को! हमारे अगले प्रस्तुतकर्ता ${speakerName} हैं, जो "${topic}" पर बोलेंगे। आपके पास ${duration} मिनट हैं। कृपया तैयार होने पर शुरू करें।`,
-      'ml-IN': `എല്ലാവർക്കും നമസ്കാരം! നമ്മുടെ അടുത്ത പ്രസന്റർ ${speakerName} ആണ്, "${topic}" എന്ന വിഷയത്തെക്കുറിച്ച് സംസാരിക്കും. നിങ്ങൾക്ക് ${duration} മിനിറ്റ് സമയമുണ്ട്. തയ്യാറാകുമ്പോൾ ആരംഭിക്കുക.`,
-      'ta-IN': `அனைவருக்கும் வணக்கம்! எங்கள் அடுத்த வழங்குநர் ${speakerName}, "${topic}" பற்றி பேசுவார். உங்களுக்கு ${duration} நிமிடங்கள் உள்ளன. தயாரானதும் தொடங்கவும்.`
-    };
-    
-    return scripts[language] || scripts['en-US'];
+
+    return `Welcome everyone! Our next presenter is ${speakerName}, who will be speaking on "${topic}". You have ${duration} minutes. Please begin when ready.`;
   }
-  
-  generateTimeWarningScript(scheduleItem, timeLeft, language) {
+
+  generateTimeWarningScript(scheduleItem, timeLeft) {
     const { speakerName } = scheduleItem;
-    
-    const scripts = {
-      'en-US': `${speakerName}, you have ${timeLeft} minutes remaining. Please wrap up soon.`,
-      'hi-IN': `${speakerName}, आपके पास ${timeLeft} मिनट बचे हैं। कृपया जल्दी समाप्त करें।`,
-      'ml-IN': `${speakerName}, നിങ്ങൾക്ക് ${timeLeft} മിനിറ്റ് മാത്രമേ ബാക്കിയുള്ളൂ. ദയവായി വേഗത്തിൽ അവസാനിപ്പിക്കുക.`,
-      'ta-IN': `${speakerName}, உங்களுக்கு ${timeLeft} நிமிடங்கள் மட்டுமே உள்ளன. விரைவில் முடிக்கவும்.`
-    };
-    
-    return scripts[language] || scripts['en-US'];
+
+    return `${speakerName}, you have ${timeLeft} minutes remaining. Please wrap up soon.`;
   }
-  
-  generateTransitionScript(completedSpeaker, nextSpeaker, language) {
-    const scripts = {
-      'en-US': `Thank you ${completedSpeaker.speakerName} for that wonderful presentation. Now, let's welcome ${nextSpeaker.speakerName} who will speak on "${nextSpeaker.topic}".`,
-      'hi-IN': `${completedSpeaker.speakerName} जी को उनके शानदार प्रस्तुति के लिए धन्यवाद। अब, ${nextSpeaker.speakerName} का स्वागत करते हैं जो "${nextSpeaker.topic}" पर बोलेंगे।`,
-      'ml-IN': `അത്ഭുതകരമായ പ്രസന്റേഷനുവേണ്ടി ${completedSpeaker.speakerName}-ന് നന്ദി. ഇപ്പോൾ, "${nextSpeaker.topic}" എന്ന വിഷയത്തിൽ സംസാരിക്കുന്ന ${nextSpeaker.speakerName}-യെ സ്വാഗതം ചെയ്യാം.`,
-      'ta-IN': `அற்புதமான விளக்கத்திற்காக ${completedSpeaker.speakerName}-க்கு நன்றி. இப்போது, "${nextSpeaker.topic}" பற்றி பேசும் ${nextSpeaker.speakerName}-ஐ வரவேற்கலாம்.`
-    };
-    
-    return scripts[language] || scripts['en-US'];
+
+  generateTransitionScript(completedSpeaker, nextSpeaker) {
+    return `Thank you ${completedSpeaker.speakerName} for that wonderful presentation. Now, let's welcome ${nextSpeaker.speakerName} who will speak on "${nextSpeaker.topic}".`;
   }
-  
-  generateClosingScript(meetingTitle, language) {
-    const scripts = {
-      'en-US': `That concludes our session "${meetingTitle}". Thank you all for your participation. Have a wonderful day!`,
-      'hi-IN': `इसके साथ हमारा "${meetingTitle}" सत्र समाप्त होता है। आप सभी के भागीदारी के लिए धन्यवाद। शुभ दिन!`,
-      'ml-IN': `ഇതോടെ ഞങ്ങളുടെ "${meetingTitle}" സെഷൻ അവസാനിക്കുന്നു. എല്ലാവരുടെയും പങ്കാളിത്തത്തിന് നന്ദി. നല്ല ദിവസം ആശംസിക്കുന്നു!`,
-      'ta-IN': `இதோடு எங்கள் "${meetingTitle}" அமர்வு முடிகிறது. அனைவரின் பங்கேற்புக்கும் நன்றி. இனிய நாள்!`
-    };
-    
-    return scripts[language] || scripts['en-US'];
+
+  generateClosingScript(meetingTitle) {
+    return `That concludes our session "${meetingTitle}". Thank you all for your participation. Have a wonderful day!`;
   }
 }
 
 const scriptGenerator = new AIScriptGenerator();
-
-// TTS function using Sarvam AI
-async function generateTTS(text, language) {
-  try {
-    const sarvamLang = languageMapping[language] || 'en-IN';
-    console.log('Generating TTS:', { text, language: sarvamLang });
-
-    if (!client) {
-      throw new Error("SARVAM_API_KEY is not configured");
-    }
-    
-    const ttsResponse = await withTimeout(
-      client.textToSpeech.convert({
-        text: text,
-        target_language_code: sarvamLang,
-        /* The non-streaming endpoint returns base64 WAV by default.
-           Requesting WAV explicitly keeps the client MIME handling honest. */
-        output_audio_codec: 'wav'
-      }),
-      20000,
-      'Sarvam TTS'
-    );
-    
-    const base64Audio = ttsResponse?.audio || ttsResponse?.data || ttsResponse?.audios?.[0];
-    console.log('Generated base64 audio:', !!base64Audio);
-    return base64Audio;
-  } catch (error) {
-    console.error('TTS Error:', error.message);
-    return null;
-  }
-}
 
 // Anchoring Session Manager
 class AnchoringSession {
@@ -258,8 +179,7 @@ class AnchoringSession {
     
     // Generate introduction script
     const introScript = scriptGenerator.generateIntroductionScript(
-      this.currentSpeaker, 
-      this.language
+      this.currentSpeaker
     );
     
     // Speak the introduction
@@ -321,15 +241,13 @@ class AnchoringSession {
       if (this.timeRemaining === 60) {
         const warningScript = scriptGenerator.generateTimeWarningScript(
           this.currentSpeaker, 
-          1, 
-          this.language
+          1
         );
         await this.speakScript(warningScript, io);
       } else if (this.timeRemaining === 30) {
         const warningScript = scriptGenerator.generateTimeWarningScript(
           this.currentSpeaker, 
-          0.5, 
-          this.language
+          0.5
         );
         await this.speakScript(warningScript, io);
       } else if (this.timeRemaining <= 0) {
@@ -350,8 +268,7 @@ class AnchoringSession {
           const nextSpeaker = this.schedule[nextIndex];
           const transitionScript = scriptGenerator.generateTransitionScript(
             this.currentSpeaker,
-            nextSpeaker,
-            this.language
+            nextSpeaker
           );
           await this.speakScript(transitionScript, io);
         }
@@ -377,131 +294,132 @@ class AnchoringSession {
       .toString(36)
       .slice(2, 8)}`;
 
-    const announce = () => {
-      /* This overlay is deliberately in the meeting language. Per-user
-         translated text and audio are delivered separately below. */
+    const roomUsers = userLanguages.get(this.roomId) || [];
+    console.log('Room users for translation:', roomUsers.length, 'users');
+
+    if (roomUsers.length === 0) {
+      const tts = await synthesizeSpeech({
+        sarvamClient: client,
+        text: script,
+        language: 'en-US',
+      });
+
+      io.to(this.roomId).emit('anchor-tts', {
+        script,
+        audio: tts.audio,
+        language: 'en-US',
+        speakerName: 'AI Anchor',
+        timestamp,
+        messageId,
+        ttsProvider: tts.audio ? 'sarvam' : null,
+        ttsError: tts.error,
+      });
+
       io.to(this.roomId).emit('anchor-announcement', {
         script,
         audioUrl: null,
-        language: this.language,
+        language: 'en-US',
         speakerName: 'AI Anchor',
         timestamp,
         messageId,
       });
-    };
+      return;
+    }
 
-    try {
-      // Get all users in the room with their language preferences
-      const roomUsers = userLanguages.get(this.roomId) || [];
-      console.log('Room users for translation:', roomUsers.length, 'users');
+    /* Scripts are authored in English. Translate per recipient so every
+       participant hears the announcement in the language they actually
+       selected, not the creator's language. */
+    const translations = await Promise.all(
+      roomUsers.map(async (user) => {
+        const targetLanguage = normalizeAnchorLanguage(user.language);
+        const targetCode = normalizeLangCode(targetLanguage);
 
-      if (roomUsers.length === 0) {
-        // Send original script with TTS to all
-        const audio = await generateTTS(script, this.language);
+        let translatedScript = script;
+        let spokenLanguage = targetLanguage;
+        let translationError = '';
 
-        io.to(this.roomId).emit('anchor-tts', {
-          script,
+        if (targetCode !== 'en') {
+          try {
+            translatedScript = await translator.translate(
+              script,
+              'en',
+              targetCode
+            );
+            console.log(
+              `Translated anchor script for ${user.userId} (${targetCode}):`,
+              translatedScript
+            );
+          } catch (error) {
+            translationError = error.message || 'Translation failed';
+            console.error(
+              `Error translating anchor script for ${user.userId}:`,
+              translationError
+            );
+
+            /* Never speak English text with a non-English voice. Fall
+               back to the English text and an English voice, and tell
+               the client translation failed. */
+            translatedScript = script;
+            spokenLanguage = 'en-US';
+          }
+        }
+
+        let tts = { audio: null, error: translationError };
+
+        if (!translationError) {
+          tts = await synthesizeSpeech({
+            sarvamClient: client,
+            text: translatedScript,
+            language: spokenLanguage,
+          });
+        }
+
+        return {
+          user,
+          translatedScript,
+          audio: tts.audio,
+          language: spokenLanguage,
+          translationError,
+          ttsError: tts.error || '',
+        };
+      })
+    );
+
+    translations.forEach(
+      ({ user, translatedScript, audio, language, translationError, ttsError }) => {
+        const targetSocket = io.sockets.sockets.get(user.socketId);
+
+        if (!targetSocket) return;
+
+        targetSocket.emit('anchor-tts', {
+          script: translatedScript,
           audio,
-          language: this.language,
+          language,
           speakerName: 'AI Anchor',
           timestamp,
           messageId,
           ttsProvider: audio ? 'sarvam' : null,
+          translationError,
+          ttsError,
         });
 
-        announce();
-        return;
+        targetSocket.emit('anchor-announcement', {
+          script: translatedScript,
+          audioUrl: null,
+          language,
+          speakerName: 'AI Anchor',
+          timestamp,
+          messageId,
+          translationError,
+        });
+
+        console.log(
+          `Sent anchor TTS to user ${user.userId} in ${language} (${
+            audio ? 'Sarvam audio' : 'browser fallback'
+          })`
+        );
       }
-
-      // Translate and generate TTS for each user
-      const translationPromises = roomUsers.map(async (user) => {
-        try {
-          // Get the target language code
-          const targetLang = normalizeAnchorLanguage(user.language);
-
-          // Translate script if different from meeting language
-          let translatedScript = script;
-          let spokenLanguage = this.language;
-
-          if (targetLang !== this.language) {
-            try {
-              const translation = await translate(script, {
-                to: targetLang.split('-')[0],
-                from: this.language.split('-')[0],
-              });
-
-              if (translation?.text) {
-                translatedScript = translation.text;
-                spokenLanguage = targetLang;
-                console.log(
-                  `Translated for user ${user.userId}: ${translatedScript}`
-                );
-              }
-            } catch (translationError) {
-              console.error(
-                `Error translating for user ${user.userId}:`,
-                translationError.message
-              );
-            }
-          }
-
-          // Generate TTS in the language that was actually emitted
-          const audio = await generateTTS(translatedScript, spokenLanguage);
-
-          return {
-            user,
-            translatedScript,
-            audio,
-            language: spokenLanguage,
-          };
-        } catch (error) {
-          console.error(
-            `Error translating for user ${user.userId}:`,
-            error.message
-          );
-
-          // Fallback to original text and original language so the
-          // browser fallback does not speak English with a Malayalam voice.
-          const audio = await generateTTS(script, this.language);
-
-          return {
-            user,
-            translatedScript: script,
-            audio,
-            language: this.language,
-          };
-        }
-      });
-
-      const translations = await Promise.all(translationPromises);
-
-      // Send personalized TTS to each user
-      translations.forEach(({ user, translatedScript, audio, language }) => {
-        const targetSocket = io.sockets.sockets.get(user.socketId);
-
-        if (targetSocket) {
-          targetSocket.emit('anchor-tts', {
-            script: translatedScript,
-            audio,
-            language,
-            speakerName: 'AI Anchor',
-            timestamp,
-            messageId,
-            ttsProvider: audio ? 'sarvam' : null,
-          });
-          console.log(
-            `Sent TTS to user ${user.userId} in ${language} (${audio ? 'Sarvam audio' : 'browser fallback'})`
-          );
-        }
-      });
-
-      // Always send the script as an announcement for captions, even
-      // when no personalized audio could be produced.
-      announce();
-    } catch (error) {
-      console.error('Error speaking script:', error);
-      announce();
-    }
+    );
   }
   
   async endSession(io) {
@@ -515,8 +433,7 @@ class AnchoringSession {
     
     // Generate closing script
     const closingScript = scriptGenerator.generateClosingScript(
-      this.settings.meetingTitle || 'Meeting',
-      this.language
+      this.settings.meetingTitle || 'Meeting'
     );
     await this.speakScript(closingScript, io);
     
@@ -833,11 +750,11 @@ io.on('connection', (socket) => {
       }
     }
 
-    const session = anchoringSessions.get(roomId);
-    if (session && session.creatorId === userId) {
-      session.language = normalizedLanguage;
-      console.log('Updated anchor language for room:', roomId, 'to:', normalizedLanguage);
-    }
+    /* Do not change the session base language here. This event carries
+       a recipient's listening preference (and is emitted by every
+       participant when their selector changes). Letting the creator's
+       current listening language rewrite the session language made the
+       meeting language flip mid-call. */
   });
   
   socket.on('disconnect', () => {

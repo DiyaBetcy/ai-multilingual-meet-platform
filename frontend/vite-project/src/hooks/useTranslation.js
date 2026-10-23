@@ -70,6 +70,11 @@ export const useTranslation = (
   const currentAudioRef = useRef(null);
   const captionClearTimeoutRef = useRef(null);
   const captionSequenceRef = useRef(0);
+  const playNextAudioRef = useRef(null);
+  const startListeningRef = useRef(null);
+  const audioBlockedRef = useRef(false);
+  const autoStartedListeningRef = useRef(false);
+  const automaticStartRef = useRef(false);
 
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState(
@@ -99,6 +104,7 @@ export const useTranslation = (
      meeting in their own language. */
   const [translationEnabled, setTranslationEnabledState] = useState(true);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [audioError, setAudioError] = useState("");
 
   const translationEnabledRef = useRef(true);
 
@@ -111,8 +117,11 @@ export const useTranslation = (
         audio.volume = 0;
         audio.play().then(() => {
           audio.pause();
+          audioBlockedRef.current = false;
+          setAudioError("");
           setAudioUnlocked(true);
           console.log("[TRANSLATE] Audio unlocked");
+          playNextAudioRef.current?.();
         }).catch(() => {});
       }
     } catch (e) {
@@ -209,12 +218,16 @@ export const useTranslation = (
 
         utterance.onend = () => {
           isPlayingAudioRef.current = false;
+          setAudioError("");
           playNextAudio();
           resolve();
         };
 
         utterance.onerror = (err) => {
           console.error("Browser TTS error:", err);
+          setAudioError(
+            "Translated speech could not be played. Check that your browser has a voice for the selected language."
+          );
           isPlayingAudioRef.current = false;
           playNextAudio();
           reject(err);
@@ -223,6 +236,9 @@ export const useTranslation = (
         window.speechSynthesis.speak(utterance);
       } catch (error) {
         console.error("Browser TTS setup error:", error);
+        setAudioError(
+          "Translated speech could not be played. Check that your browser has a voice for the selected language."
+        );
         isPlayingAudioRef.current = false;
         reject(error);
       }
@@ -230,10 +246,13 @@ export const useTranslation = (
   }, [getSpeechSynthesisVoice]);
 
   const playNextAudio = useCallback(() => {
-    if (isPlayingAudioRef.current) return;
+    if (isPlayingAudioRef.current || audioBlockedRef.current) return;
 
     const nextAudio = audioQueueRef.current.shift();
-    if (!nextAudio) return;
+    if (!nextAudio) {
+      setAudioError("");
+      return;
+    }
 
     try {
       isPlayingAudioRef.current = true;
@@ -272,22 +291,60 @@ export const useTranslation = (
         playNextAudio();
       };
 
-      audio.play().catch((err) => {
-        console.error("Audio play blocked/error:", err);
-        // Try to unlock and retry
-        unlockAudio();
-        isPlayingAudioRef.current = false;
-        setTimeout(() => {
-          audio.play().catch(() => {
-            playNextAudio();
+      const playAttempt = audio.play();
+
+      if (playAttempt && typeof playAttempt.then === "function") {
+        playAttempt
+          .then(() => setAudioError(""))
+          .catch((err) => {
+            console.error("Audio play blocked/error:", err);
+            if (currentAudioRef.current === audio) currentAudioRef.current = null;
+
+            /* Keep the audio for the next user gesture instead of
+               dropping it. Browsers block programmatic playback until
+               the page has been interacted with. */
+            audioQueueRef.current.unshift(nextAudio);
+            audioBlockedRef.current = true;
+            isPlayingAudioRef.current = false;
+            setAudioError(
+              "Translated audio is ready. Click anywhere in the page to play it."
+            );
           });
-        }, 1000);
-      });
+      }
     } catch (error) {
       console.error("Audio playback setup error:", error);
       isPlayingAudioRef.current = false;
     }
   }, [speakWithBrowserTTS]);
+
+  playNextAudioRef.current = playNextAudio;
+
+  const resumeAudioPlayback = useCallback(() => {
+    if (!audioBlockedRef.current && audioQueueRef.current.length === 0) {
+      return;
+    }
+
+    audioBlockedRef.current = false;
+    setAudioError("");
+    playNextAudioRef.current?.();
+  }, []);
+
+  /* A user gesture can happen at any time (for example after a browser
+     blocked the first translated clip). Keep listening instead of
+     relying on the one-shot unlock listener. */
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const handler = () => resumeAudioPlayback();
+
+    window.addEventListener("pointerdown", handler);
+    window.addEventListener("keydown", handler);
+
+    return () => {
+      window.removeEventListener("pointerdown", handler);
+      window.removeEventListener("keydown", handler);
+    };
+  }, [resumeAudioPlayback]);
 
   const enqueueTranslatedAudio = useCallback(
     (base64Audio, mimeType = "audio/wav") => {
@@ -404,6 +461,18 @@ export const useTranslation = (
         languageRef.current = language;
         setCurrentLanguage(language);
       }
+
+      /* Start recognition once, after the translation socket is ready.
+         Participants should not need to press "Translate" to be heard;
+         a listener who does not speak still receives captions/audio. */
+      if (!autoStartedListeningRef.current) {
+        autoStartedListeningRef.current = true;
+
+        setTimeout(() => {
+          if (!socketRef.current?.connected) return;
+          startListeningRef.current?.({ silent: true, automatic: true });
+        }, 1200);
+      }
     });
 
     socketRef.current.on("language-changed", (data) => {
@@ -419,6 +488,22 @@ export const useTranslation = (
       console.log("[TRANSLATE] Caption received:", { speaker: data.speaker, hasText: !!data.text, hasTrans: !!data.translatedText, msgId: data.messageId });
 
       if (!translationEnabledRef.current) {
+        return;
+      }
+
+      /* A caption that was already in flight when the participant
+         changed language belongs to the previous language. Showing it
+         would make it look as if the new language failed. */
+      if (
+        data.targetLanguage &&
+        normalizeLanguage(data.targetLanguage) !== languageRef.current
+      ) {
+        console.log(
+          "Skipping caption for stale language:",
+          data.targetLanguage,
+          "current:",
+          languageRef.current
+        );
         return;
       }
 
@@ -462,6 +547,19 @@ export const useTranslation = (
       });
 
       if (!translationEnabledRef.current) {
+        return;
+      }
+
+      if (
+        data.language &&
+        normalizeLanguage(data.language) !== languageRef.current
+      ) {
+        console.log(
+          "Skipping translated audio for stale language:",
+          data.language,
+          "current:",
+          languageRef.current
+        );
         return;
       }
 
@@ -514,6 +612,7 @@ export const useTranslation = (
 
       audioQueueRef.current = [];
       isPlayingAudioRef.current = false;
+      audioBlockedRef.current = false;
       playedAudioMessageIds.clear();
       lastFinalTextRef.current = { text: "", at: 0 };
 
@@ -540,6 +639,32 @@ export const useTranslation = (
       languageRef.current = language;
       setCurrentLanguage(language);
 
+      /* Anything queued in the previous language must not be spoken
+         after the switch. */
+      audioQueueRef.current = [];
+      audioBlockedRef.current = false;
+      setAudioError("");
+
+      if (currentAudioRef.current) {
+        try {
+          currentAudioRef.current.pause();
+          currentAudioRef.current.currentTime = 0;
+        } catch {
+          // ignore
+        }
+        currentAudioRef.current = null;
+      }
+
+      isPlayingAudioRef.current = false;
+
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        try {
+          window.speechSynthesis.cancel();
+        } catch {
+          // ignore
+        }
+      }
+
       if (socketRef.current && isConnected) {
         socketRef.current.emit("change-language", {
           userId,
@@ -559,7 +684,10 @@ export const useTranslation = (
     setSpeakingLanguage(language);
   }, []);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback((options = {}) => {
+    const silent = Boolean(options?.silent);
+    automaticStartRef.current = Boolean(options?.automatic);
+
     if (!socketRef.current || !isConnected) {
       console.error("Not connected to translation server");
       return;
@@ -569,7 +697,7 @@ export const useTranslation = (
       window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      alert("Speech Recognition not supported. Use Chrome.");
+      if (!silent) alert("Speech Recognition not supported. Use Chrome.");
       return;
     }
 
@@ -666,14 +794,14 @@ export const useTranslation = (
       console.error("Recognition error:", event.error);
 
       if (event.error === "audio-capture") {
-        alert("No microphone detected.");
+        if (!automaticStartRef.current) alert("No microphone detected.");
         setIsListening(false);
         shouldListenRef.current = false;
         return;
       }
 
       if (event.error === "not-allowed") {
-        alert("Microphone access denied.");
+        if (!automaticStartRef.current) alert("Microphone access denied.");
         setIsListening(false);
         shouldListenRef.current = false;
         return;
@@ -722,6 +850,8 @@ export const useTranslation = (
       recognitionRef.current = null;
     }
   }, [isConnected, userId]);
+
+  startListeningRef.current = startListening;
 
   const stopListening = useCallback(() => {
     shouldListenRef.current = false;
@@ -778,6 +908,8 @@ export const useTranslation = (
     if (!next) {
       audioQueueRef.current = [];
       isPlayingAudioRef.current = false;
+      audioBlockedRef.current = false;
+      setAudioError("");
 
       if (currentAudioRef.current) {
         try {
@@ -820,6 +952,7 @@ export const useTranslation = (
     caption,
     isListening,
     translationEnabled,
+    audioError,
     changeLanguage,
     changeSpeakingLanguage,
     startListening,

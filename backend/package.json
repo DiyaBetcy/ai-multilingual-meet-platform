@@ -10,7 +10,7 @@
     "dev": "nodemon translation.js",
     "dev:webrtc": "nodemon webrtc-server.js",
     "dev:anchoring": "nodemon anchoring-service.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test ../frontend/vite-project/tests/media.test.mjs ../frontend/vite-project/tests/translation-routing.test.mjs ../frontend/vite-project/tests/translation-providers.test.mjs"
   },
   "keywords": [],
   "author": "",

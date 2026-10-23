@@ -4,9 +4,13 @@ const http = require("http");
 const { Server } = require("socket.io");
 const { SarvamAIClient } = require("sarvamai");
 const cors = require("cors");
-const axios = require("axios");
 const mongoose = require("mongoose");
-const { translate: googleTranslate } = require("@vitalets/google-translate-api");
+const {
+  createTranslator,
+  languageNames,
+  normalizeLangCode,
+  synthesizeSpeech,
+} = require("./lib/multilingual");
 const { connectMongo, describeMongoError } = require("./config/database");
 
 const app = express();
@@ -114,219 +118,41 @@ let databaseWarningLogged = false;
   }
 })();
 
-const userLanguages = new Map();
-const translationCache = new Map();
-const CACHE_SIZE = 100;
+/* Connection registry. Keying by socket id (not userId) keeps two tabs
+   of the same account, or a stale socket during a reconnect, from
+   overwriting each other's language and room. */
+const translationUsers = new Map();
+
+const translator = createTranslator({ sarvamClient: client });
 
 /* Recognition engines often re-emit the same final phrase after a
    restart. Drop only an exact repeat inside this short window; do not
    throw away different phrases just because they arrived quickly. */
-const lastTranscriptByUser = new Map();
+const lastTranscriptBySocket = new Map();
 const DUPLICATE_TRANSCRIPT_WINDOW_MS = 8000;
 
 /* One queue per speaker preserves caption order when a provider call is
    slower than the next transcript segment. */
 const translationQueues = new Map();
 
-const languageCodeMap = {
-  en: "en-IN",
-  ml: "ml-IN",
-  hi: "hi-IN",
-  ta: "ta-IN",
-  te: "te-IN",
-  kn: "kn-IN",
-  bn: "bn-IN",
-  gu: "gu-IN",
-  mr: "mr-IN",
-  pa: "pa-IN",
-  ur: "ur-IN",
-  as: "as-IN",
-  od: "od-IN",
-  or: "od-IN",
-};
-
-const languageNames = {
-  en: "English",
-  ml: "Malayalam",
-  hi: "Hindi",
-  ta: "Tamil",
-  te: "Telugu",
-  kn: "Kannada",
-  bn: "Bengali",
-  gu: "Gujarati",
-  mr: "Marathi",
-  od: "Odia",
-  pa: "Punjabi",
-  as: "Assamese",
-  ur: "Urdu",
-};
-
-const normalizeLangCode = (lang) => {
-  if (!lang) return "en";
-  if (lang === "or") return "od";
-  return lang.split("-")[0];
-};
-
-const withTimeout = (promise, ms, label) => {
-  let timeoutId;
-
-  const timeoutPromise = new Promise((_, reject) => {
-    timeoutId = setTimeout(
-      () => reject(new Error(`${label} timed out after ${ms}ms`)),
-      ms
-    );
-  });
-
-  return Promise.race([promise, timeoutPromise]).finally(() =>
-    clearTimeout(timeoutId)
-  );
-};
-
-/* MyMemory and Google both use `or` for Odia; the UI uses `od`. */
-const providerLanguageCode = (language) => {
-  const normalized = normalizeLangCode(language);
-  return normalized === "od" || normalized === "or" ? "or" : normalized;
-};
-
-const getBase64Audio = (ttsResponse) => {
-  return (
-    ttsResponse?.audio ||
-    ttsResponse?.data ||
-    ttsResponse?.audios?.[0] ||
-    ttsResponse?.outputs?.[0]?.audio ||
-    null
-  );
-};
-
-const translateWithMyMemory = async (text, sourceLang, targetLang) => {
-  const response = await withTimeout(
-    axios.get("https://api.mymemory.translated.net/get", {
-      params: {
-        q: text,
-        langpair: `${providerLanguageCode(sourceLang)}|${providerLanguageCode(
-          targetLang
-        )}`,
-      },
-      timeout: 10000,
-    }),
-    12000,
-    "MyMemory translation"
-  );
-
-  const status = Number(response.data?.responseStatus);
-  const translatedText = String(
-    response.data?.responseData?.translatedText || ""
-  ).trim();
-
-  if (status !== 200 || !translatedText) {
-    throw new Error(
-      `MyMemory returned status ${
-        response.data?.responseStatus || "unknown"
-      }`
-    );
-  }
-
-  if (
-    /MYMEMORY WARNING|QUERY LENGTH LIMIT|INVALID LANGUAGE PAIR|PLEASE SELECT TWO DISTINCT/i.test(
-      translatedText
-    )
-  ) {
-    throw new Error(`MyMemory error: ${translatedText}`);
-  }
-
-  return translatedText;
-};
-
-const translateWithGoogle = async (text, sourceLang, targetLang) => {
-  const response = await withTimeout(
-    googleTranslate(text, {
-      from: providerLanguageCode(sourceLang),
-      to: providerLanguageCode(targetLang),
-    }),
-    12000,
-    "Google Translate"
-  );
-
-  const translatedText = String(response?.text || "").trim();
-
-  if (!translatedText) {
-    throw new Error("Google Translate returned empty text");
-  }
-
-  return translatedText;
-};
-
-const translateWithRetry = async (text, sourceLang, targetLang) => {
-  const cleanText = String(text || "").trim();
-  const source = normalizeLangCode(sourceLang);
-  const target = normalizeLangCode(targetLang);
-
-  if (!cleanText) {
-    throw new Error("Cannot translate empty text");
-  }
-
-  if (source === target) {
-    return cleanText;
-  }
-
-  if (!languageNames[source] || !languageNames[target]) {
-    throw new Error(`Unsupported language pair: ${source} -> ${target}`);
-  }
-
-  const cacheKey = `${cleanText}:${source}:${target}`;
-
-  if (translationCache.has(cacheKey)) {
-    console.log(`⚡ Cache hit: ${cacheKey}`);
-    return translationCache.get(cacheKey);
-  }
-
-  const providers = [
-    { name: "MyMemory", run: translateWithMyMemory },
-    { name: "Google Translate", run: translateWithGoogle },
-  ];
-
-  let lastError = null;
-
-  for (const provider of providers) {
-    try {
-      const translatedText = await provider.run(cleanText, source, target);
-
-      translationCache.set(cacheKey, translatedText);
-
-      if (translationCache.size > CACHE_SIZE) {
-        const firstKey = translationCache.keys().next().value;
-        translationCache.delete(firstKey);
-      }
-
-      return translatedText;
-    } catch (error) {
-      lastError = error;
-      console.error(
-        `❌ ${provider.name} failed (${source} -> ${target}):`,
-        error.message
-      );
-    }
-  }
-
-  throw lastError || new Error("Translation failed");
-};
 
 const processSpeechText = async ({ speaker, text, sourceLang }) => {
-  const currentSpeaker = userLanguages.get(speaker.userId);
+  const currentSpeaker = translationUsers.get(speaker.socketId);
 
   if (
     !currentSpeaker ||
-    currentSpeaker.socketId !== speaker.socketId ||
-    currentSpeaker.roomId !== speaker.roomId
+    currentSpeaker.roomId !== speaker.roomId ||
+    currentSpeaker.userId !== speaker.userId
   ) {
     console.log("Skipping queued transcript for a user who left:", speaker.userId);
     return;
   }
 
   const cleanText = text.trim();
-  const roomUsers = Array.from(userLanguages.values()).filter(
+  const roomUsers = Array.from(translationUsers.values()).filter(
     (user) =>
       user.roomId === currentSpeaker.roomId &&
+      user.socketId !== currentSpeaker.socketId &&
       user.userId !== currentSpeaker.userId
   );
 
@@ -352,7 +178,7 @@ const processSpeechText = async ({ speaker, text, sourceLang }) => {
       let translatedText = cleanText;
 
       if (targetLang !== sourceLang) {
-        translatedText = await translateWithRetry(
+        translatedText = await translator.translate(
           cleanText,
           sourceLang,
           targetLang
@@ -368,36 +194,29 @@ const processSpeechText = async ({ speaker, text, sourceLang }) => {
       }
 
       let audio = null;
+      let ttsError = "";
 
-      if (client) {
-        try {
+      if (translatedText) {
+        console.log(
+          `🎤 Generating TTS for ${targetUser.name} in ${targetLang}: ${translatedText}`
+        );
+
+        const tts = await synthesizeSpeech({
+          sarvamClient: client,
+          text: translatedText,
+          language: targetLang,
+        });
+
+        audio = tts.audio;
+        ttsError = tts.error;
+
+        if (audio) {
           console.log(
-            `🎤 Generating TTS for ${targetUser.name} in ${targetLang}: ${translatedText}`
+            `🔊 TTS ready for ${targetUser.name}, length: ${audio.length}`
           );
-
-          const ttsResponse = await withTimeout(
-            client.textToSpeech.convert({
-              text: translatedText,
-              target_language_code: languageCodeMap[targetLang] || "en-IN",
-              output_audio_codec: "wav",
-            }),
-            20000,
-            "Sarvam TTS"
-          );
-
-          audio = getBase64Audio(ttsResponse);
-
-          if (audio) {
-            console.log(
-              `🔊 TTS ready for ${targetUser.name}, length: ${audio.length}`
-            );
-          } else {
-            console.error("❌ No audio returned from Sarvam TTS");
-          }
-        } catch (ttsError) {
+        } else {
           console.error(
-            `❌ TTS failed for ${targetUser.name}:`,
-            ttsError.message
+            `❌ TTS unavailable for ${targetUser.name}: ${ttsError}`
           );
         }
       }
@@ -407,6 +226,7 @@ const processSpeechText = async ({ speaker, text, sourceLang }) => {
         translatedText,
         targetLang,
         audio,
+        ttsError,
         translationError: "",
       };
     } catch (error) {
@@ -424,6 +244,7 @@ const processSpeechText = async ({ speaker, text, sourceLang }) => {
         translationError: "Translation is temporarily unavailable.",
         targetLang,
         audio: null,
+        ttsError: "",
       };
     }
   });
@@ -431,7 +252,7 @@ const processSpeechText = async ({ speaker, text, sourceLang }) => {
   const results = await Promise.all(translationTasks);
 
   results.forEach(
-    ({ targetUser, translatedText, targetLang, audio, translationError }) => {
+    ({ targetUser, translatedText, targetLang, audio, ttsError, translationError }) => {
       const targetSocket = io.sockets.sockets.get(targetUser.socketId);
 
       console.log("[TRANSLATE] Sending to recipient:", targetUser.name, targetLang, "hasAudio:", !!audio);
@@ -492,6 +313,7 @@ const processSpeechText = async ({ speaker, text, sourceLang }) => {
           mimeType: "audio/wav",
           messageId,
           translatedText,
+          ttsError: "",
         });
       } else if (translatedText) {
         // Send translated text for browser TTS fallback
@@ -503,6 +325,7 @@ const processSpeechText = async ({ speaker, text, sourceLang }) => {
           mimeType: "audio/wav",
           messageId,
           translatedText,
+          ttsError,
         });
       }
     }
@@ -510,7 +333,8 @@ const processSpeechText = async ({ speaker, text, sourceLang }) => {
 };
 
 const enqueueSpeech = ({ speaker, text, sourceLang }) => {
-  const previous = translationQueues.get(speaker.userId) || Promise.resolve();
+  const previous =
+    translationQueues.get(speaker.socketId) || Promise.resolve();
 
   const task = previous
     .catch(() => {})
@@ -519,11 +343,11 @@ const enqueueSpeech = ({ speaker, text, sourceLang }) => {
       console.error("Speech queue error:", error);
     });
 
-  translationQueues.set(speaker.userId, task);
+  translationQueues.set(speaker.socketId, task);
 
   task.then(() => {
-    if (translationQueues.get(speaker.userId) === task) {
-      translationQueues.delete(speaker.userId);
+    if (translationQueues.get(speaker.socketId) === task) {
+      translationQueues.delete(speaker.socketId);
     }
   });
 
@@ -546,7 +370,7 @@ io.on("connection", (socket) => {
 
     console.log(`🌍 ${userName} joined translation room ${roomId} with language ${language}`);
 
-    userLanguages.set(userId, {
+    translationUsers.set(socket.id, {
       socketId: socket.id,
       language,
       name: userName || "Guest",
@@ -564,15 +388,18 @@ io.on("connection", (socket) => {
   });
 
   socket.on("change-language", ({ userId, newLanguage } = {}) => {
-    if (!userId || !newLanguage) return;
+    if (!newLanguage) return;
 
-    const user = userLanguages.get(userId);
+    const user = translationUsers.get(socket.id);
     const language = normalizeLangCode(newLanguage);
 
-    if (!user || user.socketId !== socket.id) {
+    /* Only the socket that registered this participant may change the
+       preference. A stale or unrelated socket cannot hijack another
+       participant's language. */
+    if (!user || (userId && user.userId !== userId)) {
       console.error(
-        "❌ Ignoring language change from a mismatched socket:",
-        userId
+        "❌ Ignoring language change from a socket that did not join:",
+        userId || socket.id
       );
       return;
     }
@@ -603,21 +430,21 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const speaker = userLanguages.get(userId);
+    const speaker = translationUsers.get(socket.id);
 
     if (!speaker) {
-      console.error("❌ Speaker not found:", userId);
+      console.error("❌ Speaker not found:", userId || socket.id);
       return;
     }
 
-    if (speaker.socketId !== socket.id) {
-      console.error("❌ Ignoring transcript from a mismatched socket:", userId);
+    if (userId && speaker.userId !== userId) {
+      console.error("❌ Ignoring transcript with a mismatched user id:", userId);
       return;
     }
 
     const normalizedText = cleanText.toLowerCase().replace(/\s+/g, " ");
     const now = Date.now();
-    const previous = lastTranscriptByUser.get(userId);
+    const previous = lastTranscriptBySocket.get(socket.id);
 
     if (
       previous &&
@@ -628,7 +455,7 @@ io.on("connection", (socket) => {
       return;
     }
 
-    lastTranscriptByUser.set(userId, { text: normalizedText, at: now });
+    lastTranscriptBySocket.set(socket.id, { text: normalizedText, at: now });
 
     const sourceLang = normalizeLangCode(
       originalLanguage || sourceLanguage || speaker.language || "en"
@@ -645,14 +472,13 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     console.log("❌ Translation user disconnected:", socket.id);
 
-    for (const [userId, user] of userLanguages.entries()) {
-      if (user.socketId === socket.id) {
-        console.log(`👋 Removed ${user.name}`);
-        userLanguages.delete(userId);
-        lastTranscriptByUser.delete(userId);
-        translationQueues.delete(userId);
-        break;
-      }
+    const user = translationUsers.get(socket.id);
+
+    if (user) {
+      console.log(`👋 Removed ${user.name}`);
+      translationUsers.delete(socket.id);
+      lastTranscriptBySocket.delete(socket.id);
+      translationQueues.delete(socket.id);
     }
   });
 });
@@ -662,8 +488,8 @@ app.get("/health", (req, res) => {
     status: "ok",
     service: "translation",
     database: isDatabaseReady() ? "connected" : "unavailable",
-    activeUsers: userLanguages.size,
-    users: Array.from(userLanguages.values()).map((u) => ({
+    activeUsers: translationUsers.size,
+    users: Array.from(translationUsers.values()).map((u) => ({
       name: u.name,
       language: u.language,
       room: u.roomId,

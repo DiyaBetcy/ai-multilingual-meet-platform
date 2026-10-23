@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io } from "socket.io-client";
 import { WEBRTC_URL, SERVICE_CONFIG_ERRORS } from "../lib/serviceUrls.js";
+import { attachStreamToVideo } from "../lib/media.js";
 
 const WEBRTC_CONFIG_ERROR = SERVICE_CONFIG_ERRORS.webrtc;
 
@@ -764,9 +765,7 @@ export const useWebRTC = (roomId, userName, userId, options = {}) => {
           setLocalStream(stream);
 
           if (localVideoRef.current) {
-            localVideoRef.current.srcObject = stream;
-            localVideoRef.current.muted = true;
-            localVideoRef.current.play().catch(() => {});
+            attachStreamToVideo(localVideoRef.current, stream, { muted: true });
           }
 
           const micOn = Boolean(audioTrack?.enabled);
@@ -870,8 +869,7 @@ export const useWebRTC = (roomId, userName, userId, options = {}) => {
     localVideoRef.current = ref;
 
     if (ref && localStreamRef.current) {
-      ref.srcObject = localStreamRef.current;
-      ref.muted = true;
+      attachStreamToVideo(ref, localStreamRef.current, { muted: true });
     }
   }, []);
 
@@ -975,7 +973,7 @@ export const useWebRTC = (roomId, userName, userId, options = {}) => {
     setLocalStream(newStream);
 
     if (localVideoRef.current) {
-      localVideoRef.current.srcObject = newStream;
+      attachStreamToVideo(localVideoRef.current, newStream, { muted: true });
     }
 
     mediaStateRef.current.camOn = Boolean(cameraTrack?.enabled);
@@ -1043,7 +1041,7 @@ export const useWebRTC = (roomId, userName, userId, options = {}) => {
       setLocalStream(newStream);
 
       if (localVideoRef.current) {
-        localVideoRef.current.srcObject = newStream;
+        attachStreamToVideo(localVideoRef.current, newStream, { muted: true });
       }
 
       mediaStateRef.current.isScreenSharing = true;
