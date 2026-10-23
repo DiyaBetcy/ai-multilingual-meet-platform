@@ -9,17 +9,15 @@ const app = express();
    wildcard origin must not be combined with credentials: true. That
    invalid CORS combination made preflight/upgrade behavior depend on the
    browser. Restrict origins with CLIENT_ORIGIN when deploying. */
-const allowedOrigins = (process.env.CLIENT_ORIGIN || process.env.CORS_ORIGIN)
-  ? (process.env.CLIENT_ORIGIN || process.env.CORS_ORIGIN)
-      .split(",")
-      .map((origin) => origin.trim())
-      .filter(Boolean)
-  : "*";
+const allowedOrigins = [
+  "https://meet-2-deploying.vercel.app",
+];
 
 const corsOptions = {
   origin: allowedOrigins,
   methods: ["GET", "POST"],
   credentials: false,
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 app.use(cors(corsOptions));
