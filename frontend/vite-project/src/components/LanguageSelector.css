@@ -1,0 +1,188 @@
+/* ============================================================
+   LanguageSelector — caption language picker + translation toggle
+   ------------------------------------------------------------
+   OBSIDIAN INTELLIGENCE meeting room (mockups/obsidian.css
+   §15). Every class name below already existed in this file and
+   is kept verbatim.
+
+   DOM (LanguageSelector.jsx):
+     .language-selector
+       .translation-controls
+         button.language-dropdown-btn > .globe-icon / .current-lang / .dropdown-arrow
+         button.translation-toggle(.active) > .mic-icon / .toggle-text
+       .language-dropdown-menu
+         .dropdown-header
+         .language-list > .language-option(.selected)
+           > .lang-flag / .lang-name / .check-mark
+   ============================================================ */
+
+.language-selector {
+  position: relative;
+  margin-left: auto;
+}
+
+.translation-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.language-dropdown-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 34px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-sm);
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-2);
+  color: var(--text-1);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.language-dropdown-btn:hover {
+  background: var(--bg-raised);
+  border-color: var(--line-3);
+}
+
+.globe-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.current-lang {
+  white-space: nowrap;
+}
+
+.dropdown-arrow {
+  font-size: 9px;
+  color: var(--text-3);
+}
+
+.translation-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-2);
+  background: var(--bg-elevated);
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.translation-toggle:hover {
+  color: var(--text-1);
+  border-color: var(--line-3);
+}
+
+.translation-toggle.active {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent-text);
+}
+
+.translation-toggle .mic-icon {
+  font-size: 11px;
+}
+
+.toggle-text {
+  white-space: nowrap;
+}
+
+.language-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: var(--z-drawer);
+  width: 236px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--sp-1);
+  border-radius: var(--r-md);
+  background: var(--bg-overlay);
+  border: 1px solid var(--line-2);
+  box-shadow: var(--shadow-3);
+}
+
+.language-dropdown-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.language-dropdown-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.language-dropdown-menu::-webkit-scrollbar-thumb {
+  background: var(--bg-raised);
+  border-radius: var(--r-full);
+}
+
+.language-dropdown-menu::-webkit-scrollbar-thumb:hover {
+  background: var(--line-3);
+}
+
+.dropdown-header {
+  padding: var(--sp-3);
+  font-size: var(--text-2xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.language-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.language-option {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: 8px var(--sp-3);
+  border: 0;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.language-option:hover {
+  background: var(--bg-hover);
+}
+
+.language-option.selected {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: var(--fw-medium);
+}
+
+.lang-flag {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.lang-name {
+  flex: 1;
+}
+
+.check-mark {
+  color: var(--accent);
+  font-size: var(--text-xs);
+}

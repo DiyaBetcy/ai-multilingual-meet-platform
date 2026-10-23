@@ -1,0 +1,109 @@
+/* ============================================================
+   TranslatedCaption — live translated caption overlay
+   ------------------------------------------------------------
+   OBSIDIAN INTELLIGENCE meeting room (mockups/obsidian.css
+   §15). Every class name below already existed in this file and
+   is kept verbatim.
+
+   DOM (TranslatedCaption.jsx):
+     .translated-caption-overlay
+       .caption-container
+         .caption-header > .speaker-name / .translation-indicator
+         .caption-text
+         .caption-footer > .language-tag
+   ============================================================ */
+
+.translated-caption-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  padding: var(--sp-5);
+  pointer-events: none;
+  z-index: var(--z-raised);
+  animation: caption-rise var(--dur-slow) var(--ease-out);
+}
+
+.caption-container {
+  width: min(760px, 100%);
+  border-radius: var(--r-md);
+  background: rgba(10, 16, 12, 0.9);
+  border: 1px solid var(--line-2);
+  box-shadow: var(--shadow-3);
+  overflow: hidden;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.caption-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
+  border-bottom: 1px solid var(--line-1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* The caption speaker is premium metadata — champagne. */
+.caption-header .speaker-name {
+  font-size: var(--text-2xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--champagne-text);
+}
+
+.translation-indicator {
+  font-size: var(--text-2xs);
+  color: var(--text-3);
+}
+
+.caption-text {
+  padding: var(--sp-3) var(--sp-4);
+  font-size: var(--text-lg);
+  font-weight: var(--fw-medium);
+  line-height: 1.45;
+  letter-spacing: var(--tracking-snug);
+  color: var(--text-1);
+  text-align: center;
+}
+
+.caption-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 var(--sp-4) var(--sp-2);
+}
+
+.language-tag {
+  font-size: 9px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.1em;
+  padding: 2px 7px;
+  border-radius: var(--r-xs);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  color: var(--accent-text);
+}
+
+@keyframes caption-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 720px) {
+  .translated-caption-overlay {
+    padding: var(--sp-3);
+  }
+  .caption-text {
+    font-size: var(--text-base);
+  }
+}

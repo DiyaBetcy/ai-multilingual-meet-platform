@@ -1,0 +1,152 @@
+/* ============================================================
+   Profile — user profile card
+   ------------------------------------------------------------
+   Class contract: the historical class names are kept; the
+   `.profile-actions` row wraps the Edit and Log out buttons.
+
+   `.avatar-circle` and `.info-box` are owned by
+   src/styles/primitives.css; both are intentionally re-shaped
+   here through an ancestor qualifier so the profile shows a
+   large avatar and a row of stat tiles rather than a callout.
+
+   DOM (profile.jsx):
+     .profile-container
+       AppShell
+         .oi-content.profile-main
+           .oi-pagehead
+           .profile-card.oi-card
+             .profile-avatar > .avatar-circle
+             .profile-details
+               h2.oi-card-title
+               .email.oi-meta
+               .profile-info > .info-box > span + strong
+               .profile-actions > button.edit-btn.oi-btn.oi-btn--secondary
+   ============================================================ */
+
+.profile-container {
+  min-height: 100vh;
+  background: var(--bg-app);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+}
+
+.profile-main {
+  min-width: 0;
+}
+
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  max-width: 760px;
+  padding: var(--sp-8);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-2);
+}
+
+.profile-avatar {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+}
+
+/* Qualified override of the primitives avatar. */
+.profile-avatar .avatar-circle {
+  width: 92px;
+  height: 92px;
+  border-color: var(--accent-line);
+  background: var(--grad-brand);
+  color: var(--accent-ink);
+  font-size: var(--text-3xl);
+  font-weight: var(--fw-semibold);
+  box-shadow: 0 0 0 6px var(--accent-soft);
+}
+
+.profile-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-details h2 {
+  margin: 0 0 var(--sp-1);
+  color: var(--text-1);
+  font-size: var(--text-2xl);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-tight);
+}
+
+.email {
+  margin: 0 0 var(--sp-6);
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+
+.profile-info {
+  display: flex;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-6);
+}
+
+/* Qualified override of the primitives callout — this is a
+   stat tile, so the callout chrome is fully reset here. */
+.profile-info .info-box {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-1);
+  padding: var(--sp-4);
+  border: 1px solid var(--line-2);
+  border-left: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--bg-elevated);
+}
+
+.profile-info .info-box span {
+  color: var(--text-3);
+  font-size: var(--text-2xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.profile-info .info-box strong {
+  color: var(--text-1);
+  font-size: var(--text-2xl);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+
+.edit-btn {
+  min-width: 148px;
+}
+
+@media (max-width: 720px) {
+  .profile-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--sp-6);
+    padding: var(--sp-6);
+  }
+
+  .profile-avatar {
+    justify-content: flex-start;
+  }
+
+  .profile-info {
+    flex-direction: column;
+  }
+
+  .edit-btn {
+    width: 100%;
+  }
+}

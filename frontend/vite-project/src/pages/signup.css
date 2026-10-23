@@ -1,0 +1,32 @@
+/* ============================================================
+   Signup page.
+   ------------------------------------------------------------
+   The top bar, split panels, form card, fields and buttons are
+   shared and live in src/styles/primitives.css — this file only
+   owns the page shell and the signup-specific tweaks.
+
+   DOM (signup.jsx):
+     .signup-container
+       .start-top-bar > .start-logo + .start-menu
+       .main-content.oi-auth
+         .left-panel.oi-auth-aside
+         .right-panel.oi-auth-main > .form-wrapper.oi-auth-card
+           .google-btn / .or-text.oi-divider
+           form.oi-form > .oi-field > .oi-input
+             .send-otp > .send-otp-btn
+             .oi-otp-row
+           .oi-alert
+           button.submit
+   ============================================================ */
+
+.signup-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg-app);
+  color: var(--text-1);
+}
+
+.signup-container form {
+  margin: 0;
+}

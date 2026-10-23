@@ -1,0 +1,65 @@
+.home-content {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #1c1c1c;
+}
+
+.home-card {
+  background: #2a2a2a;
+  padding: 40px;
+  border-radius: 12px;
+  width: 400px;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+.home-card h1 {
+  margin-bottom: 20px;
+}
+
+.primary-btn {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: none;
+  border-radius: 8px;
+  background-color: #19E5D8;
+  color: black;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary-btn:hover {
+  opacity: 0.9;
+}
+
+.secondary-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background-color: #444;
+  color: white;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+.recent-section {
+  text-align: left;
+}
+
+.recent-section h3 {
+  margin-bottom: 8px;
+}
+
+.recent-section ul {
+  list-style: none;
+  padding: 0;
+}
+
+.recent-section li {
+  padding: 6px 0;
+  border-bottom: 1px solid #444;
+}

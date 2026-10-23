@@ -1,0 +1,28 @@
+/* ============================================================
+   Login page.
+   ------------------------------------------------------------
+   The top bar, split panels, form card, fields and buttons are
+   shared and live in src/styles/primitives.css — this file only
+   owns the page shell and the login-specific tweaks.
+
+   DOM (login.jsx):
+     .auth-page
+       .top-bar > .logo-image + .nav-menu
+       .main-content.oi-auth
+         .left-panel.oi-auth-aside
+         .right-panel.oi-auth-main > .form-wrapper.oi-auth-card
+           form.oi-form > .oi-field > .oi-input
+           button.submit
+   ============================================================ */
+
+.auth-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg-app);
+  color: var(--text-1);
+}
+
+.auth-page form {
+  margin: 0;
+}

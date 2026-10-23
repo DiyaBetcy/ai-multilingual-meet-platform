@@ -1,0 +1,67 @@
+/* ============================================================
+   Workspace home (/start).
+   ------------------------------------------------------------
+   The visual language lives in src/styles/primitives.css —
+   this is the OBSIDIAN INTELLIGENCE design system (shell,
+   buttons, cards, form primitives). This file only carries
+   the page-specific aliases so the historical class names
+   keep resolving without fighting the shared primitives.
+
+   DOM (start.jsx):
+     .start-page
+       AppShell
+         .oi-content.start-main
+           .oi-pagehead > .start-buttons > .start-btn
+           .oi-action-grid
+           form.oi-join-form.start-meeting-bar
+             .oi-join-options.start-options
+             .start-action-btn
+   ============================================================ */
+
+.start-page {
+  min-height: 100vh;
+  background: var(--bg-app);
+  color: var(--text-1);
+}
+
+.start-main {
+  min-width: 0;
+}
+
+.start-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+
+.start-btn {
+  min-width: 148px;
+}
+
+.start-meeting-bar {
+  width: 100%;
+}
+
+.start-options {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  flex-wrap: wrap;
+}
+
+.start-action-btn {
+  align-self: end;
+}
+
+@media (max-width: 720px) {
+  .start-btn {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .start-buttons {
+    width: 100%;
+  }
+  .start-action-btn {
+    width: 100%;
+  }
+}

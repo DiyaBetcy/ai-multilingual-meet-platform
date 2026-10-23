@@ -1,0 +1,82 @@
+/* ============================================================
+   ScheduleSetupModal — AI anchor schedule editor
+   ------------------------------------------------------------
+   The shared chrome for this modal (overlay, dialog, header,
+   footer, form groups, schedule rows, callout, buttons) now
+   lives in src/styles/primitives.css, which is the single
+   owner of those class names.
+
+   This file therefore contains ONLY deliberate, qualified
+   refinements for this particular modal. Every rule below is
+   scoped by an ancestor so it can never fight another file.
+
+   DOM (ScheduleSetupModal.jsx):
+     .modal-overlay > .schedule-modal
+       .modal-header > h2 / .close-btn
+       .modal-content
+         .form-group > label / input | select
+         .schedule-section
+           .section-header > h3 / .total-time
+           .schedule-list > .schedule-item-form
+             .item-number / .item-fields / .field-row
+             .name-input / .participant-select / .topic-input
+             .duration-field > .duration-input / span
+             .remove-btn
+           .add-btn
+         .info-box
+       .modal-footer > .btn-secondary / .btn-primary
+   ============================================================ */
+
+/* The editor is dense — a slightly narrower column than the
+   default modal width keeps the two-column field rows readable. */
+.modal-overlay .schedule-modal {
+  max-width: 640px;
+}
+
+/* Tighter content padding so the schedule list stays in view. */
+.schedule-modal .modal-content {
+  padding: var(--sp-5) var(--sp-6);
+}
+
+/* Long schedules scroll inside the dialog instead of growing
+   past the viewport. */
+.schedule-modal .schedule-list {
+  max-height: 46vh;
+  overflow-y: auto;
+  padding-right: var(--sp-1);
+}
+
+/* The participant picker and the free-text name sit side by
+   side — give the picker a slightly larger share. */
+.schedule-modal .field-row .participant-select {
+  flex: 1 1 45%;
+}
+
+.schedule-modal .field-row .name-input {
+  flex: 1 1 55%;
+}
+
+/* The topic row pairs a free-text title with a fixed-width
+   duration control. */
+.schedule-modal .field-row .topic-input {
+  flex: 1 1 auto;
+}
+
+.schedule-modal .duration-field {
+  flex: none;
+}
+
+/* The "How AI Anchoring Works" callout closes the modal body. */
+.schedule-modal .info-box {
+  margin-top: var(--sp-2);
+}
+
+/* Footer actions — the primary call to action carries the
+   emphasis, Cancel stays quiet. */
+.schedule-modal .modal-footer .btn-secondary {
+  min-width: 120px;
+}
+
+.schedule-modal .modal-footer .btn-primary {
+  min-width: 200px;
+}

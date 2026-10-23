@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Obsidian Intelligence — Authentication Mockup</title>
+<link rel="stylesheet" href="obsidian.css" />
+</head>
+<body>
+
+<nav class="oi-mock-bar">
+  <b>OBSIDIAN INTELLIGENCE</b>
+  <a href="index.html">Overview</a>
+  <a href="dashboard.html">Dashboard</a>
+  <a href="auth.html">Auth</a>
+  <a href="meeting.html">Meeting room</a>
+  <span>Static mockup — no production source was modified</span>
+</nav>
+
+<div class="oi-mock-note">
+  <b>Authentication mockup.</b> Models the real <code>/login</code> and <code>/signup</code> screens. Field order,
+  the OTP round-trip (<code>Send OTP → Enter OTP → Verify → Sign Up</code>), the resend cooldown, the Google entry
+  point and the “already have an account” / “create an account” links are all taken from
+  <code>src/pages/login.jsx</code> and <code>src/pages/signup.jsx</code>. Only the presentation changes —
+  the submission logic, validation rules, API calls and redirects are untouched.
+</div>
+
+<div class="oi-auth">
+
+  <!-- ===================== BRAND PANEL ===================== -->
+  <aside class="oi-auth-aside">
+    <a class="oi-brand" href="#" style="padding:0">
+      <span class="oi-brand-mark">M</span>
+      <span>
+        <span class="oi-brand-text">Meet</span>
+        <span class="oi-brand-sub">Multilingual</span>
+      </span>
+    </a>
+
+    <div style="position:relative;z-index:1">
+      <span class="oi-eyebrow">Obsidian Intelligence</span>
+      <h1 class="oi-auth-headline" style="margin-top:var(--sp-3)">
+        Meetings that speak every attendee's language.
+      </h1>
+      <p class="oi-auth-lede">
+        One room for every attendee — live caption translation, AI-assisted speaker turns and a meeting
+        surface built to stay readable for hours.
+      </p>
+
+      <div class="oi-auth-points">
+        <div class="oi-auth-point">
+          <span class="oi-auth-point-icon" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
+          </span>
+          <span>Live translated captions for English, Hindi, Malayalam and Tamil.</span>
+        </div>
+        <div class="oi-auth-point">
+          <span class="oi-auth-point-icon" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
+          </span>
+          <span>AI anchoring keeps speaker order and time on schedule.</span>
+        </div>
+        <div class="oi-auth-point">
+          <span class="oi-auth-point-icon" aria-hidden="true">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
+          </span>
+          <span>Dark, low-glare room surfaces designed for long sessions.</span>
+        </div>
+      </div>
+    </div>
+
+    <p class="oi-auth-foot">© 2026 · Meet Multilingual Platform</p>
+  </aside>
+
+  <!-- ===================== FORMS ===================== -->
+  <main class="oi-auth-main">
+    <div style="width:min(880px,100%);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-8);align-items:start">
+
+      <!-- ---------- LOGIN ---------- -->
+      <section class="oi-auth-card" aria-labelledby="login-h">
+        <div>
+          <h2 class="oi-auth-title" id="login-h">Log in</h2>
+          <p class="oi-auth-sub">Use the email or username you signed up with.</p>
+        </div>
+
+        <form class="oi-form" onsubmit="return false">
+          <div class="oi-field">
+            <label class="oi-label" for="login-id">Username or email</label>
+            <input class="oi-input" id="login-id" type="text" placeholder="you@example.com" autocomplete="username" />
+          </div>
+
+          <div class="oi-field">
+            <label class="oi-label" for="login-pw">Password</label>
+            <input class="oi-input" id="login-pw" type="password" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+
+          <button class="oi-btn oi-btn--primary oi-btn--lg oi-btn--block" type="submit">
+            Log in
+          </button>
+        </form>
+
+        <p class="oi-auth-alt">
+          Don’t have an account? <a href="#">Create an account</a>
+        </p>
+
+        <!-- validation + submission states -->
+        <div style="border-top:1px solid var(--line-2);padding-top:var(--sp-4);display:flex;flex-direction:column;gap:var(--sp-3)">
+          <span class="oi-eyebrow">States</span>
+          <div class="oi-field oi-field--invalid">
+            <label class="oi-label" for="bad-pw">Password</label>
+            <input class="oi-input" id="bad-pw" type="password" value="123" readonly />
+            <span class="oi-field-error">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5M12 16.2v.2"/></svg>
+              Password must be at least 6 characters.
+            </span>
+          </div>
+          <div class="oi-field">
+            <label class="oi-label" for="ok-pw">Password</label>
+            <input class="oi-input" id="ok-pw" type="password" value="••••••••" readonly />
+            <span class="oi-field-success">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
+              Password looks good.
+            </span>
+          </div>
+          <button class="oi-btn oi-btn--primary oi-btn--block" type="button" disabled>
+            <span class="oi-btn-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+                <path d="M12 3a9 9 0 1 0 9 9" stroke-opacity=".35"/><path d="M12 3a9 9 0 0 1 9 9">
+                  <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.9s" repeatCount="indefinite"/>
+                </path>
+              </svg>
+            </span>
+            Logging in…
+          </button>
+        </div>
+      </section>
+
+      <!-- ---------- SIGNUP ---------- -->
+      <section class="oi-auth-card" aria-labelledby="signup-h">
+        <div>
+          <h2 class="oi-auth-title" id="signup-h">Create account</h2>
+          <p class="oi-auth-sub">Verify your email with a one-time code, then set a password.</p>
+        </div>
+
+        <button class="oi-social-btn" type="button">
+          <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.24 1.4-1.66 4.1-5.5 4.1a6.1 6.1 0 1 1 0-12.2c1.8 0 3 .8 3.7 1.4l2.5-2.4A9.3 9.3 0 0 0 12 2a10 10 0 1 0 0 20c5.8 0 9.6-4 9.6-9.8 0-.7-.08-1.2-.16-1.6z"/></svg>
+          Sign up with Google
+        </button>
+
+        <div class="oi-divider">or</div>
+
+        <form class="oi-form" onsubmit="return false">
+          <div class="oi-field">
+            <label class="oi-label" for="su-name">Full name</label>
+            <input class="oi-input" id="su-name" type="text" value="Your Name" autocomplete="name" />
+          </div>
+
+          <div class="oi-field">
+            <label class="oi-label" for="su-email">Email</label>
+            <input class="oi-input" id="su-email" type="email" value="you@example.com" autocomplete="email" />
+          </div>
+
+          <div class="oi-otp-row">
+            <div class="oi-field">
+              <label class="oi-label" for="su-otp">One-time code</label>
+              <input class="oi-input" id="su-otp" type="text" inputmode="numeric" placeholder="6-digit code" value="482915" />
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;padding-top:22px">
+              <button class="oi-btn oi-btn--secondary oi-btn--sm" type="button">Send OTP</button>
+            </div>
+          </div>
+
+          <div class="oi-form-row">
+            <div class="oi-field">
+              <label class="oi-label" for="su-pw">Password</label>
+              <input class="oi-input" id="su-pw" type="password" value="••••••••" autocomplete="new-password" />
+            </div>
+            <div class="oi-field">
+              <label class="oi-label" for="su-pw2">Confirm password</label>
+              <input class="oi-input" id="su-pw2" type="password" value="••••••••" autocomplete="new-password" />
+            </div>
+          </div>
+
+          <div class="oi-alert oi-alert--success">
+            <span class="oi-alert-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>
+            </span>
+            <span>OTP verified successfully</span>
+          </div>
+
+          <button class="oi-btn oi-btn--primary oi-btn--lg oi-btn--block" type="submit">
+            Sign up
+          </button>
+        </form>
+
+        <p class="oi-auth-alt">
+          Already have an account? <a href="#">Log in</a>
+        </p>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

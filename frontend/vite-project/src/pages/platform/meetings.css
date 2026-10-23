@@ -1,0 +1,52 @@
+/* ============================================================
+   Meetings — "My Meetings" grid
+   ------------------------------------------------------------
+   Class contract: every class name below already existed in
+   this file and is kept verbatim. The visual language comes
+   from src/styles/primitives.css (the OBSIDIAN INTELLIGENCE
+   design system); this file only carries page aliases.
+
+   DOM (meetings.jsx):
+     .meetings-container
+       AppShell
+         .oi-content.meetings-main
+           .oi-pagehead > .meetings-header > button.new-meeting-btn
+           .oi-meetings-grid.meetings-list
+             article.oi-meeting-card.meeting-card
+               .oi-meeting-top / .oi-meeting-meta / .oi-chip
+               .oi-meeting-foot > button.join-btn
+   ============================================================ */
+
+.meetings-container {
+  min-height: 100vh;
+  background: var(--bg-app);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+}
+
+.meetings-main {
+  min-width: 0;
+}
+
+.meetings-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-4);
+}
+
+.new-meeting-btn {
+  min-width: 156px;
+}
+
+.meetings-list {
+  width: 100%;
+}
+
+.meeting-card {
+  min-width: 0;
+}
+
+.join-btn {
+  min-width: 76px;
+}

@@ -1,0 +1,181 @@
+/* Full container */
+.base-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #1c1c1c;
+  color: white;
+}
+
+
+.start-top-bar {
+  background: #19E5D8;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+
+/* Main content: left = big video, right = small tiles */
+.main-content {
+  display: flex;
+  flex: 1;
+  padding: 10px;
+  gap: 10px;
+}
+
+/* Big video */
+.main-video {
+  flex: 3;
+  background-color: #9f9f9f;
+  border-radius: 6px;
+  min-height: 600px;
+  /* ensures it doesn’t squash */
+}
+
+/* Side videos */
+.side-videos {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  /* force 3 rows */
+  gap: 8px;
+  min-height: 600px;
+  /* same height as big video */
+}
+
+.video-tile {
+  background-color: #9f9f9f;
+  border-radius: 6px;
+}
+
+
+/* Bottom controls */
+.controls {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  gap: 12px;
+  background-color: #1c1c1c;
+}
+
+.control-btn {
+  background: #444;
+  border: none;
+  padding: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-btn img {
+  width: 20px;
+  height: 20px;
+}
+
+.control-btn.end {
+  background: red;
+}
+
+.control-btn.end:hover {
+  background: darkred;
+}
+
+/* Show OFF state for mic/camera buttons */
+.control-btn.off {
+  opacity: 0.5;
+  background-color: #666;
+}
+
+.chat-btn {
+  position: relative;
+}
+
+.chat-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: red;
+  color: white;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.screen-warning-popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.popup-content {
+  background: #fff;
+  padding: 20px 24px;
+  border-radius: 10px;
+  text-align: center;
+  width: 320px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.popup-content p {
+  font-size: 14px;
+  margin-bottom: 16px;
+  color: #111;
+}
+
+.popup-content button {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}
+
+.control-btn {
+  position: relative;
+}
+
+/* When mic or camera is OFF */
+.control-btn.off::after {
+  content: "";
+  position: absolute;
+  width: 26px;
+  height: 3px;
+  background: white;
+  transform: rotate(-45deg);
+  top: 50%;
+  left: 50%;
+  transform-origin: center;
+  translate: -50% -50%;
+}
+
+/* Optional: red background when OFF (like Google Meet) */
+.control-btn.off {
+  background-color: #d93025;
+}
+
+.caption-overlay {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 18px;
+}
