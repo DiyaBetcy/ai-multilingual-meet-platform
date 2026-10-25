@@ -4,8 +4,13 @@
   "main": "translation.js",
   "scripts": {
     "start": "node translation.js",
+    "start:translation": "node translation.js",
+    "start:webrtc": "node webrtc-server.js",
+    "start:anchoring": "node anchoring-service.js",
     "dev": "nodemon translation.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev:webrtc": "nodemon webrtc-server.js",
+    "dev:anchoring": "nodemon anchoring-service.js",
+    "test": "node --test ../frontend/vite-project/tests/media.test.mjs ../frontend/vite-project/tests/translation-routing.test.mjs ../frontend/vite-project/tests/translation-providers.test.mjs"
   },
   "keywords": [],
   "author": "",

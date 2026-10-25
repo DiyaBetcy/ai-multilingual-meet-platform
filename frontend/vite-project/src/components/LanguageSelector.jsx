@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react';
 import './LanguageSelector.css';
 
-const LanguageSelector = ({ 
-  currentLanguage, 
-  availableLanguages, 
-  onChangeLanguage, 
+const LanguageSelector = ({
+  currentLanguage,
+  speakingLanguage,
+  availableLanguages,
+  onChangeLanguage,
+  onChangeSpeakingLanguage,
   isListening,
-  onToggleListening 
+  translationEnabled,
+  onToggleTranslation,
+  onToggleListening,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const speaking = speakingLanguage || currentLanguage;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -26,11 +31,15 @@ const LanguageSelector = ({
     setIsOpen(false);
   };
 
+  const handleSpeakingSelect = (event) => {
+    onChangeSpeakingLanguage?.(event.target.value);
+  };
+
   return (
     <div className="language-selector">
       <div className="translation-controls">
         {/* Language Dropdown */}
-        <button 
+        <button
           className="language-dropdown-btn"
           onClick={() => setIsOpen(!isOpen)}
         >
@@ -39,11 +48,12 @@ const LanguageSelector = ({
           <span className="dropdown-arrow">▼</span>
         </button>
 
-        {/* Translation Toggle */}
-        <button 
+        {/* Microphone / speech recognition toggle. Receiving translations is
+            controlled separately in the dropdown below. */}
+        <button
           className={`translation-toggle ${isListening ? 'active' : ''}`}
           onClick={onToggleListening}
-          title={isListening ? 'Stop Translation' : 'Start Translation'}
+          title={isListening ? 'Stop sending your speech' : 'Start sending your speech'}
         >
           <span className="mic-icon">{isListening ? '🔴' : '🎤'}</span>
           <span className="toggle-text">{isListening ? 'Stop' : 'Translate'}</span>
@@ -54,7 +64,7 @@ const LanguageSelector = ({
       {isOpen && (
         <div className="language-dropdown-menu">
           <div className="dropdown-header">
-            <span>Select Your Language</span>
+            <span>I want to hear</span>
           </div>
           <div className="language-list">
             {Object.entries(availableLanguages).map(([code, name]) => (
@@ -69,6 +79,45 @@ const LanguageSelector = ({
               </button>
             ))}
           </div>
+
+          <div className="language-speaking">
+            <label htmlFor="speaking-language">I speak</label>
+            <select
+              id="speaking-language"
+              className="speaking-language-select"
+              value={speaking}
+              onChange={handleSpeakingSelect}
+            >
+              {Object.entries(availableLanguages).map(([code, name]) => (
+                <option key={code} value={code}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            role="switch"
+            aria-checked={translationEnabled}
+            className={`translation-mode-option ${translationEnabled ? 'enabled' : ''}`}
+            onClick={onToggleTranslation}
+            title={
+              translationEnabled
+                ? 'You hear translated audio. Click to hear the original voices instead.'
+                : 'You hear original voices. Click to hear the translated audio.'
+            }
+          >
+            <span className="translation-mode-copy">
+              <span className="translation-mode-title">Translated audio</span>
+              <span className="translation-mode-hint">
+                {translationEnabled ? 'Original voices muted' : 'Original voices audible'}
+              </span>
+            </span>
+            <span className="switch-track" aria-hidden="true">
+              <span className="switch-thumb" />
+            </span>
+          </button>
         </div>
       )}
     </div>

@@ -1,76 +1,134 @@
 # Deployment Instructions
 
-## Frontend Deployment to Vercel
+The application uses three independent backend services. Do not point one
+service at another service's URL.
 
-### Option 1: Using Vercel Web Interface (Recommended)
+| Service | Render start command | Health check |
+| --- | --- | --- |
+| WebRTC signaling | `npm run start:webrtc` | `/health` |
+| Translation / auth / transcripts | `npm run start:translation` | `/health` |
+| AI anchoring | `npm run start:anchoring` | `/health` |
 
-1. **Go to Vercel Dashboard**
-   - Visit: https://vercel.com/dashboard
-   - Click "Add New..." → "Project"
+All three services read `process.env.PORT` and listen on `0.0.0.0`, which is
+required by Render. The same `backend` folder is used for all three Render
+services; set the start command per service in the Render dashboard.
 
-2. **Import from GitHub**
-   - Click "Import Git Repository"
-   - Select your ai-multilingual-meet-platform repository
-   - Click "Import"
+## Test deployment URLs
 
-3. **Configure Root Directory**
-   - Root Directory: `frontend/vite-project`
-   - Framework Preset: `Vite`
-   - Build Command: `npm run build`
-   - Output Directory: `dist`
+| Service | URL |
+| --- | --- |
+| Frontend (Vercel) | `https://meet-2-deploying.vercel.app` |
+| WebRTC signaling | `https://meet-2-deploying.onrender.com` |
+| Translation / auth | `https://meet-2-deploying-1.onrender.com` |
+| AI anchoring | `https://meet-2-deploying-2.onrender.com` |
 
-4. **Environment Variables**
-   - Click "Environment Variables"
-   - Add: `VITE_SERVER_URL` (value will be backend URL after backend deployment)
+## Frontend on Vercel
 
-5. **Deploy**
-   - Click "Deploy"
-   - Wait for deployment to complete
-   - Get your Vercel URL: `https://your-app-name.vercel.app`
+1. Import the repository and set **Root Directory** to `frontend/vite-project`.
+2. Framework preset: **Vite**.
+3. Build command: `npm run build`.
+4. Output directory: `dist`.
+5. Add these environment variables (Production and Preview):
 
-### Option 2: Using CLI (if CLI works)
-
-```bash
-cd frontend/vite-project
-npx vercel --prod
+```text
+VITE_WEBRTC_URL=https://meet-2-deploying.onrender.com
+VITE_TRANSLATION_URL=https://meet-2-deploying-1.onrender.com
+VITE_ANCHORING_URL=https://meet-2-deploying-2.onrender.com
 ```
 
-## Backend Deployment to Railway
+Optional TURN relay:
 
-1. **Go to Railway Dashboard**
-   - Visit: https://railway.app/dashboard
-   - Click "New Project" → "Deploy from GitHub repo"
+```text
+VITE_TURN_URL=
+VITE_TURN_USERNAME=
+VITE_TURN_CREDENTIAL=
+```
 
-2. **Select Repository**
-   - Choose your ai-multilingual-meet-platform repository
-   - Set Root Directory: `backend`
+Vite embeds `VITE_*` values at build time, so **redeploy the frontend after
+changing any of them**. Never put `SARVAM_API_KEY`, `MONGO_URI`, `JWT_SECRET`
+or any other secret in a `VITE_*` variable: those values are visible in the
+browser bundle.
 
-3. **Configure Service**
-   - Build Command: `npm install`
-   - Start Command: `npm start`
+If a URL is missing, the affected feature shows a configuration error instead
+of falling back to the Vercel hostname or a localhost port.
 
-4. **Add Environment Variables**
-   - `NODE_ENV=production`
-   - `SARVAM_API_KEY=sk_xbi0i64z_BihO9CdiDsUV4O19SnvXf9mO`
+## Render services
 
-5. **Deploy**
-   - Click "Deploy Now"
-   - Get your Railway URL: `https://your-app-name.railway.app`
+Each service can use the `backend` folder as its root directory.
 
-## Final Steps
+### WebRTC signaling
 
-1. **Update Frontend Environment Variables**
-   - In Vercel dashboard, add:
-   ```
-   VITE_SERVER_URL=your-backend-name.railway.app
-   VITE_WEBRTC_PORT=3001
-   VITE_TRANSLATION_PORT=5000
-   VITE_ANCHORING_PORT=3002
-   ```
+- Start command: `npm run start:webrtc`
+- Environment: `CLIENT_ORIGIN=https://meet-2-deploying.vercel.app` (optional;
+  when omitted, any origin is allowed because credentials are disabled).
+- Health check path: `/health`
 
-2. **Redeploy Frontend**
-   - Vercel will automatically redeploy with new environment variables
+### Translation / auth
 
-3. **Test**
-   - Frontend: `https://your-app-name.vercel.app`
-   - Backend: `https://your-app-name.railway.app`
+- Start command: `npm run start:translation`
+- Environment:
+  - `SARVAM_API_KEY` (translated speech and primary translation provider;
+    captions still work without it)
+  - `MONGO_URI`, `MONGO_DB_NAME`, `JWT_SECRET` (auth, transcripts, summaries)
+  - `FRONTEND_URL` / `CLIENT_ORIGIN`
+- Health check path: `/health`
+- MongoDB is optional for live captions and TTS. If it is missing or
+  unreachable, those features keep working and auth/transcript endpoints
+  return `503`.
+
+### AI anchoring
+
+- Start command: `npm run start:anchoring`
+- Environment:
+  - `SARVAM_API_KEY` (server-side speech; the browser voice is the fallback)
+  - `CLIENT_ORIGIN=https://meet-2-deploying.vercel.app`
+- Health check path: `/health`
+
+## Translation providers
+
+Both backend services use `backend/lib/multilingual.js`, which tries the
+providers in this order:
+
+1. **Sarvam AI** (`sarvam-translate:v1`, same `SARVAM_API_KEY` as TTS)
+2. **MyMemory**
+3. **Google Translate**
+
+Sarvam is first because it is reachable from Render and covered by the API key
+that already powers TTS. MyMemory and Google remain fallbacks. If every
+provider fails, the recipient receives the original text labelled as
+untranslated and **no audio**; the service never speaks the original language
+as if it were the translation.
+
+Sarvam TTS does not currently expose Assamese (`as`) or Urdu (`ur`) voices on
+all accounts. Translation still works for both languages and the browser
+speech-synthesis fallback speaks the translated text.
+
+## Verification
+
+After deploying:
+
+```text
+https://meet-2-deploying.onrender.com/health
+https://meet-2-deploying-1.onrender.com/health
+https://meet-2-deploying-2.onrender.com/health
+```
+
+Each should return HTTP 200 with a JSON `status: "ok"`.
+
+## Local development
+
+The frontend falls back to these addresses only when running `vite dev`:
+
+```text
+http://localhost:3001  WebRTC signaling
+http://localhost:5000  translation / auth
+http://localhost:3002  AI anchoring
+```
+
+Run each backend service in its own terminal from `backend`:
+
+```bash
+npm run dev:webrtc
+npm run dev:translation
+npm run dev:anchoring
+```

@@ -190,13 +190,23 @@ export default function JoinPreview() {
   const [password, setPassword] = useState("");
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
-  const [aiAnchor, setAiAnchor] = useState(false);
+  const [language, setLanguage] = useState("en");
   const [waitingRoom, setWaitingRoom] = useState(false);
   const [stream, setStream] = useState(null);
+  const [mediaError, setMediaError] = useState("");
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [meetingTitle, setMeetingTitle] = useState("");
-  const [anchoringSchedule, setAnchoringSchedule] = useState(null);
+  const [, setAnchoringSchedule] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState(null);
   const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const copyFeedbackTimerRef = useRef(null);
+
+  /* Entry state handed over by the quick-join form on /start.
+     Kept in a ref so the media effect can read it without
+     adding `location.state` to its dependency list. */
+  const entryState = useRef(location.state || null);
 
   /* ---------- AUTO GENERATE FOR CREATE ---------- */
 useEffect(() => {
@@ -210,86 +220,244 @@ useEffect(() => {
   }
 }, [mode, location.state]);
 
-  /* ---------- AUTO GENERATE FOR CREATE ---------- */
- useEffect(() => {
-  let localStream;
+  /* ---------- MEDIA PREVIEW ---------- */
+  useEffect(() => {
+    let cancelled = false;
 
-  const getMedia = async () => {
+    const describeMediaError = (error) => {
+      if (
+        error?.name === "NotAllowedError" ||
+        error?.name === "SecurityError"
+      ) {
+        return "Camera/microphone permission was denied. Allow access for this site in your browser, then reload this page.";
+      }
+      if (
+        error?.name === "NotFoundError" ||
+        error?.name === "DevicesNotFoundError"
+      ) {
+        return "No camera or microphone was found. Connect a device and try again.";
+      }
+      if (
+        error?.name === "NotReadableError" ||
+        error?.name === "TrackStartError"
+      ) {
+        return "The camera or microphone is already in use by another application. Close it and try again.";
+      }
+      return `Could not start the camera or microphone: ${
+        error?.message || "unknown error"
+      }`;
+    };
+
+    const getMedia = async () => {
+      let mediaStream = null;
+
+      try {
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true,
+          });
+        } catch (initialError) {
+          if (initialError?.name === "NotAllowedError") throw initialError;
+
+          // A missing camera/microphone should not prevent the preview
+          // when the other device is available.
+          for (const constraints of [
+            { video: false, audio: true },
+            { video: true, audio: false },
+          ]) {
+            try {
+              mediaStream = await navigator.mediaDevices.getUserMedia(
+                constraints
+              );
+              break;
+            } catch {
+              // Try the other device.
+            }
+          }
+
+          if (!mediaStream) throw initialError;
+        }
+
+        if (cancelled) {
+          mediaStream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        streamRef.current = mediaStream;
+        setStream(mediaStream);
+
+        /* Seed the requested entry state: the quick-join form on
+           /start can ask to join with the camera or the mic off. */
+        const entry = entryState.current;
+        const videoOff = Boolean(entry?.videoOff);
+        const micOff = Boolean(entry?.micOff);
+
+        mediaStream.getVideoTracks().forEach((track) => {
+          track.enabled = !videoOff;
+        });
+        mediaStream.getAudioTracks().forEach((track) => {
+          track.enabled = !micOff;
+        });
+
+        setCamOn(
+          Boolean(mediaStream.getVideoTracks()[0]?.enabled)
+        );
+        setMicOn(
+          Boolean(mediaStream.getAudioTracks()[0]?.enabled)
+        );
+        setMediaError(
+          mediaStream.getVideoTracks().length === 0
+            ? "No camera was found. You can still join with audio only."
+            : mediaStream.getAudioTracks().length === 0
+              ? "No microphone was found. You can still join with video only."
+              : ""
+        );
+        setStream(mediaStream);
+      } catch (err) {
+        console.error("Preview media error:", err);
+        if (!cancelled) setMediaError(describeMediaError(err));
+      }
+    };
+
+    getMedia();
+
+    return () => {
+      cancelled = true;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [stream]);
+
+  useEffect(
+    () => () => {
+      if (copyFeedbackTimerRef.current) {
+        clearTimeout(copyFeedbackTimerRef.current);
+      }
+    },
+    []
+  );
+
+  /* ---------- COPY FEEDBACK ---------- */
+  const showCopyFeedback = (message, type = "success") => {
+    setCopyFeedback({ message, type });
+
+    if (copyFeedbackTimerRef.current) {
+      clearTimeout(copyFeedbackTimerRef.current);
+    }
+
+    copyFeedbackTimerRef.current = setTimeout(() => {
+      setCopyFeedback(null);
+      copyFeedbackTimerRef.current = null;
+    }, 2400);
+  };
+
+  const copyText = async (value, label) => {
+    const text = String(value ?? "");
+
+    if (!text.trim()) {
+      showCopyFeedback(`There is no ${label.toLowerCase()} to copy.`, "error");
+      return;
+    }
+
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Clipboard API fallback for browsers that only expose execCommand.
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
 
-      localStream = mediaStream;
-      setStream(mediaStream);
+        try {
+          textarea.select();
+          const copied = document.execCommand("copy");
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
+          if (!copied) {
+            throw new Error("The browser rejected the copy command");
+          }
+        } finally {
+          document.body.removeChild(textarea);
+        }
       }
 
-      setCamOn(true);
-    } catch (err) {
-      console.error(err);
+      showCopyFeedback(`${label} copied to clipboard.`);
+    } catch (error) {
+      console.error(`Could not copy ${label}:`, error);
+      showCopyFeedback(
+        `${label} could not be copied. Please copy it manually.`,
+        "error"
+      );
     }
   };
 
-  getMedia();
+  /* ---------- MICROPHONE TOGGLE ---------- */
+  const toggleMic = () => {
+    const audioTrack = streamRef.current?.getAudioTracks()[0];
 
-  return () => {
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
+    if (!audioTrack) {
+      setMediaError(
+        "No microphone track is available. Check the device and browser permission, then reload."
+      );
+      return;
     }
+
+    audioTrack.enabled = !audioTrack.enabled;
+    setMicOn(audioTrack.enabled);
   };
-}, []);
 
-/* ---------- MICROPHONE TOGGLE ---------- */
-const toggleMic = () => {
-  if (!stream) return;
+  /* ---------- CAMERA TOGGLE ---------- */
+  const toggleCam = async () => {
+    const videoTrack = streamRef.current?.getVideoTracks()[0];
 
-  const audioTrack = stream.getAudioTracks()[0];
-  if (!audioTrack) return;
+    if (videoTrack) {
+      // Disabling the track keeps the microphone and the permission
+      // grant intact. Stopping every track here was why turning the
+      // camera off also killed the microphone.
+      videoTrack.enabled = !videoTrack.enabled;
+      setCamOn(videoTrack.enabled);
+      return;
+    }
 
-  audioTrack.enabled = !audioTrack.enabled;
-  setMicOn(audioTrack.enabled);
-};
-
-/* ---------- CAMERA TOGGLE ---------- */
-
-const toggleCam = async () => {
-  try {
-    if (camOn) {
-      // 🔥 TURN OFF CAMERA COMPLETELY
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-
-      setStream(null);
-      setCamOn(false);
-
-    } else {
-      // 🔥 START BRAND NEW CAMERA STREAM
-      const newStream = await navigator.mediaDevices.getUserMedia({
+    try {
+      const cameraStream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: false,
       });
+      const newTrack = cameraStream.getVideoTracks()[0];
+      if (!newTrack) return;
 
-      setStream(newStream);
+      const previous = streamRef.current;
+      const nextStream = previous
+        ? new MediaStream(previous.getTracks())
+        : new MediaStream();
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = newStream;
-      }
-
+      nextStream.addTrack(newTrack);
+      streamRef.current = nextStream;
+      setStream(nextStream);
       setCamOn(true);
+      setMediaError("");
+    } catch (err) {
+      console.error("Camera toggle error:", err);
+      setMediaError(
+        err?.name === "NotAllowedError"
+          ? "Camera permission was denied. Allow camera access in this browser."
+          : "The camera could not be started. Check that it is connected and not in use."
+      );
     }
-  } catch (err) {
-    console.error("Camera toggle error:", err);
-  }
-};
+  };
   /* ---------- HANDLE START / JOIN ---------- */
   const handleMeetingStart = () => {
     if (!name.trim()) {
@@ -302,13 +470,8 @@ const toggleCam = async () => {
       return;
     }
 
-    // If AI anchor is enabled, show schedule setup first
-    if (aiAnchor) {
-      setShowScheduleModal(true);
-      return;
-    }
-
-    // Otherwise, navigate directly to meeting
+    // AI anchoring is enabled from the meeting dashboard, not from the
+    // pre-join screen, so joining never opens the schedule modal here.
     navigateToMeeting();
   };
 
@@ -320,7 +483,7 @@ const toggleCam = async () => {
         mode,
         micOn,
         camOn,
-        aiAnchor,
+        language,
         waitingRoom,
         isCreator: mode === "create",
         userId: 'user_' + Math.random().toString(36).substr(2, 9),
@@ -355,11 +518,39 @@ const toggleCam = async () => {
             onChange={(e) => setName(e.target.value)}
           />
 
-          <input
-            placeholder="Meeting ID"
-            value={meetingId}
-            onChange={(e) => setMeetingId(e.target.value)}
-          />
+          <div className="jp-input-wrap">
+            <input
+              placeholder="Meeting ID"
+              aria-label="Meeting ID"
+              value={meetingId}
+              onChange={(e) => setMeetingId(e.target.value)}
+            />
+            <div className="jp-input-actions">
+              <button
+                type="button"
+                className="jp-input-action"
+                onClick={() => copyText(meetingId, "Meeting ID")}
+                title="Copy meeting ID"
+                aria-label="Copy meeting ID"
+              >
+                <svg
+                  aria-hidden="true"
+                  focusable="false"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect x="9" y="9" width="11" height="11" rx="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+              </button>
+            </div>
+          </div>
 
           {mode === "create" && (
             <div className="jp-regenerate">
@@ -369,12 +560,85 @@ const toggleCam = async () => {
             </div>
           )}
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+          <div className="jp-input-wrap jp-input-wrap--password">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              aria-label="Meeting password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <div className="jp-input-actions">
+              <button
+                type="button"
+                className="jp-input-action"
+                onClick={() => setShowPassword((visible) => !visible)}
+                title={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+              >
+                {showPassword ? (
+                  <svg
+                    aria-hidden="true"
+                    focusable="false"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 3l18 18" />
+                    <path d="M10.6 6.8a9.8 9.8 0 0 1 1.4-.3c6 0 9.5 5.5 9.5 5.5a16.4 16.4 0 0 1-2.2 2.8" />
+                    <path d="M6.4 7.9A16.7 16.7 0 0 0 2.5 12s3.5 5.5 9.5 5.5c1.3 0 2.5-.3 3.6-.7" />
+                    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+                  </svg>
+                ) : (
+                  <svg
+                    aria-hidden="true"
+                    focusable="false"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12s-3.5 6.5-9.5 6.5S2.5 12 2.5 12z" />
+                    <circle cx="12" cy="12" r="2.7" />
+                  </svg>
+                )}
+              </button>
+
+              <button
+                type="button"
+                className="jp-input-action"
+                onClick={() => copyText(password, "Meeting password")}
+                title="Copy meeting password"
+                aria-label="Copy meeting password"
+              >
+                <svg
+                  aria-hidden="true"
+                  focusable="false"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect x="9" y="9" width="11" height="11" rx="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+              </button>
+            </div>
+          </div>
 
           {mode === "create" && (
             <div className="jp-regenerate">
@@ -396,28 +660,29 @@ const toggleCam = async () => {
                 />
                 Waiting Room
               </label>
-
-              <label className="jp-toggle">
-                <input
-                  type="checkbox"
-                  checked={aiAnchor}
-                  onChange={() => setAiAnchor(!aiAnchor)}
-                />
-                AI Anchor Assistant
-              </label>
             </>
           )}
 
-          {mode === "join" && (
-            <div className="jp-field">
-              <select>
-                <option value="en">English</option>
-                <option value="hi">Hindi</option>
-                <option value="ml">Malayalam</option>
-                <option value="ta">Tamil</option>
-              </select>
-            </div>
-          )}
+          <div className="jp-field">
+            <select
+              aria-label="Preferred language"
+              value={language}
+              onChange={(event) => setLanguage(event.target.value)}
+            >
+              <option value="en">English</option>
+              <option value="ml">Malayalam</option>
+              <option value="hi">Hindi</option>
+              <option value="ta">Tamil</option>
+              <option value="te">Telugu</option>
+              <option value="kn">Kannada</option>
+              <option value="bn">Bengali</option>
+              <option value="gu">Gujarati</option>
+              <option value="mr">Marathi</option>
+              <option value="pa">Punjabi</option>
+              <option value="as">Assamese</option>
+              <option value="ur">Urdu</option>
+            </select>
+          </div>
 
         </div>
 
@@ -434,14 +699,36 @@ const toggleCam = async () => {
 </div>
 
           <div className="jp-controls">
-            <button onClick={toggleMic}>
-  <img src={micOn ? micOnIcon : micOffIcon} alt="mic" />
-</button>
+            <button
+              type="button"
+              onClick={toggleMic}
+              title={micOn ? "Mute microphone" : "Unmute microphone"}
+              aria-label={micOn ? "Mute microphone" : "Unmute microphone"}
+            >
+              <img
+                src={micOn ? micOnIcon : micOffIcon}
+                alt={micOn ? "Microphone on" : "Microphone off"}
+              />
+            </button>
 
-            <button onClick={toggleCam}>
-  <img src={camOn ? camOnIcon : camOffIcon} alt="cam" />
-</button>
+            <button
+              type="button"
+              onClick={toggleCam}
+              title={camOn ? "Turn camera off" : "Turn camera on"}
+              aria-label={camOn ? "Turn camera off" : "Turn camera on"}
+            >
+              <img
+                src={camOn ? camOnIcon : camOffIcon}
+                alt={camOn ? "Camera on" : "Camera off"}
+              />
+            </button>
           </div>
+
+          {mediaError && (
+            <div className="jp-media-error" role="alert">
+              {mediaError}
+            </div>
+          )}
         </div>
       </div>
 
@@ -452,6 +739,19 @@ const toggleCam = async () => {
       >
         {mode === "create" ? "Start" : "Join"}
       </button>
+
+      {copyFeedback && (
+        <div
+          className="jp-toast-region"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <div className={`oi-toast oi-toast--${copyFeedback.type}`}>
+            <span className="oi-toast-title">{copyFeedback.message}</span>
+          </div>
+        </div>
+      )}
 
       {/* ---------- SCHEDULE SETUP MODAL ---------- */}
       <ScheduleSetupModal

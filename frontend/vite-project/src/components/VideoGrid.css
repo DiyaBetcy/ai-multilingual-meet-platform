@@ -1,263 +1,249 @@
+/* ============================================================
+   VideoGrid — participant tile grid
+   ------------------------------------------------------------
+   OBSIDIAN INTELLIGENCE meeting room (mockups/obsidian.css
+   §15). Every class name below already existed in this file and
+   is kept verbatim. `.speaking-badge` was referenced by
+   VideoGrid.jsx but had no rule anywhere; it is defined here.
+
+   `.avatar-circle` is owned by src/styles/primitives.css.
+   This file only qualifies it with an ancestor so the anchor
+   tile can be larger than the default.
+
+   DOM (VideoGrid.jsx):
+     .video-grid
+       .video-container.local-video | .video-container.remote-video
+         .video-element
+         .anchor-avatar > .avatar-circle > .avatar-emoji
+         .anchor-avatar > .anchor-status > .pulse-ring
+         .video-info > .participant-name > .anchor-badge / .speaking-badge
+         .video-info > .participant-status > .status-icon
+         .screen-badge
+   ============================================================ */
+
 .video-grid {
+  flex: 1;
   display: grid;
-  gap: 10px;
-  padding: 10px;
-  height: 100%;
-  width: 100%;
-  box-sizing: border-box;
+  gap: var(--sp-3);
+  min-height: 0;
 }
 
-/* Grid layouts for different participant counts */
-.grid-1 {
-  grid-template-columns: 1fr;
-  grid-template-rows: 1fr;
+.video-grid.grid-1 {
+  grid-template-columns: minmax(0, 1fr);
 }
-
-.grid-2 {
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: 1fr;
+.video-grid.grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-
-.grid-4 {
-  grid-template-columns: repeat(2, 1fr);
-  grid-template-rows: repeat(2, 1fr);
+.video-grid.grid-4 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-
-.grid-6 {
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(2, 1fr);
+.video-grid.grid-6 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-
-.grid-9 {
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 1fr);
+.video-grid.grid-9 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-
-.grid-12 {
-  grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(3, 1fr);
+.video-grid.grid-12 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .video-container {
   position: relative;
-  background: #1a1a1a;
-  border-radius: 12px;
+  min-height: 0;
+  border-radius: var(--r-md);
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
+  background: var(--grad-tile);
+  border: 1px solid var(--line-2);
+  transition: border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
 }
 
-.video-container:hover .video-info {
-  opacity: 1;
+.video-container.speaking {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-line), 0 10px 30px var(--accent-glow);
 }
 
 .video-element {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.local-video {
-  border: 3px solid #4CAF50;
-}
-
-.remote-video {
-  border: 2px solid #333;
+  display: block;
+  background: var(--grad-tile);
 }
 
 .video-info {
   position: absolute;
-  bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
-  padding: 20px 15px 15px;
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  bottom: 0;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-end;
+  gap: var(--sp-3);
+  padding: var(--sp-6) var(--sp-3) var(--sp-3);
+  background: linear-gradient(
+    to top,
+    rgba(8, 12, 10, 0.88),
+    rgba(8, 12, 10, 0.55) 55%,
+    rgba(8, 12, 10, 0)
+  );
 }
 
 .participant-name {
-  color: white;
-  font-weight: 500;
-  font-size: 14px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  font-weight: var(--fw-medium);
+  color: var(--text-1);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  min-width: 0;
+}
+
+.anchor-badge {
+  font-size: 9px;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.08em;
+  padding: 1px 5px;
+  border-radius: var(--r-xs);
+  background: var(--champagne-soft-strong);
+  border: 1px solid var(--champagne-line);
+  color: var(--champagne-text);
+}
+
+.speaking-badge {
+  font-size: 9px;
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: var(--r-full);
+  background: var(--accent-soft-strong);
+  border: 1px solid var(--accent-line);
+  color: var(--accent);
 }
 
 .participant-status {
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
 }
 
 .status-icon {
-  font-size: 16px;
-  opacity: 0.8;
-}
-
-.status-icon.on {
-  opacity: 1;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-xs);
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  line-height: 1;
+  background: rgba(8, 12, 10, 0.62);
+  border: 1px solid var(--line-2);
+  color: var(--text-1);
 }
 
 .status-icon.off {
-  opacity: 0.3;
+  color: var(--danger);
+  border-color: var(--danger-line);
+}
+
+.status-icon.speaking {
+  color: var(--accent);
+  border-color: var(--accent-line);
 }
 
 .status-icon.hand {
-  color: #ff9800;
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+  color: var(--champagne-text);
+  border-color: var(--champagne-line);
 }
 
 .screen-badge {
   position: absolute;
-  top: 10px;
-  left: 10px;
-  background: rgba(76, 175, 80, 0.9);
-  color: white;
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
+  top: var(--sp-3);
+  left: var(--sp-3);
+  font-size: var(--text-2xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  padding: 3px 9px;
+  border-radius: var(--r-full);
+  background: rgba(8, 12, 10, 0.76);
+  border: 1px solid var(--accent-line);
+  color: var(--accent);
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .video-grid {
-    gap: 5px;
-    padding: 5px;
-  }
-  
-  .grid-6 {
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-  }
-  
-  .grid-9 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .grid-12 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .video-container {
-    min-height: 150px;
-  }
-  
-  .video-info {
-    opacity: 1;
-    padding: 15px 10px 10px;
-  }
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .video-container {
-    background: #0a0a0a;
-  }
-}
-
-/* AI Anchor Participant Styles */
-.anchor-participant {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border: 2px solid #19e5d8;
-}
+/* ---------------------------------------------------------
+   AI anchor tile
+   --------------------------------------------------------- */
 
 .anchor-avatar {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
 }
 
-.avatar-circle {
-  width: 120px;
-  height: 120px;
-  background: linear-gradient(135deg, #19e5d8 0%, #0d8a7f 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  box-shadow: 0 0 30px rgba(25, 229, 216, 0.4);
+.anchor-avatar .avatar-circle {
+  width: 74px;
+  height: 74px;
+  font-size: var(--text-2xl);
+  background: var(--grad-tile-anchor);
+  border-color: var(--champagne-line);
+  color: var(--champagne-text);
 }
 
 .avatar-emoji {
-  font-size: 60px;
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
+  line-height: 1;
 }
 
 .anchor-status {
   position: absolute;
-  bottom: -10px;
-  left: 50%;
-  transform: translateX(-50%);
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
 }
 
 .pulse-ring {
-  display: block;
-  width: 20px;
-  height: 20px;
-  background: #19e5d8;
-  border-radius: 50%;
-  animation: pulse 2s infinite;
+  width: 88px;
+  height: 88px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--champagne-line);
+  animation: oi-pulse 2.6s var(--ease-in-out) infinite;
 }
 
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(25, 229, 216, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 15px rgba(25, 229, 216, 0);
-  }
+@keyframes oi-pulse {
+  0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(25, 229, 216, 0);
-  }
-}
-
-.anchor-badge {
-  background: #19e5d8;
-  color: #000;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
-  margin-left: 6px;
-  text-transform: uppercase;
-}
-
-.status-icon.speaking {
-  animation: speaking-pulse 1s ease-in-out infinite;
-  color: #19e5d8 !important;
-}
-
-@keyframes speaking-pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
+    transform: scale(0.92);
+    opacity: 0.55;
   }
   50% {
-    transform: scale(1.2);
-    opacity: 0.8;
+    transform: scale(1.05);
+    opacity: 0;
+  }
+}
+
+/* ---------------------------------------------------------
+   Responsive
+   --------------------------------------------------------- */
+
+@media (max-width: 860px) {
+  .video-grid.grid-4,
+  .video-grid.grid-6,
+  .video-grid.grid-9 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .video-grid.grid-12 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .video-grid.grid-2,
+  .video-grid.grid-4,
+  .video-grid.grid-6,
+  .video-grid.grid-9,
+  .video-grid.grid-12 {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

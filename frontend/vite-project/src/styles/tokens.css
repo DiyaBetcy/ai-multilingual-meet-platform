@@ -1,0 +1,305 @@
+/* ============================================================
+   OBSIDIAN INTELLIGENCE — Design Tokens
+   ------------------------------------------------------------
+   Single source of truth for colour, type, spacing, radius,
+   elevation and motion.
+
+   Palette (from the approved redesign):
+     Obsidian          #101713   application canvas
+     Primary forest    #18221C   sidebar / surface
+     Elevated forest   #202D25   cards, panels, overlays
+     Deeper forest     #26372D   raised controls, hover
+     Emerald           #35D39A   interactive + genuinely active
+     Deep emerald      #167653   emerald on light surfaces
+     Champagne         #D8C6A1   premium metadata only
+     Warm ivory        #F2EBDD   primary text
+     Muted             #A8B7AB   secondary text
+
+   Emerald is reserved for interactive and active states.
+   Champagne is reserved for premium metadata (timers, the AI
+   anchor badge, AI captions, scheduled chips). Neither is
+   ever used as body copy.
+
+   Dark is the default and always applies. The light theme is
+   opt-in via  <html data-theme="light">  and is implemented as a
+   token override only — no component rule changes.
+
+   Order of layers:
+     1. tokens.css     (this file)   — variables only
+     2. base.css       — reset + element defaults
+     3. primitives.css — shared UI primitives + design system
+     4. per-page CSS   — page/component specifics
+   ============================================================ */
+
+:root {
+  /* ---------------------------------------------------------
+     1. Typography
+     --------------------------------------------------------- */
+  --font-sans: "Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", ui-monospace, SFMono-Regular,
+    Menlo, Consolas, monospace;
+
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 15px;
+  --text-lg: 17px;
+  --text-xl: 20px;
+  --text-2xl: 25px;
+  --text-3xl: 32px;
+  --text-4xl: 40px;
+
+  --lh-tight: 1.2;
+  --lh-snug: 1.35;
+  --lh-base: 1.55;
+  --lh-relaxed: 1.7;
+
+  --tracking-tight: -0.022em;
+  --tracking-snug: -0.012em;
+  --tracking-wide: 0.08em;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* ---------------------------------------------------------
+     2. Spacing (4px grid)
+     --------------------------------------------------------- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 28px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* ---------------------------------------------------------
+     3. Radii
+     --------------------------------------------------------- */
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --r-2xl: 28px;
+  --r-full: 999px;
+
+  /* ---------------------------------------------------------
+     4. Motion
+     --------------------------------------------------------- */
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 240ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ---------------------------------------------------------
+     5. Layout
+     --------------------------------------------------------- */
+  --z-base: 1;
+  --z-raised: 10;
+  --z-sticky: 20;
+  --z-dock: 40;
+  --z-drawer: 60;
+  --z-modal: 80;
+  --z-toast: 90;
+  --z-top: 100;
+
+  --topbar-h: 60px;
+  --sidebar-w: 244px;
+  --rail-w: 340px;
+  --content-max: 1180px;
+
+  /* ---------------------------------------------------------
+     6. Emerald — primary interactive accent.
+        Identical in both themes except the light theme, where
+        emerald darkens to #167653 to stay legible on white.
+     --------------------------------------------------------- */
+  --accent: #35d39a;
+  --accent-hi: #5ee0ae;
+  --accent-lo: #167653;
+  --accent-ink: #04140e;
+  --accent-soft: rgba(53, 211, 154, 0.12);
+  --accent-soft-strong: rgba(53, 211, 154, 0.2);
+  --accent-line: rgba(53, 211, 154, 0.38);
+  --accent-glow: rgba(53, 211, 154, 0.22);
+  --accent-shadow: rgba(53, 211, 154, 0.24);
+  --accent-text: #35d39a;
+
+  /* ---------------------------------------------------------
+     6b. Champagne — the warm third note of the palette.
+        Premium metadata only: AI-anchor highlights, raised
+        hands, caption speaker accents, scheduled chips.
+        Never for primary CTAs.
+     --------------------------------------------------------- */
+  --champagne: #d8c6a1;
+  --champagne-hi: #ecdfc4;
+  --champagne-lo: #a8966f;
+  --champagne-ink: #17130a;
+  --champagne-soft: rgba(216, 198, 161, 0.1);
+  --champagne-soft-strong: rgba(216, 198, 161, 0.18);
+  --champagne-line: rgba(216, 198, 161, 0.32);
+  --champagne-glow: rgba(216, 198, 161, 0.16);
+  --champagne-text: #d8c6a1;
+
+  /* ---------------------------------------------------------
+     7. Semantic status colours
+     --------------------------------------------------------- */
+  --success: #35d39a;
+  --success-soft: rgba(53, 211, 154, 0.13);
+  --success-line: rgba(53, 211, 154, 0.36);
+
+  --warning: #e0b062;
+  --warning-soft: rgba(224, 176, 98, 0.13);
+  --warning-line: rgba(224, 176, 98, 0.36);
+
+  --danger: #ef7f6d;
+  --danger-soft: rgba(239, 127, 109, 0.13);
+  --danger-line: rgba(239, 127, 109, 0.4);
+
+  --info: #7fb0d8;
+  --info-soft: rgba(127, 176, 216, 0.13);
+  --info-line: rgba(127, 176, 216, 0.36);
+
+  /* =========================================================
+     8. Dark theme (default)
+     ========================================================= */
+  color-scheme: dark;
+
+  --bg-app: #101713;
+  --bg-surface: #18221c;
+  --bg-elevated: #202d25;
+  --bg-raised: #26372d;
+  --bg-overlay: #202d25;
+  --bg-inset: rgba(0, 0, 0, 0.26);
+  --bg-hover: rgba(242, 235, 221, 0.045);
+  --bg-active: rgba(242, 235, 221, 0.08);
+  --bg-glass: rgba(24, 34, 28, 0.86);
+  --bg-scrim: rgba(8, 12, 10, 0.68);
+  --bg-scrim-strong: rgba(8, 12, 10, 0.86);
+
+  --text-1: #f2ebdd;
+  --text-2: #a8b7ab;
+  --text-3: #8b9a8f;
+  --text-invert: #06110d;
+
+  --line-1: rgba(216, 198, 161, 0.09);
+  --line-2: rgba(216, 198, 161, 0.16);
+  --line-3: rgba(216, 198, 161, 0.26);
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.34);
+  --shadow-2: 0 6px 18px rgba(0, 0, 0, 0.34);
+  --shadow-3: 0 18px 44px rgba(0, 0, 0, 0.46);
+  --shadow-4: 0 32px 80px rgba(0, 0, 0, 0.58);
+
+  --focus-ring: 0 0 0 3px rgba(53, 211, 154, 0.28);
+  --focus-ring-strong: 0 0 0 3px rgba(53, 211, 154, 0.45);
+
+  /* Avatar / tile gradients */
+  --grad-avatar: linear-gradient(145deg, #2f4436, #1d2b22);
+  --grad-tile: linear-gradient(155deg, #1b2620, #141c17);
+  --grad-tile-anchor: linear-gradient(155deg, #1d2a22, #121a15);
+  --grad-brand: linear-gradient(145deg, var(--accent-hi), var(--accent-lo));
+  --grad-brand-soft: linear-gradient(
+    145deg,
+    rgba(53, 211, 154, 0.16),
+    rgba(127, 176, 216, 0.12)
+  );
+  --grad-champagne: linear-gradient(145deg, var(--champagne-hi), var(--champagne-lo));
+
+  /* Select chevron is a data-URI so it can be re-tinted per
+     theme without touching component rules. */
+  --select-chevron: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a8b7ab' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+
+/* =========================================================
+   9. Light theme
+   Opt-in via  <html data-theme="light">
+   Only variables change — every component rule is shared.
+   ========================================================= */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-app: #f6f5f0;
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-raised: #e9eee7;
+  --bg-overlay: #ffffff;
+  --bg-inset: rgba(27, 40, 32, 0.04);
+  --bg-hover: rgba(27, 40, 32, 0.045);
+  --bg-active: rgba(27, 40, 32, 0.075);
+  --bg-glass: rgba(255, 255, 255, 0.88);
+  --bg-scrim: rgba(27, 40, 32, 0.38);
+  --bg-scrim-strong: rgba(27, 40, 32, 0.6);
+
+  --text-1: #1b2820;
+  --text-2: #647168;
+  /* Tertiary text is darkened from #7B887F so it clears 4.5:1
+     on the sage surface as well as on white. */
+  --text-3: #5f6b63;
+  --text-invert: #ffffff;
+
+  --line-1: rgba(27, 40, 32, 0.07);
+  --line-2: rgba(27, 40, 32, 0.12);
+  --line-3: rgba(27, 40, 32, 0.2);
+
+  --shadow-1: 0 1px 2px rgba(27, 40, 32, 0.05);
+  --shadow-2: 0 6px 18px rgba(27, 40, 32, 0.07);
+  --shadow-3: 0 18px 44px rgba(27, 40, 32, 0.11);
+  --shadow-4: 0 32px 80px rgba(27, 40, 32, 0.16);
+
+  --focus-ring: 0 0 0 3px rgba(22, 118, 83, 0.24);
+  --focus-ring-strong: 0 0 0 3px rgba(22, 118, 83, 0.4);
+
+  --grad-avatar: linear-gradient(145deg, #d8e3d9, #b6c6b9);
+  --grad-tile: linear-gradient(155deg, #eef2ec, #e4eae1);
+  --grad-tile-anchor: linear-gradient(155deg, #e9efe8, #e2e9e0);
+
+  /* Emerald darkens on light surfaces to stay legible. */
+  --accent: #167653;
+  --accent-hi: #1c8f65;
+  --accent-lo: #0f5c40;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(22, 118, 83, 0.1);
+  --accent-soft-strong: rgba(22, 118, 83, 0.17);
+  --accent-line: rgba(22, 118, 83, 0.34);
+  --accent-glow: rgba(22, 118, 83, 0.16);
+  --accent-shadow: rgba(22, 118, 83, 0.22);
+  --accent-text: #167653;
+
+  /* Champagne is darkened so it stays legible on white. */
+  --champagne: #a98f5f;
+  --champagne-hi: #8d7549;
+  --champagne-lo: #c4a97a;
+  --champagne-ink: #ffffff;
+  --champagne-soft: rgba(169, 143, 95, 0.1);
+  --champagne-soft-strong: rgba(169, 143, 95, 0.17);
+  --champagne-line: rgba(169, 143, 95, 0.32);
+  --champagne-glow: rgba(169, 143, 95, 0.16);
+  --champagne-text: #7a6338;
+
+  --success: #167653;
+  --success-soft: rgba(22, 118, 83, 0.11);
+  --success-line: rgba(22, 118, 83, 0.32);
+
+  --warning: #8a6520;
+  --warning-soft: rgba(138, 101, 32, 0.11);
+  --warning-line: rgba(138, 101, 32, 0.3);
+
+  --danger: #a8412f;
+  --danger-soft: rgba(168, 65, 47, 0.1);
+  --danger-line: rgba(168, 65, 47, 0.3);
+
+  --info: #3d6f96;
+  --info-soft: rgba(61, 111, 150, 0.1);
+  --info-line: rgba(61, 111, 150, 0.3);
+
+  --select-chevron: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23647168' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}

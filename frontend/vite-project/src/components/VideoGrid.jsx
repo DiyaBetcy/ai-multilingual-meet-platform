@@ -1,4 +1,5 @@
-import { useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
+import { attachStreamToVideo } from '../lib/media.js';
 import './VideoGrid.css';
 
 const VideoGrid = ({ 
@@ -14,16 +15,59 @@ const VideoGrid = ({
 }) => {
   const remoteVideoRefs = useRef({});
   const localVideoRef = useRef(null);
+  const localStreamRef = useRef(localStream);
 
+  localStreamRef.current = localStream;
+
+  /* Attach the local stream whenever it changes. The local tile may
+     mount after getUserMedia resolves, so this cannot rely on the
+     stream effect running after the ref exists. */
   useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
+    attachStreamToVideo(localVideoRef.current, localStream, { muted: true });
+    if (localVideoRef.current) {
+      setLocalVideoRef(localVideoRef.current);
     }
-  }, [localStream]);
+  }, [localStream, setLocalVideoRef]);
 
+  /* Callback ref: runs every time the <video> actually mounts. This is
+     the path that fixes the black local preview after media init. */
+  const attachLocalVideo = useCallback(
+    (element) => {
+      localVideoRef.current = element;
+
+      if (element) {
+        attachStreamToVideo(element, localStreamRef.current, { muted: true });
+      }
+
+      setLocalVideoRef(element);
+    },
+    [setLocalVideoRef]
+  );
+
+  /* Attach remote tracks after React has rendered the video element.
+     The old code assigned srcObject inside pc.ontrack by querying the DOM,
+     which missed the element whenever ontrack arrived before the
+     participant tile mounted. */
   useEffect(() => {
-    setLocalVideoRef(localVideoRef.current);
-  }, [setLocalVideoRef]);
+    participants.forEach((participant) => {
+      if (participant.isYou || participant.isAnchor) return;
+
+      const video = remoteVideoRefs.current[participant.id];
+      if (!video || !participant.stream) return;
+
+      if (video.srcObject !== participant.stream) {
+        video.srcObject = participant.stream;
+      }
+
+      video.play().catch((error) => {
+        console.warn(
+          "Remote video/audio autoplay was blocked:",
+          participant.id,
+          error
+        );
+      });
+    });
+  }, [participants]);
 
   // Get grid class based on participant count
   const getGridClass = (count) => {
@@ -35,10 +79,16 @@ const VideoGrid = ({
     return 'grid-12';
   };
 
-  // Separate current user from others
-  const currentUser = participants.find(p => p.isYou);
+  // Separate current user from others. Render the local tile even before
+  // the signaling server returns the participant list so the preview is
+  // never blank while waiting for the room state.
+  const currentUser = participants.find(p => p.isYou) || {
+    id: "local-self",
+    isYou: true,
+    name: userName,
+  };
   const otherParticipants = participants.filter(p => !p.isYou);
-  const totalParticipants = participants.length;
+  const totalParticipants = Math.max(participants.length, 1);
 
   return (
     <div className={`video-grid ${getGridClass(totalParticipants)}`}>
@@ -46,7 +96,7 @@ const VideoGrid = ({
       {currentUser && (
         <div className="video-container local-video">
           <video
-            ref={localVideoRef}
+            ref={attachLocalVideo}
             autoPlay
             playsInline
             muted

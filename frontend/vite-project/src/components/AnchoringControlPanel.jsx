@@ -1,6 +1,52 @@
 import React from 'react';
 import './AnchoringControlPanel.css';
 
+const AnchorAudioStatus = ({
+  isActive,
+  isSpeaking,
+  audioStatus,
+  audioError,
+  onRetryAudio,
+}) => {
+  const state = isSpeaking ? 'speaking' : audioStatus;
+  const message = isSpeaking
+    ? 'AI Anchor is speaking…'
+    : audioStatus === 'error'
+      ? 'AI Anchor audio needs attention.'
+      : isActive
+        ? 'AI Anchor is ready for the next announcement.'
+        : 'AI Anchoring is enabled.';
+
+  return (
+    <>
+      <div
+        className={`anchor-audio-status ${state}`}
+        role="status"
+        aria-live="polite"
+      >
+        <span className="anchor-audio-icon" aria-hidden="true">
+          {isSpeaking ? '🔊' : audioStatus === 'error' ? '⚠️' : '🎙️'}
+        </span>
+        <span className="anchor-audio-message">{message}</span>
+        {audioStatus === 'error' && onRetryAudio && (
+          <button
+            type="button"
+            className="anchor-audio-retry"
+            onClick={onRetryAudio}
+          >
+            Enable audio
+          </button>
+        )}
+      </div>
+      {audioStatus === 'error' && audioError && isSpeaking === false && (
+        <p className="anchor-audio-help" role="alert">
+          {audioError}
+        </p>
+      )}
+    </>
+  );
+};
+
 const AnchoringControlPanel = ({
   isCreator,
   isAnchoringEnabled,
@@ -10,14 +56,18 @@ const AnchoringControlPanel = ({
   currentIndex,
   timeRemaining,
   timeFormatted,
-  onEnableAnchoring,
+  isSpeaking = false,
+  audioStatus = 'idle',
+  audioError = '',
+  canResume = false,
   onStartAnchoring,
   onPauseAnchoring,
   onResumeAnchoring,
   onSkipSpeaker,
   onStopAnchoring,
   onResetAnchoring,
-  onOpenSchedule
+  onOpenSchedule,
+  onRetryAudio,
 }) => {
   if (!isCreator) {
     // Non-creator view
@@ -39,6 +89,14 @@ const AnchoringControlPanel = ({
         <div className="anchoring-header">
           <h4>🎤 AI Anchoring Active</h4>
         </div>
+
+        <AnchorAudioStatus
+          isActive={isActive}
+          isSpeaking={isSpeaking}
+          audioStatus={audioStatus}
+          audioError={audioError}
+          onRetryAudio={onRetryAudio}
+        />
         
         {currentSpeaker && (
           <div className="current-speaker-info">
@@ -97,6 +155,14 @@ const AnchoringControlPanel = ({
               {isActive ? '🟢 Running' : '⏸️ Paused'}
             </span>
           </div>
+
+          <AnchorAudioStatus
+            isActive={isActive}
+            isSpeaking={isSpeaking}
+            audioStatus={audioStatus}
+            audioError={audioError}
+            onRetryAudio={onRetryAudio}
+          />
           
           {currentSpeaker && (
             <div className="current-speaker-control">
@@ -117,12 +183,19 @@ const AnchoringControlPanel = ({
           
           <div className="anchoring-controls">
             {!isActive ? (
-              <button className="btn-control btn-start" onClick={() => {
-                console.log('Start button clicked');
-                onStartAnchoring();
-              }}>
-                ▶️ Start Anchoring
-              </button>
+              <>
+                {canResume && (
+                  <button className="btn-control btn-start" onClick={onResumeAnchoring}>
+                    ▶️ Resume Anchoring
+                  </button>
+                )}
+                <button className="btn-control btn-start" onClick={() => {
+                  console.log('Start button clicked');
+                  onStartAnchoring();
+                }}>
+                  {canResume ? '🔄 Restart from Beginning' : '▶️ Start Anchoring'}
+                </button>
+              </>
             ) : (
               <>
                 <button className="btn-control btn-pause" onClick={onPauseAnchoring}>

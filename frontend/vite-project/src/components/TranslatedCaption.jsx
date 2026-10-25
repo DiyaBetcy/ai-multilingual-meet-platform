@@ -5,19 +5,30 @@ const TranslatedCaption = ({ caption, isVisible }) => {
   const [displayText, setDisplayText] = useState('');
   const [isShowing, setIsShowing] = useState(false);
 
+  const isFallback =
+    !caption.translatedText && Boolean(caption.translationError);
+
   useEffect(() => {
-    if (caption.translatedText) {
-      setDisplayText(caption.translatedText);
+    const nextText =
+      caption.translatedText ||
+      (caption.translationError ? caption.originalText : '');
+
+    if (nextText) {
+      setDisplayText(nextText);
       setIsShowing(true);
-      
+
       // Auto-hide after 6 seconds
       const timer = setTimeout(() => {
         setIsShowing(false);
       }, 6000);
-      
+
       return () => clearTimeout(timer);
     }
-  }, [caption.translatedText]);
+  }, [
+    caption.translatedText,
+    caption.translationError,
+    caption.originalText,
+  ]);
 
   if (!isVisible || !displayText || !isShowing) return null;
 
@@ -26,10 +37,16 @@ const TranslatedCaption = ({ caption, isVisible }) => {
       <div className="caption-container">
         <div className="caption-header">
           <span className="speaker-name">{caption.speaker}</span>
-          {!caption.isOriginal && (
+          {isFallback ? (
             <span className="translation-indicator">
-              Translated from {caption.originalText}
+              {caption.translationError}
             </span>
+          ) : (
+            !caption.isOriginal && (
+              <span className="translation-indicator">
+                Translated from {caption.originalText}
+              </span>
+            )
           )}
         </div>
         <div className="caption-text">
@@ -37,7 +54,11 @@ const TranslatedCaption = ({ caption, isVisible }) => {
         </div>
         <div className="caption-footer">
           <span className="language-tag">
-            {caption.isOriginal ? 'Original' : caption.targetLanguage?.toUpperCase()}
+            {isFallback
+              ? 'Original'
+              : caption.isOriginal
+                ? 'Original'
+                : caption.targetLanguage?.toUpperCase()}
           </span>
         </div>
       </div>

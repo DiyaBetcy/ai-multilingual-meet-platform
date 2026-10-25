@@ -8,7 +8,15 @@
 }
 
 
-.start-top-bar {
+/* NOTE (CSS redesign): this file is unreachable from src/main.jsx
+   and never reaches the production bundle. The three rules below
+   were re-scoped so that `.start-top-bar`, `.main-content` and
+   `.control-btn` keep exactly one bare definition in the shipped
+   set (src/styles/primitives.css and
+   src/pages/platform/meetdashboard.css respectively).
+   `.base-container` remains an intentional duplicate of
+   src/pages/base.css — both files are unreachable. */
+.base-container .start-top-bar {
   background: #19E5D8;
   padding: 12px 20px;
   display: flex;
@@ -18,7 +26,7 @@
 
 
 /* Main content: left = big video, right = small tiles */
-.main-content {
+.base-container .main-content {
   display: flex;
   flex: 1;
   padding: 10px;
@@ -61,7 +69,7 @@
   background-color: #1c1c1c;
 }
 
-.control-btn {
+.controls .control-btn {
   background: #444;
   border: none;
   padding: 12px;
@@ -72,21 +80,21 @@
   justify-content: center;
 }
 
-.control-btn img {
+.controls .control-btn img {
   width: 20px;
   height: 20px;
 }
 
-.control-btn.end {
+.controls .control-btn.end {
   background: red;
 }
 
-.control-btn.end:hover {
+.controls .control-btn.end:hover {
   background: darkred;
 }
 
 /* Show OFF state for mic/camera buttons */
-.control-btn.off {
+.controls .control-btn.off {
   opacity: 0.5;
   background-color: #666;
 }
@@ -145,12 +153,12 @@
   cursor: pointer;
 }
 
-.control-btn {
+.controls .control-btn {
   position: relative;
 }
 
 /* When mic or camera is OFF */
-.control-btn.off::after {
+.controls .control-btn.off::after {
   content: "";
   position: absolute;
   width: 26px;
@@ -164,7 +172,7 @@
 }
 
 /* Optional: red background when OFF (like Google Meet) */
-.control-btn.off {
+.controls .control-btn.off {
   background-color: #d93025;
 }
 

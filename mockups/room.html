@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Meeting room — component frame</title>
+<link rel="stylesheet" href="obsidian.css" />
+</head>
+<body>
+<!--
+  Component frame for the live meeting room.
+  Used by meeting.html inside scaled iframes so the responsive
+  breakpoints are exercised for real (the iframe width drives
+  the media queries). Never imported by the production app.
+
+  Query flags:  ?panel=chat   ?panel=people   ?captions=off
+-->
+<div class="meet-dashboard">
+
+  <!-- ============ HEADER ============ -->
+  <header class="meet-header">
+    <div class="meet-info">
+      <h3>AI Conference</h3>
+      <span class="oi-chip oi-chip--muted" style="font-family:var(--font-mono)">7KQ4M2</span>
+      <span class="timer">00:14:32</span>
+      <span class="connection-status connected">
+        <svg width="7" height="7" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg>
+        Connected
+      </span>
+    </div>
+
+    <div class="language-selector">
+      <div class="translation-controls">
+        <button class="language-dropdown-btn" type="button">
+          <span class="globe-icon" aria-hidden="true">🌐</span>
+          <span class="current-lang">Malayalam</span>
+          <span class="dropdown-arrow" aria-hidden="true">▼</span>
+        </button>
+        <button class="translation-toggle active" type="button" title="Stop Translation">
+          <span class="mic-icon" aria-hidden="true">🎤</span>
+          <span class="toggle-text">Stop</span>
+        </button>
+      </div>
+
+      <div class="language-dropdown-menu">
+        <div class="dropdown-header">Select Your Language</div>
+        <div class="language-list">
+          <button class="language-option" type="button">
+            <span class="lang-flag" aria-hidden="true">🇬🇧</span><span class="lang-name">English</span>
+          </button>
+          <button class="language-option" type="button">
+            <span class="lang-flag" aria-hidden="true">🇮🇳</span><span class="lang-name">Hindi</span>
+          </button>
+          <button class="language-option selected" type="button">
+            <span class="lang-flag" aria-hidden="true">🇮🇳</span><span class="lang-name">Malayalam</span>
+            <span class="check-mark" aria-hidden="true">✓</span>
+          </button>
+          <button class="language-option" type="button">
+            <span class="lang-flag" aria-hidden="true">🇮🇳</span><span class="lang-name">Tamil</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="meet-controls">
+      <button class="control-btn active" type="button" title="Mute microphone" aria-label="Mute microphone">🎤</button>
+      <button class="control-btn active" type="button" title="Turn camera off" aria-label="Turn camera off">📹</button>
+      <button class="control-btn" type="button" title="Share screen" aria-label="Share screen">🖥️</button>
+      <button class="control-btn raised" type="button" title="Raise hand" aria-label="Raise hand">✋</button>
+      <button class="control-btn active" type="button" title="Toggle captions" aria-label="Toggle captions">📝</button>
+      <button class="control-btn" type="button" title="Open chat" aria-label="Open chat">💬</button>
+      <button class="control-btn" type="button" title="Open participants" aria-label="Open participants">👥</button>
+      <button class="control-btn debug" type="button" title="Debug connection" aria-label="Debug connection">🐛</button>
+      <button class="control-btn end-call" type="button" title="Leave meeting" aria-label="Leave meeting">📞</button>
+    </div>
+  </header>
+
+  <!-- ============ CONTENT ============ -->
+  <div class="meet-content">
+    <div class="video-section">
+
+      <div class="video-grid grid-6">
+
+        <!-- local -->
+        <div class="video-container local-video">
+          <div class="oi-mock-feed" aria-hidden="true"><span>LB</span></div>
+          <div class="video-info">
+            <span class="participant-name">Your Name (You)</span>
+            <div class="participant-status">
+              <span class="status-icon on" title="Microphone on">🎤</span>
+              <span class="status-icon on" title="Camera on">📹</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- speaking -->
+        <div class="video-container remote-video speaking">
+          <div class="oi-mock-feed" aria-hidden="true"><span>AN</span></div>
+          <div class="video-info">
+            <span class="participant-name">Arjun Nair <span class="speaking-badge">Speaking</span></span>
+            <div class="participant-status">
+              <span class="status-icon speaking" title="Microphone on">🎤</span>
+              <span class="status-icon on" title="Camera on">📹</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- camera off -->
+        <div class="video-container remote-video">
+          <div class="oi-mock-feed oi-mock-feed--off" aria-hidden="true"><span>MI</span></div>
+          <div class="video-info">
+            <span class="participant-name">Meera Iyer</span>
+            <div class="participant-status">
+              <span class="status-icon off" title="Microphone muted">🔇</span>
+              <span class="status-icon off" title="Camera off">📵</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI anchor -->
+        <div class="video-container remote-video anchor-participant">
+          <div class="anchor-avatar">
+            <div class="avatar-circle"><span class="avatar-emoji">🎤</span></div>
+            <div class="anchor-status"><span class="pulse-ring"></span></div>
+          </div>
+          <div class="video-info">
+            <span class="participant-name">AI Anchor <span class="anchor-badge">AI</span></span>
+            <div class="participant-status">
+              <span class="status-icon speaking" title="Anchor is speaking">🎤</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- screen sharing -->
+        <div class="video-container remote-video">
+          <div class="oi-mock-feed" aria-hidden="true"><span>RK</span></div>
+          <div class="screen-badge">Sharing Screen</div>
+          <div class="video-info">
+            <span class="participant-name">Ravi Kumar</span>
+            <div class="participant-status">
+              <span class="status-icon on" title="Microphone on">🎤</span>
+              <span class="status-icon on" title="Camera on">📹</span>
+              <span class="status-icon" title="Sharing screen">🖥️</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- hand raised -->
+        <div class="video-container remote-video">
+          <div class="oi-mock-feed" aria-hidden="true"><span>DS</span></div>
+          <div class="video-info">
+            <span class="participant-name">Divya S</span>
+            <div class="participant-status">
+              <span class="status-icon on" title="Microphone on">🎤</span>
+              <span class="status-icon on" title="Camera on">📹</span>
+              <span class="status-icon hand" title="Hand raised">✋</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- captions -->
+      <div class="translated-caption-overlay" id="caption">
+        <div class="caption-container">
+          <div class="caption-header">
+            <span class="speaker-name">Meera Iyer</span>
+            <span class="translation-indicator">Translated from English</span>
+          </div>
+          <div class="caption-text">Let us review the anchoring schedule before the session begins.</div>
+          <div class="caption-footer">
+            <span class="language-tag">ML-IN</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ SIDE PANELS ============ -->
+    <aside class="side-panels">
+      <div class="anchoring-panel creator-view">
+        <div class="anchoring-header">
+          <h4>🎤 AI Anchoring Control</h4>
+        </div>
+
+        <div class="anchoring-status">
+          <span class="status-indicator active">🟢 Running</span>
+        </div>
+
+        <div class="current-speaker-control">
+          <div class="speaker-info">
+            <span class="label">Current Speaker</span>
+            <span class="name">Arjun Nair</span>
+          </div>
+          <div class="topic-info">
+            <span class="label">Topic</span>
+            <span class="topic">Anchoring schedule review</span>
+          </div>
+          <div class="timer">
+            <span class="label">Time Remaining</span>
+            <span class="time">02:14</span>
+          </div>
+        </div>
+
+        <div class="anchoring-controls">
+          <button class="btn-control btn-pause" type="button">⏸️ Pause</button>
+          <button class="btn-control btn-skip" type="button">⏭️ Skip Speaker</button>
+          <button class="btn-control btn-schedule" type="button">📋 Edit Schedule</button>
+          <button class="btn-control btn-stop" type="button">⏹️ Stop Anchoring</button>
+          <button class="btn-control btn-reset" type="button">🔄 Reset</button>
+        </div>
+
+        <div class="schedule-progress">
+          <h5>Progress (2 / 4)</h5>
+          <div class="progress-bar"><div class="progress-fill" style="width:50%"></div></div>
+          <div class="schedule-list compact">
+            <div class="schedule-item completed">
+              <span class="item-number">1</span><span class="item-name">Meera Iyer</span><span class="item-duration">5m</span>
+            </div>
+            <div class="schedule-item active">
+              <span class="item-number">2</span><span class="item-name">Arjun Nair</span><span class="item-duration">5m</span>
+            </div>
+            <div class="schedule-item">
+              <span class="item-number">3</span><span class="item-name">Ravi Kumar</span><span class="item-duration">5m</span>
+            </div>
+            <div class="schedule-item">
+              <span class="item-number">4</span><span class="item-name">Divya S</span><span class="item-duration">5m</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ============ OPTIONAL OVERLAYS (?panel=chat|people) ============ -->
+  <div class="cp-overlay" id="chatOverlay" hidden>
+    <div class="cp-panel">
+      <div class="cp-header">
+        <div class="cp-title">Chat</div>
+        <button class="cp-close" type="button" aria-label="Close">✕</button>
+      </div>
+      <div class="cp-messages">
+        <div class="cp-msg">
+          <div class="cp-meta">
+            <span class="cp-sender">Arjun Nair</span>
+            <span class="cp-time">10:14:02</span>
+          </div>
+          <div class="cp-text">Slides are in the shared drive.</div>
+        </div>
+        <div class="cp-msg">
+          <div class="cp-meta">
+            <span class="cp-sender">Meera Iyer</span>
+            <span class="cp-time">10:14:09</span>
+          </div>
+          <div class="cp-text">Anchor can read them in Malayalam too.</div>
+        </div>
+        <div class="cp-msg">
+          <div class="cp-meta">
+            <span class="cp-sender">Your Name</span>
+            <span class="cp-time">10:14:15</span>
+          </div>
+          <div class="cp-text">Thank you — starting the recording now.</div>
+        </div>
+      </div>
+      <div class="cp-inputRow">
+        <input class="cp-input" placeholder="Send a message to everyone" />
+        <button class="cp-send" type="button">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="pp-overlay" id="peopleOverlay" hidden>
+    <div class="pp-panel">
+      <div class="pp-header">
+        <div>
+          <div class="pp-title">People</div>
+          <div class="pp-subtitle">Participants (6) • Raised hands (2)</div>
+        </div>
+        <button class="pp-close" type="button" aria-label="Close">✕</button>
+      </div>
+      <div class="pp-list">
+        <div class="pp-row speaking">
+          <div class="pp-avatar">AN</div>
+          <div class="pp-info">
+            <div class="pp-name">Arjun Nair <span class="pp-speaking-inline">🔊 Speaking</span></div>
+            <div class="pp-status"><span>🎤 On</span><span>•</span><span>📷 On</span></div>
+          </div>
+        </div>
+        <div class="pp-row">
+          <div class="pp-avatar">LB</div>
+          <div class="pp-info">
+            <div class="pp-name">Your Name <span class="pp-you">(You)</span></div>
+            <div class="pp-status"><span>🎤 On</span><span>•</span><span>📷 On</span></div>
+          </div>
+        </div>
+        <div class="pp-row">
+          <div class="pp-avatar">MI</div>
+          <div class="pp-info">
+            <div class="pp-name">Meera Iyer</div>
+            <div class="pp-status"><span>🎤 Muted</span><span>•</span><span>📷 Off</span></div>
+          </div>
+        </div>
+        <div class="pp-row">
+          <div class="pp-avatar">RK</div>
+          <div class="pp-info">
+            <div class="pp-name">Ravi Kumar <span class="pp-hand-inline">✋</span></div>
+            <div class="pp-status"><span>🎤 On</span><span>•</span><span>📷 On</span></div>
+          </div>
+        </div>
+        <div class="pp-row">
+          <div class="pp-avatar">DS</div>
+          <div class="pp-info">
+            <div class="pp-name">Divya S <span class="pp-hand-inline">✋</span></div>
+            <div class="pp-status"><span>🎤 On</span><span>•</span><span>📷 On</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  (function () {
+    var q = new URLSearchParams(location.search);
+    var panel = q.get("panel");
+    if (panel === "chat") document.getElementById("chatOverlay").hidden = false;
+    if (panel === "people") document.getElementById("peopleOverlay").hidden = false;
+    if (q.get("captions") === "off") document.getElementById("caption").hidden = true;
+  })();
+</script>
+</body>
+</html>

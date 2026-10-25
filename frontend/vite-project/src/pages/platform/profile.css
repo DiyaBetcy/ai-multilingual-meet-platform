@@ -1,82 +1,152 @@
+/* ============================================================
+   Profile — user profile card
+   ------------------------------------------------------------
+   Class contract: the historical class names are kept; the
+   `.profile-actions` row wraps the Edit and Log out buttons.
+
+   `.avatar-circle` and `.info-box` are owned by
+   src/styles/primitives.css; both are intentionally re-shaped
+   here through an ancestor qualifier so the profile shows a
+   large avatar and a row of stat tiles rather than a callout.
+
+   DOM (profile.jsx):
+     .profile-container
+       AppShell
+         .oi-content.profile-main
+           .oi-pagehead
+           .profile-card.oi-card
+             .profile-avatar > .avatar-circle
+             .profile-details
+               h2.oi-card-title
+               .email.oi-meta
+               .profile-info > .info-box > span + strong
+               .profile-actions > button.edit-btn.oi-btn.oi-btn--secondary
+   ============================================================ */
+
 .profile-container {
-  height: 100vh;
-  background-color: #1c1c1c;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg-app);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+}
+
+.profile-main {
+  min-width: 0;
 }
 
 .profile-card {
-  background-color: #2a2a2a;
-  width: 450px;
-  padding: 30px;
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  max-width: 760px;
+  padding: var(--sp-8);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-2);
 }
 
 .profile-avatar {
-  margin-bottom: 20px;
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
 }
 
-.avatar-circle {
-  width: 90px;
-  height: 90px;
-  background-color: #19E5D8;
-  color: #111;
-  font-size: 28px;
-  font-weight: bold;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto;
+/* Qualified override of the primitives avatar. */
+.profile-avatar .avatar-circle {
+  width: 92px;
+  height: 92px;
+  border-color: var(--accent-line);
+  background: var(--grad-brand);
+  color: var(--accent-ink);
+  font-size: var(--text-3xl);
+  font-weight: var(--fw-semibold);
+  box-shadow: 0 0 0 6px var(--accent-soft);
+}
+
+.profile-details {
+  flex: 1;
+  min-width: 0;
 }
 
 .profile-details h2 {
-  margin-bottom: 6px;
+  margin: 0 0 var(--sp-1);
+  color: var(--text-1);
+  font-size: var(--text-2xl);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-tight);
 }
 
 .email {
-  color: #bbb;
-  margin-bottom: 20px;
-  font-size: 14px;
+  margin: 0 0 var(--sp-6);
+  color: var(--text-3);
+  font-size: var(--text-sm);
 }
 
 .profile-info {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 20px;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-6);
 }
 
-.info-box {
-  background-color: #1c1c1c;
-  padding: 15px;
-  border-radius: 8px;
-  width: 30%;
+/* Qualified override of the primitives callout — this is a
+   stat tile, so the callout chrome is fully reset here. */
+.profile-info .info-box {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-1);
+  padding: var(--sp-4);
+  border: 1px solid var(--line-2);
+  border-left: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--bg-elevated);
 }
 
-.info-box span {
-  display: block;
-  font-size: 12px;
-  color: #aaa;
-  margin-bottom: 6px;
+.profile-info .info-box span {
+  color: var(--text-3);
+  font-size: var(--text-2xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
 }
 
-.info-box strong {
-  font-size: 18px;
+.profile-info .info-box strong {
+  color: var(--text-1);
+  font-size: var(--text-2xl);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
 }
 
 .edit-btn {
-  background: #19E5D8;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
+  min-width: 148px;
 }
 
-.edit-btn:hover {
-  opacity: 0.9;
+@media (max-width: 720px) {
+  .profile-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--sp-6);
+    padding: var(--sp-6);
+  }
+
+  .profile-avatar {
+    justify-content: flex-start;
+  }
+
+  .profile-info {
+    flex-direction: column;
+  }
+
+  .edit-btn {
+    width: 100%;
+  }
 }
