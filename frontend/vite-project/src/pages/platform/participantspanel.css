@@ -1,123 +1,226 @@
+/* ============================================================
+   ParticipantsPanel — in-meeting people drawer
+   ------------------------------------------------------------
+   OBSIDIAN INTELLIGENCE meeting room (mockups/obsidian.css
+   §15). Every class name below already existed in this file and
+   is kept verbatim.
+
+   DOM (participantspanel.jsx):
+     .pp-overlay
+       .pp-panel
+         .pp-header > .pp-title / .pp-subtitle / button.pp-close
+         .pp-list > .pp-row(.speaking)
+           .pp-avatar
+           .pp-info
+             .pp-name > .pp-you / .pp-hand-inline / .pp-speaking-inline
+             .pp-status > span.oi-pp-on / span.oi-pp-off
+   ============================================================ */
+
 .pp-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.35);
+  z-index: var(--z-drawer);
+  background: var(--bg-scrim);
   display: flex;
   justify-content: flex-end;
-  z-index: 9999;
+  padding: var(--sp-4);
+  animation: primitive-fade-in var(--dur-base) var(--ease-out);
 }
 
 .pp-panel {
-  width: 320px;
-  height: 100%;
-  background: #222;
-  color: #fff;
-  padding: 14px;
-  box-shadow: -8px 0 20px rgba(0,0,0,0.35);
+  width: min(360px, 100%);
   display: flex;
   flex-direction: column;
+  max-height: 100%;
+  border-radius: var(--r-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--line-2);
+  color: var(--text-1);
+  box-shadow: var(--shadow-4);
+  overflow: hidden;
+  animation: pp-slide-in var(--dur-slow) var(--ease-out);
+}
+
+@keyframes pp-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .pp-header {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.15);
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border-bottom: 1px solid var(--line-2);
+  background: var(--bg-elevated);
 }
 
 .pp-title {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-1);
 }
 
 .pp-subtitle {
-  font-size: 12px;
-  opacity: 0.8;
-  margin-top: 4px;
+  margin-top: 2px;
+  font-size: var(--text-2xs);
+  color: var(--text-3);
 }
 
 .pp-close {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--line-2);
   background: transparent;
-  border: none;
-  color: white;
-  font-size: 18px;
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
   cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.pp-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-1);
 }
 
 .pp-list {
-  margin-top: 12px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  padding: var(--sp-4);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-4);
 }
 
 .pp-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: rgba(255,255,255,0.06);
-  padding: 10px;
-  border-radius: 10px;
+  gap: var(--sp-3);
+  padding: var(--sp-2);
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  transition: background-color var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out);
+}
+
+.pp-row:hover {
+  background: var(--bg-hover);
+}
+
+/* Currently speaking — emerald. */
+.pp-row.speaking {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
 }
 
 .pp-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: #19E5D8;
-  color: #111;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: var(--r-full);
+  display: grid;
+  place-items: center;
+  background: var(--grad-avatar);
+  border: 1px solid var(--line-2);
+  color: var(--text-1);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  line-height: 1;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.pp-row.speaking .pp-avatar {
+  background: var(--grad-brand);
+  border-color: var(--accent-line);
+  color: var(--accent-ink);
 }
 
 .pp-info {
-  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .pp-name {
-  font-weight: 700;
-  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-1);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pp-you {
-  font-weight: 600;
-  font-size: 12px;
-  opacity: 0.8;
-  margin-left: 6px;
+  font-size: var(--text-2xs);
+  color: var(--text-3);
+  font-weight: var(--fw-regular);
 }
 
-.pp-status {
-  font-size: 12px;
-  opacity: 0.8;
-  margin-top: 3px;
+.pp-hand-inline,
+.pp-speaking-inline {
+  font-size: var(--text-2xs);
 }
 
-.pp-hand {
-  font-size: 20px;
-}
 .pp-hand-inline {
-  margin-left: 6px;
-  font-size: 18px;
+  color: var(--champagne-text);
 }
 
 .pp-speaking-inline {
-  margin-left: 6px;
-  font-size: 14px;
-  color: #4caf50;
-  font-weight: 600;
-  animation: pulse 1s infinite;
+  color: var(--accent-text);
 }
 
-.pp-row.speaking {
-  background: rgba(76, 175, 80, 0.15);
-  border-left: 3px solid #4caf50;
+/* Retained for contract parity — the live markup uses
+   `.pp-hand-inline` instead. */
+.pp-hand {
+  color: var(--champagne-text);
+  font-size: var(--text-2xs);
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+.pp-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  font-size: var(--text-2xs);
+  color: var(--text-2);
+}
+
+/* Mic / camera state — token driven, never inline colours. */
+.oi-pp-on {
+  color: var(--success);
+}
+
+.oi-pp-off {
+  color: var(--text-3);
+}
+
+@media (max-width: 720px) {
+  .pp-overlay {
+    padding: 0;
+  }
+  .pp-panel {
+    width: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
 }

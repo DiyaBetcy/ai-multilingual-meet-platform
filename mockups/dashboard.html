@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Obsidian Intelligence — Dashboard Mockup</title>
+<link rel="stylesheet" href="obsidian.css" />
+</head>
+<body>
+
+<nav class="oi-mock-bar">
+  <b>OBSIDIAN INTELLIGENCE</b>
+  <a href="index.html">Overview</a>
+  <a href="dashboard.html">Dashboard</a>
+  <a href="auth.html">Auth</a>
+  <a href="meeting.html">Meeting room</a>
+  <span>Static mockup — no production source was modified</span>
+</nav>
+
+<div class="oi-mock-note">
+  <b>Dashboard mockup.</b> Models the live <code>/start</code> + <code>/meetings</code> screens inside one shared
+  application shell. Every item shown is real application state: the four real nav destinations
+  (Home / Meetings / Settings / Profile), the real <i>Create Meeting</i> and <i>Join Meeting</i> actions, and the
+  three real meetings from <code>src/pages/platform/meetings.jsx</code>. No counts, analytics, activity feeds or
+  features were invented.
+</div>
+
+<div class="oi-shell">
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside class="oi-sidebar">
+    <a class="oi-brand" href="#">
+      <span class="oi-brand-mark">M</span>
+      <span>
+        <span class="oi-brand-text">Meet</span>
+        <span class="oi-brand-sub">Multilingual</span>
+      </span>
+    </a>
+
+    <nav class="oi-nav" aria-label="Primary">
+      <div class="oi-nav-heading">Workspace</div>
+      <a class="oi-nav-item is-active" href="#" aria-current="page">
+        <span class="oi-nav-icon" aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></svg>
+        </span>
+        <span>Home</span>
+      </a>
+      <a class="oi-nav-item" href="#meetings">
+        <span class="oi-nav-icon" aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>
+        </span>
+        <span>Meetings</span>
+        <span class="oi-nav-badge">3</span>
+      </a>
+      <a class="oi-nav-item" href="#">
+        <span class="oi-nav-icon" aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.35a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.65 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.65 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.65a1.7 1.7 0 0 0 1-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.35 9v.03a1.7 1.7 0 0 0 1.56 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z"/></svg>
+        </span>
+        <span>Settings</span>
+      </a>
+      <a class="oi-nav-item" href="#">
+        <span class="oi-nav-icon" aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>
+        </span>
+        <span>Profile</span>
+      </a>
+    </nav>
+
+    <div class="oi-sidebar-foot">
+      <a class="oi-btn oi-btn--primary oi-btn--block" href="#create">
+        <span class="oi-btn-icon" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </span>
+        New meeting
+      </a>
+      <div class="oi-user-card">
+        <span class="avatar-circle">LB</span>
+        <span class="oi-user-info" style="min-width:0">
+          <span class="oi-user-name">Your Name</span>
+          <span class="oi-user-mail">you@example.com</span>
+        </span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===================== MAIN ===================== -->
+  <div class="oi-main">
+
+    <header class="oi-topbar">
+      <span class="oi-topbar-title">Home</span>
+      <span class="oi-topbar-crumb">/ Workspace</span>
+      <span class="oi-topbar-spacer"></span>
+      <span class="oi-status oi-status--live"><span class="oi-status-dot"></span>Translation service online</span>
+      <span class="avatar-circle avatar-circle--sm">LB</span>
+    </header>
+
+    <main class="oi-content">
+
+      <!-- ---- page head ---- -->
+      <div class="oi-pagehead">
+        <div class="oi-pagehead-text">
+          <span class="oi-eyebrow">Workspace</span>
+          <h1 class="oi-page-title">Welcome back</h1>
+          <p class="oi-pagehead-sub">
+            Start a new meeting or join an existing one with a meeting ID.
+            Live translation and AI anchoring are available once you are in a room.
+          </p>
+        </div>
+        <div style="display:flex;gap:var(--sp-3);align-items:center">
+          <a class="oi-btn oi-btn--secondary" href="#join">
+            <span class="oi-btn-icon" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+            </span>
+            Join meeting
+          </a>
+          <a class="oi-btn oi-btn--primary" href="#create">
+            <span class="oi-btn-icon" aria-hidden="true">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+            Create meeting
+          </a>
+        </div>
+      </div>
+
+      <!-- ---- primary actions ---- -->
+      <section aria-labelledby="act-h">
+        <h2 class="oi-section-title" id="act-h" style="margin-bottom:var(--sp-4)">Start something</h2>
+        <div class="oi-action-grid">
+          <a class="oi-action-card oi-action-card--primary" id="create" href="#">
+            <span class="oi-action-icon" aria-hidden="true">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10.5 20.5 7v10L15 13.5z"/><rect x="2.5" y="5.5" width="12.5" height="13" rx="2.4"/></svg>
+            </span>
+            <span class="oi-action-text">
+              <span class="oi-action-title">Create meeting</span>
+              <span class="oi-action-desc">Generate a meeting ID and configure camera, mic and AI anchoring before you join.</span>
+            </span>
+          </a>
+          <a class="oi-action-card" id="join" href="#">
+            <span class="oi-action-icon" aria-hidden="true">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 13.5 6 16.8a2.2 2.2 0 0 1-3.3-2.2 13 13 0 0 1 10.9-10.9A2.2 2.2 0 0 1 15.8 7z"/><path d="M15.5 8.5 21 14l-5.5 5.5L10 14z"/></svg>
+            </span>
+            <span class="oi-action-text">
+              <span class="oi-action-title">Join meeting</span>
+              <span class="oi-action-desc">Enter a meeting ID to join a session that is already in progress.</span>
+            </span>
+          </a>
+        </div>
+      </section>
+
+      <!-- ---- my meetings (the /meetings view, same shell) ---- -->
+      <section aria-labelledby="meet-h" id="meetings">
+        <div class="oi-meetings-head">
+          <h2 class="oi-section-title" id="meet-h">My meetings</h2>
+          <a class="oi-btn oi-btn--ghost oi-btn--sm" href="#">
+            <span class="oi-btn-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+            New meeting
+          </a>
+        </div>
+
+        <div class="oi-meetings-grid">
+          <article class="oi-meeting-card">
+            <div class="oi-meeting-top">
+              <div>
+                <h3 class="oi-meeting-title">AI Conference</h3>
+                <div class="oi-meeting-meta">
+                  <span>12 Feb 2026</span>
+                  <span class="oi-meeting-meta-dot"></span>
+                  <span>10:00 AM</span>
+                </div>
+              </div>
+              <span class="oi-chip oi-chip--champagne">Scheduled</span>
+            </div>
+            <div class="oi-meeting-foot">
+              <span class="oi-meta">Meeting ID</span>
+              <button class="oi-btn oi-btn--secondary oi-btn--sm" type="button">Join</button>
+            </div>
+          </article>
+
+          <article class="oi-meeting-card">
+            <div class="oi-meeting-top">
+              <div>
+                <h3 class="oi-meeting-title">Project Discussion</h3>
+                <div class="oi-meeting-meta">
+                  <span>14 Feb 2026</span>
+                  <span class="oi-meeting-meta-dot"></span>
+                  <span>2:30 PM</span>
+                </div>
+              </div>
+              <span class="oi-chip oi-chip--champagne">Scheduled</span>
+            </div>
+            <div class="oi-meeting-foot">
+              <span class="oi-meta">Meeting ID</span>
+              <button class="oi-btn oi-btn--secondary oi-btn--sm" type="button">Join</button>
+            </div>
+          </article>
+
+          <article class="oi-meeting-card">
+            <div class="oi-meeting-top">
+              <div>
+                <h3 class="oi-meeting-title">Team Standup</h3>
+                <div class="oi-meeting-meta">
+                  <span>16 Feb 2026</span>
+                  <span class="oi-meeting-meta-dot"></span>
+                  <span>9:00 AM</span>
+                </div>
+              </div>
+              <span class="oi-chip oi-chip--champagne">Scheduled</span>
+            </div>
+            <div class="oi-meeting-foot">
+              <span class="oi-meta">Meeting ID</span>
+              <button class="oi-btn oi-btn--secondary oi-btn--sm" type="button">Join</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ---- component states (loading / empty / error) ---- -->
+      <section aria-labelledby="state-h">
+        <div class="oi-meetings-head">
+          <h2 class="oi-section-title" id="state-h">Component states</h2>
+          <span class="oi-meta">Loading · empty · error — same visual language</span>
+        </div>
+        <div class="oi-mock-grid oi-mock-grid--3">
+          <div class="oi-mock-card">
+            <div class="oi-mock-card-head">Loading</div>
+            <div class="oi-mock-card-body">
+              <article class="oi-meeting-card" style="pointer-events:none">
+                <div class="oi-meeting-top">
+                  <div style="flex:1">
+                    <div class="oi-skeleton oi-skeleton--title"></div>
+                    <div class="oi-skeleton oi-skeleton--meta"></div>
+                  </div>
+                  <div class="oi-skeleton oi-skeleton--pill"></div>
+                </div>
+                <div class="oi-meeting-foot">
+                  <div class="oi-skeleton" style="height:10px;width:58px"></div>
+                  <div class="oi-skeleton oi-skeleton--pill" style="height:30px;width:62px;border-radius:var(--r-sm)"></div>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <div class="oi-mock-card">
+            <div class="oi-mock-card-head">Empty</div>
+            <div class="oi-mock-card-body">
+              <div class="oi-state">
+                <span class="oi-state-icon" aria-hidden="true">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>
+                </span>
+                <span class="oi-state-title">No meetings yet</span>
+                <span class="oi-state-text">Meetings you host or join will appear here.</span>
+                <button class="oi-btn oi-btn--secondary oi-btn--sm" type="button">Create a meeting</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="oi-mock-card">
+            <div class="oi-mock-card-head">Error</div>
+            <div class="oi-mock-card-body">
+              <div class="oi-state oi-state--error">
+                <span class="oi-state-icon" aria-hidden="true">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5M12 16.2v.2"/></svg>
+                </span>
+                <span class="oi-state-title">Could not load meetings</span>
+                <span class="oi-state-text">The meeting service did not respond. Try again in a moment.</span>
+                <button class="oi-btn oi-btn--secondary oi-btn--sm" type="button">Retry</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<script>
+  // Mockup-only: allows ?theme=light to preview the coordinated warm dashboard.
+  (function () {
+    var t = new URLSearchParams(location.search).get("theme");
+    if (t === "light") document.documentElement.setAttribute("data-theme", "light");
+  })();
+</script>
+</body>
+</html>

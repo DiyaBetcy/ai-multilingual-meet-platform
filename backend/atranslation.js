@@ -7,9 +7,8 @@ import { SarvamAIClient } from "sarvamai";
 
 // 🔑 Set your Sarvam AI API key here
 const client = new SarvamAIClient({
-  apiSubscriptionKey: "rai3"
+  apiSubscriptionKey: process.env.SARVAM_API_KEY
 });
-
 const app = express();
 const server = http.createServer(app);
 

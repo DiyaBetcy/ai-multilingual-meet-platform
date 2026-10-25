@@ -1,36 +1,83 @@
+/* ============================================================
+   Settings — preferences page
+   ------------------------------------------------------------
+   Class contract: every class name below already existed in
+   this file and is kept verbatim.
+
+   DOM (settings.jsx):
+     .settings-container
+       AppShell
+         .oi-content.settings-main
+           .oi-pagehead
+           .settings-card.oi-card
+             .setting-item > span / .oi-check > input[type=checkbox]
+                             / select.oi-select
+   ============================================================ */
+
 .settings-container {
   min-height: 100vh;
-  background-color: #1c1c1c;
-  color: white;
-  padding: 40px;
+  background: var(--bg-app);
+  color: var(--text-1);
+  font-family: var(--font-sans);
 }
 
-.settings-container h1 {
-  margin-bottom: 30px;
+.settings-main {
+  min-width: 0;
 }
 
 .settings-card {
-  background-color: #2a2a2a;
-  padding: 30px;
-  border-radius: 10px;
-  max-width: 500px;
+  max-width: 620px;
+  padding: var(--sp-2) var(--sp-6);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-2);
 }
 
 .setting-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-4) 0;
+  border-bottom: 1px solid var(--line-1);
+}
+
+.setting-item:last-child {
+  border-bottom: 0;
 }
 
 .setting-item span {
-  font-size: 16px;
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+}
+
+.setting-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  accent-color: var(--accent);
+  cursor: pointer;
 }
 
 .setting-item select {
-  background-color: #444;
-  color: white;
-  border: none;
-  padding: 6px 10px;
-  border-radius: 6px;
+  min-width: 200px;
+  max-width: 100%;
+}
+
+@media (max-width: 560px) {
+  .settings-card {
+    padding: var(--sp-1) var(--sp-4);
+  }
+
+  .setting-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-2);
+  }
+
+  .setting-item select {
+    width: 100%;
+  }
 }

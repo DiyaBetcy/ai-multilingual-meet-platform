@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Obsidian Intelligence — Live Meeting Room Mockup</title>
+<link rel="stylesheet" href="obsidian.css" />
+</head>
+<body>
+
+<nav class="oi-mock-bar">
+  <b>OBSIDIAN INTELLIGENCE</b>
+  <a href="index.html">Overview</a>
+  <a href="dashboard.html">Dashboard</a>
+  <a href="auth.html">Auth</a>
+  <a href="meeting.html">Meeting room</a>
+  <span>Static mockup — no production source was modified</span>
+</nav>
+
+<div class="oi-mock-note">
+  <b>Live meeting room mockup.</b> Built on the real DOM contract of
+  <code>src/pages/platform/meetdashboard.jsx</code>, <code>src/components/VideoGrid.jsx</code>,
+  <code>src/components/TranslatedCaption.jsx</code>, <code>src/components/LanguageSelector.jsx</code>,
+  <code>src/pages/platform/chatpanel.jsx</code>, <code>src/pages/platform/participantspanel.jsx</code> and
+  <code>src/components/AnchoringControlPanel.jsx</code> — same wrapper classes, same tile anatomy, same
+  caption and panel structures. Every video element, ref and stream relationship is preserved verbatim.
+  <br />
+  <b>Placeholder content:</b> participant names, caption text, chat messages and anchor schedule entries are runtime
+  placeholders used to show layout and hierarchy. No status is shown that the app cannot produce: the translation
+  toggle is on because <code>isListening</code> is true, the speaking outline comes from <code>speakingUser</code>,
+  the AI tile comes from <code>participant.isAnchor</code>, and every tile indicator comes from the real
+  <code>micOn / camOn / isScreenSharing / handRaised</code> flags.
+</div>
+
+<div style="padding:var(--sp-6);display:flex;flex-direction:column;gap:var(--sp-10)">
+
+  <!-- ======================= DESKTOP ======================= -->
+  <section>
+    <div class="oi-meetings-head" style="margin-bottom:var(--sp-4)">
+      <h2 class="oi-section-title">Live meeting room — desktop</h2>
+      <span class="oi-meta">1440 × 900 · chat panel open · AI anchoring running · translation on</span>
+    </div>
+
+    <div class="oi-device" style="width:1123px;height:702px;max-width:100%">
+      <span class="oi-device-label">Desktop · 1440×900</span>
+      <iframe src="room.html?panel=chat" width="1440" height="900"
+              style="transform:scale(0.78)" title="Live meeting room — desktop view"></iframe>
+    </div>
+  </section>
+
+  <!-- ======================= RESPONSIVE ======================= -->
+  <section>
+    <div class="oi-meetings-head" style="margin-bottom:var(--sp-4)">
+      <h2 class="oi-section-title">Responsive behaviour</h2>
+      <span class="oi-meta">Real breakpoints — the frame width drives the CSS media queries</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--sp-6);align-items:start">
+
+      <div class="oi-stage">
+        <span class="oi-meta"><b style="color:var(--text-1)">Tablet</b> — 834 × 1000</span>
+        <div class="oi-device" style="width:517px;height:620px;max-width:100%">
+          <span class="oi-device-label">Tablet</span>
+          <iframe src="room.html" width="834" height="1000" style="transform:scale(0.62)" title="Live meeting room — tablet view"></iframe>
+        </div>
+      </div>
+
+      <div class="oi-stage">
+        <span class="oi-meta"><b style="color:var(--text-1)">Mobile</b> — 390 × 760</span>
+        <div class="oi-device" style="width:370px;height:722px;max-width:100%">
+          <span class="oi-device-label">Mobile</span>
+          <iframe src="room.html?panel=people" width="390" height="760" style="transform:scale(0.95)" title="Live meeting room — mobile view"></iframe>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ======================= SUPPORTING PANELS ======================= -->
+  <section>
+    <div class="oi-meetings-head" style="margin-bottom:var(--sp-4)">
+      <h2 class="oi-section-title">Supporting panels</h2>
+      <span class="oi-meta">Participants · chat · AI anchoring · translation status</span>
+    </div>
+
+    <div class="oi-mock-grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+
+      <!-- People -->
+      <div class="oi-mock-card">
+        <div class="oi-mock-card-head">Participants</div>
+        <div class="oi-mock-card-body" style="padding:0">
+          <div class="oi-mock-frame" style="height:420px;border:0;border-radius:0">
+            <div class="pp-overlay" style="padding:0">
+              <div class="pp-panel" style="width:100%;max-height:100%;border-radius:0">
+                <div class="pp-header">
+                  <div>
+                    <div class="pp-title">People</div>
+                    <div class="pp-subtitle">Participants (6) • Raised hands (2)</div>
+                  </div>
+                  <button class="pp-close" type="button" aria-label="Close">✕</button>
+                </div>
+                <div class="pp-list">
+                  <div class="pp-row speaking">
+                    <div class="pp-avatar">AN</div>
+                    <div class="pp-info">
+                      <div class="pp-name">Arjun Nair <span class="pp-speaking-inline">🔊 Speaking</span></div>
+                      <div class="pp-status"><span>🎤 On</span><span>•</span><span>📷 On</span></div>
+                    </div>
+                  </div>
+                  <div class="pp-row">
+                    <div class="pp-avatar">LB</div>
+                    <div class="pp-info">
+                      <div class="pp-name">Your Name <span class="pp-you">(You)</span></div>
+                      <div class="pp-status"><span>🎤 On</span><span>•</span><span>📷 On</span></div>
+                    </div>
+                  </div>
+                  <div class="pp-row">
+                    <div class="pp-avatar">MI</div>
+                    <div class="pp-info">
+                      <div class="pp-name">Meera Iyer</div>
+                      <div class="pp-status"><span>🎤 Muted</span><span>•</span><span>📷 Off</span></div>
+                    </div>
+                  </div>
+                  <div class="pp-row">
+                    <div class="pp-avatar">RK</div>
+                    <div class="pp-info">
+                      <div class="pp-name">Ravi Kumar <span class="pp-hand-inline">✋</span></div>
+                      <div class="pp-status"><span>🎤 On</span><span>•</span><span>📷 On</span></div>
+                    </div>
+                  </div>
+                  <div class="pp-row">
+                    <div class="pp-avatar">DS</div>
+                    <div class="pp-info">
+                      <div class="pp-name">Divya S <span class="pp-hand-inline">✋</span></div>
+                      <div class="pp-status"><span>🎤 On</span><span>•</span><span>📷 On</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat -->
+      <div class="oi-mock-card">
+        <div class="oi-mock-card-head">Chat</div>
+        <div class="oi-mock-card-body" style="padding:0">
+          <div class="oi-mock-frame" style="height:420px;border:0;border-radius:0">
+            <div class="cp-overlay" style="padding:0">
+              <div class="cp-panel" style="width:100%;max-height:100%;border-radius:0">
+                <div class="cp-header">
+                  <div class="cp-title">Chat</div>
+                  <button class="cp-close" type="button" aria-label="Close">✕</button>
+                </div>
+                <div class="cp-messages">
+                  <div class="cp-msg">
+                    <div class="cp-meta"><span class="cp-sender">Arjun Nair</span><span class="cp-time">10:14:02</span></div>
+                    <div class="cp-text">Slides are in the shared drive.</div>
+                  </div>
+                  <div class="cp-msg">
+                    <div class="cp-meta"><span class="cp-sender">Meera Iyer</span><span class="cp-time">10:14:09</span></div>
+                    <div class="cp-text">Anchor can read them in Malayalam too.</div>
+                  </div>
+                  <div class="cp-msg">
+                    <div class="cp-meta"><span class="cp-sender">Your Name</span><span class="cp-time">10:14:15</span></div>
+                    <div class="cp-text">Thank you — starting the recording now.</div>
+                  </div>
+                </div>
+                <div class="cp-inputRow">
+                  <input class="cp-input" placeholder="Send a message to everyone" />
+                  <button class="cp-send" type="button">Send</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI anchoring -->
+      <div class="oi-mock-card">
+        <div class="oi-mock-card-head">AI anchoring — creator view</div>
+        <div class="oi-mock-card-body" style="padding:var(--sp-4)">
+          <div class="anchoring-panel creator-view">
+            <div class="anchoring-header"><h4>🎤 AI Anchoring Control</h4></div>
+            <div class="anchoring-status"><span class="status-indicator active">🟢 Running</span></div>
+            <div class="current-speaker-control">
+              <div class="speaker-info">
+                <span class="label">Current Speaker</span>
+                <span class="name">Arjun Nair</span>
+              </div>
+              <div class="topic-info">
+                <span class="label">Topic</span>
+                <span class="topic">Anchoring schedule review</span>
+              </div>
+              <div class="timer">
+                <span class="label">Time Remaining</span>
+                <span class="time">02:14</span>
+              </div>
+            </div>
+            <div class="anchoring-controls">
+              <button class="btn-control btn-pause" type="button">⏸️ Pause</button>
+              <button class="btn-control btn-skip" type="button">⏭️ Skip Speaker</button>
+              <button class="btn-control btn-schedule" type="button">📋 Edit Schedule</button>
+              <button class="btn-control btn-stop" type="button">⏹️ Stop Anchoring</button>
+              <button class="btn-control btn-reset" type="button">🔄 Reset</button>
+            </div>
+            <div class="schedule-progress">
+              <h5>Progress (2 / 4)</h5>
+              <div class="progress-bar"><div class="progress-fill" style="width:50%"></div></div>
+              <div class="schedule-list compact">
+                <div class="schedule-item completed"><span class="item-number">1</span><span class="item-name">Meera Iyer</span><span class="item-duration">5m</span></div>
+                <div class="schedule-item active"><span class="item-number">2</span><span class="item-name">Arjun Nair</span><span class="item-duration">5m</span></div>
+                <div class="schedule-item"><span class="item-number">3</span><span class="item-name">Ravi Kumar</span><span class="item-duration">5m</span></div>
+                <div class="schedule-item"><span class="item-number">4</span><span class="item-name">Divya S</span><span class="item-duration">5m</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="anchoring-panel participant-view" style="margin-top:var(--sp-4)">
+            <div class="anchoring-header"><h4>🎤 AI Anchoring Active</h4></div>
+            <p class="anchoring-disabled-text">
+              AI Anchoring is available. The meeting creator can enable it to manage speaker schedules automatically.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ======================= TRANSLATION ======================= -->
+  <section>
+    <div class="oi-meetings-head" style="margin-bottom:var(--sp-4)">
+      <h2 class="oi-section-title">Translation &amp; captions</h2>
+      <span class="oi-meta">Status indicators shown only when backed by real state</span>
+    </div>
+
+    <div class="oi-mock-grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+
+      <div class="oi-mock-card">
+        <div class="oi-mock-card-head">Translated caption</div>
+        <div class="oi-mock-card-body" style="background:var(--grad-tile)">
+          <div class="caption-container" style="position:relative">
+            <div class="caption-header">
+              <span class="speaker-name">Meera Iyer</span>
+              <span class="translation-indicator">Translated from English</span>
+            </div>
+            <div class="caption-text">Let us review the anchoring schedule before the session begins.</div>
+            <div class="caption-footer"><span class="language-tag">ML-IN</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="oi-mock-card">
+        <div class="oi-mock-card-head">Original caption (no translation applied)</div>
+        <div class="oi-mock-card-body" style="background:var(--grad-tile)">
+          <div class="caption-container" style="position:relative">
+            <div class="caption-header"><span class="speaker-name">Meera Iyer</span></div>
+            <div class="caption-text">Let us review the anchoring schedule before the session begins.</div>
+            <div class="caption-footer"><span class="language-tag">Original</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="oi-mock-card">
+        <div class="oi-mock-card-head">Language selector — open</div>
+        <div class="oi-mock-card-body" style="display:flex;gap:var(--sp-4);align-items:flex-start;position:relative;min-height:250px">
+          <div class="language-selector" style="margin-left:0">
+            <div class="translation-controls">
+              <button class="language-dropdown-btn" type="button">
+                <span class="globe-icon">🌐</span><span class="current-lang">Malayalam</span><span class="dropdown-arrow">▼</span>
+              </button>
+              <button class="translation-toggle active" type="button"><span class="mic-icon">🎤</span><span class="toggle-text">Stop</span></button>
+            </div>
+            <div class="language-dropdown-menu" style="left:0;right:auto">
+              <div class="dropdown-header">Select Your Language</div>
+              <div class="language-list">
+                <button class="language-option" type="button"><span class="lang-flag">🇬🇧</span><span class="lang-name">English</span></button>
+                <button class="language-option" type="button"><span class="lang-flag">🇮🇳</span><span class="lang-name">Hindi</span></button>
+                <button class="language-option selected" type="button"><span class="lang-flag">🇮🇳</span><span class="lang-name">Malayalam</span><span class="check-mark">✓</span></button>
+                <button class="language-option" type="button"><span class="lang-flag">🇮🇳</span><span class="lang-name">Tamil</span></button>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:var(--sp-3);padding-top:46px">
+            <span class="oi-meta">Toggle states</span>
+            <button class="translation-toggle active" type="button"><span class="mic-icon">🎤</span><span class="toggle-text">Stop</span></button>
+            <button class="translation-toggle" type="button"><span class="mic-icon">🎤</span><span class="toggle-text">Translate</span></button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ======================= TOKENS ======================= -->
+  <section>
+    <div class="oi-meetings-head" style="margin-bottom:var(--sp-4)">
+      <h2 class="oi-section-title">Colour tokens</h2>
+      <span class="oi-meta">Dark theme (default) · the light dashboard uses the coordinated warm set</span>
+    </div>
+
+    <div class="oi-mock-card">
+      <div class="oi-mock-card-body">
+        <div class="oi-swatches">
+          <span class="oi-swatch"><i style="background:#101713"></i> Obsidian <code>#101713</code></span>
+          <span class="oi-swatch"><i style="background:#18221C"></i> Forest <code>#18221C</code></span>
+          <span class="oi-swatch"><i style="background:#202D25"></i> Forest elevated <code>#202D25</code></span>
+          <span class="oi-swatch"><i style="background:#26372D"></i> Forest deep <code>#26372D</code></span>
+          <span class="oi-swatch"><i style="background:#35D39A"></i> Emerald <code>#35D39A</code></span>
+          <span class="oi-swatch"><i style="background:#167653"></i> Deep emerald <code>#167653</code></span>
+          <span class="oi-swatch"><i style="background:#D8C6A1"></i> Champagne <code>#D8C6A1</code></span>
+          <span class="oi-swatch"><i style="background:#F2EBDD"></i> Warm ivory <code>#F2EBDD</code></span>
+          <span class="oi-swatch"><i style="background:#A8B7AB"></i> Muted <code>#A8B7AB</code></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>

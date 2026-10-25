@@ -5,8 +5,10 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-package-lock.json
-yarn.lock
+
+
+
+
 
 # =====================
 # Python
@@ -23,14 +25,13 @@ venv/
 # Environment Variables & Secrets
 # =====================
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+!.env.sample
 *.key
 *.pem
 secrets.json
-config.json
+
 
 # =====================
 # API Keys & Credentials (NEVER commit these)
@@ -46,7 +47,7 @@ aws-credentials.json
 dist/
 build/
 *.tsbuildinfo
-
+.vercel/
 # =====================
 # Audio / Temp Files
 # =====================

@@ -1,57 +1,102 @@
+/* ============================================================
+   Home page (src/pages/platform/home.jsx — not routed).
+   Kept in sync with the rest of the design system so it can be
+   re-enabled without a redesign.
+   ============================================================ */
+
 .home-content {
-  flex: 1;
   display: flex;
-  justify-content: center;
+  flex: 1;
   align-items: center;
-  background-color: #1c1c1c;
+  justify-content: center;
+  padding: var(--sp-10) var(--sp-6);
+  background: radial-gradient(
+    900px 520px at 50% -10%,
+    var(--accent-glow),
+    transparent 60%
+  );
 }
 
 .home-card {
-  background: #2a2a2a;
-  padding: 40px;
-  border-radius: 12px;
-  width: 400px;
+  width: 100%;
+  max-width: 420px;
+  padding: var(--sp-8);
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-xl);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-3);
   text-align: center;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
 }
 
 .home-card h1 {
-  margin-bottom: 20px;
+  margin-bottom: var(--sp-6);
+  font-size: var(--text-2xl);
+  letter-spacing: var(--tracking-tight);
+}
+
+.logo-text {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: var(--tracking-tight);
+  background: var(--grad-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.primary-btn,
+.secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: var(--sp-3);
+  padding: 0 var(--sp-5);
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  font-size: var(--text-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
 }
 
 .primary-btn {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 12px;
-  border: none;
-  border-radius: 8px;
-  background-color: #19E5D8;
-  color: black;
-  font-weight: 600;
-  cursor: pointer;
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 .primary-btn:hover {
-  opacity: 0.9;
+  background: var(--accent-hi);
+  box-shadow: 0 8px 24px var(--accent-shadow);
 }
 
 .secondary-btn {
-  width: 100%;
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  background-color: #444;
-  color: white;
-  cursor: pointer;
-  margin-bottom: 20px;
+  background: var(--bg-raised);
+  border-color: var(--line-2);
+  color: var(--text-1);
+}
+
+.secondary-btn:hover {
+  border-color: var(--line-3);
+  background: var(--bg-active);
 }
 
 .recent-section {
+  margin-top: var(--sp-8);
   text-align: left;
 }
 
 .recent-section h3 {
-  margin-bottom: 8px;
+  margin-bottom: var(--sp-3);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--text-2);
 }
 
 .recent-section ul {
@@ -60,6 +105,8 @@
 }
 
 .recent-section li {
-  padding: 6px 0;
-  border-bottom: 1px solid #444;
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--line-1);
+  color: var(--text-2);
+  font-size: var(--text-base);
 }

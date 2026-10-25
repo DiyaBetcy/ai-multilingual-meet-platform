@@ -1,4 +1,7 @@
-import "./ParticipantsPanel.css";
+/* The file on disk is `participantspanel.css` — the old
+   `./ParticipantsPanel.css` import 404s on case-sensitive
+   hosts (Linux / Vercel). */
+import "./participantspanel.css";
 
 export default function ParticipantsPanel({ participants, onClose, speakingUser }) {
   const raisedCount = participants.filter((p) => p.handRaised).length;
@@ -34,13 +37,13 @@ export default function ParticipantsPanel({ participants, onClose, speakingUser 
                 </div>
 
                 <div className="pp-status">
-                  <span style={{ color: p.micOn ? "#4caf50" : "red" }}>
+                  <span className={p.micOn ? "oi-pp-on" : "oi-pp-off"}>
                     {p.micOn ? "🎤 On" : "🎤 Muted"}
                   </span>
 
                   {" • "}
 
-                  <span style={{ color: p.camOn ? "#4caf50" : "#aaa" }}>
+                  <span className={p.camOn ? "oi-pp-on" : "oi-pp-off"}>
                     {p.camOn ? "📷 On" : "📷 Off"}
                   </span>
                 </div>

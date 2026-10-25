@@ -1,0 +1,322 @@
+/* ============================================================
+   AI Multilingual Meet — Preloader
+   ------------------------------------------------------------
+   Full-viewport loading screen for the app boot sequence and for
+   any full-surface loading state.
+
+   House rules
+     * Every colour comes from the design tokens, so the screen
+       re-skins itself with the active theme (dark / light).
+     * The indicator is INDETERMINATE on purpose — the application
+       has no real progress signal to report, so no percentage is
+       ever rendered.
+     * Every animation is switched off under prefers-reduced-motion.
+
+   The token fallbacks are deliberate: index.html paints this
+   screen before the design-system stylesheet has been parsed, so
+   the values below must be able to stand on their own.
+   ============================================================ */
+
+/* ---------------------------------------------------------
+   1. Screen
+   --------------------------------------------------------- */
+
+.preloader {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-top, 100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-6, 24px);
+  overflow: hidden;
+  background: var(--bg-app, #0a0e13);
+  color: var(--text-1, #e9eff6);
+  opacity: 1;
+  transition: opacity var(--dur-slow, 240ms)
+    var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+/* The app is painted underneath — let it through. */
+.preloader[data-state="leaving"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.preloader__inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4, 16px);
+  width: 100%;
+  max-width: 440px;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------
+   2. Logo mark
+   --------------------------------------------------------- */
+
+.preloader__halo {
+  position: absolute;
+  top: -34px;
+  left: 50%;
+  width: 230px;
+  height: 230px;
+  margin-left: -115px;
+  border-radius: var(--r-full, 999px);
+  background: radial-gradient(
+    circle at center,
+    var(--accent-glow, rgba(53, 211, 154, 0.22)) 0%,
+    transparent 68%
+  );
+  pointer-events: none;
+  animation: preloader-halo 3.4s var(--ease-in-out, ease-in-out) infinite;
+}
+
+.preloader__mark {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border: 1px solid var(--line-2, rgba(255, 255, 255, 0.11));
+  border-radius: var(--r-xl, 22px);
+  background: var(--bg-elevated, #161e28);
+  box-shadow: 0 0 0 1px var(--accent-soft, rgba(53, 211, 154, 0.12)),
+    0 18px 46px rgba(0, 0, 0, 0.45);
+}
+
+.preloader__logo {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+/* ---------------------------------------------------------
+   3. Typography
+   --------------------------------------------------------- */
+
+.preloader__head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1, 4px);
+}
+
+.preloader__brand {
+  margin: 0;
+  color: var(--text-1, #e9eff6);
+  font-size: var(--text-sm, 12px);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.preloader__tagline {
+  margin: 0;
+  color: var(--champagne-text, #f0d3a1);
+  font-size: var(--text-lg, 16px);
+  font-weight: 500;
+  line-height: var(--lh-snug, 1.35);
+}
+
+/* ---------------------------------------------------------
+   4. Audio waveform
+   --------------------------------------------------------- */
+
+.preloader__wave {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 28px;
+}
+
+.preloader__wave-bar {
+  width: 3px;
+  height: 100%;
+  border-radius: var(--r-full, 999px);
+  background: linear-gradient(
+    180deg,
+    var(--accent-hi, #5cf2e8),
+    var(--accent, #35d39a)
+  );
+  transform-origin: bottom center;
+  animation: preloader-wave 1.2s var(--ease-in-out, ease-in-out) infinite;
+}
+
+.preloader__wave-bar:nth-child(1) {
+  height: 45%;
+  animation-delay: -0.48s;
+}
+
+.preloader__wave-bar:nth-child(2) {
+  height: 75%;
+  animation-delay: -0.24s;
+}
+
+.preloader__wave-bar:nth-child(3) {
+  height: 100%;
+  animation-delay: 0s;
+}
+
+.preloader__wave-bar:nth-child(4) {
+  height: 75%;
+  animation-delay: -0.24s;
+}
+
+.preloader__wave-bar:nth-child(5) {
+  height: 45%;
+  animation-delay: -0.48s;
+}
+
+/* ---------------------------------------------------------
+   5. Progress track (indeterminate)
+   --------------------------------------------------------- */
+
+.preloader__progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3, 12px);
+  width: 100%;
+}
+
+.preloader__track {
+  position: relative;
+  width: min(280px, 100%);
+  height: 3px;
+  overflow: hidden;
+  border-radius: var(--r-full, 999px);
+  background: var(--line-2, rgba(255, 255, 255, 0.11));
+}
+
+.preloader__runner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 38%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--accent, #35d39a) 45%,
+    var(--accent-hi, #5cf2e8) 55%,
+    transparent
+  );
+  box-shadow: 0 0 14px var(--accent-glow, rgba(53, 211, 154, 0.22));
+  animation: preloader-run 1.6s var(--ease-in-out, ease-in-out) infinite;
+}
+
+.preloader__status {
+  margin: 0;
+  color: var(--text-2, #9daabc);
+  font-size: var(--text-sm, 12px);
+  letter-spacing: 0.01em;
+}
+
+/* ---------------------------------------------------------
+   6. Motion
+   --------------------------------------------------------- */
+
+@keyframes preloader-halo {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes preloader-wave {
+  0%,
+  100% {
+    transform: scaleY(0.28);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes preloader-run {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(365%);
+  }
+}
+
+/* ---------------------------------------------------------
+   7. Reduced motion
+   Nothing moves, nothing implies a percentage: the runner
+   collapses to a single activity dot.
+   --------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .preloader__halo,
+  .preloader__wave-bar,
+  .preloader__runner {
+    animation: none;
+  }
+
+  .preloader__wave-bar {
+    transform: scaleY(0.55);
+  }
+
+  .preloader__runner {
+    left: 50%;
+    width: 6px;
+    margin-left: -3px;
+    background: var(--accent, #35d39a);
+  }
+}
+
+/* ---------------------------------------------------------
+   8. Small screens
+   --------------------------------------------------------- */
+
+@media (max-width: 480px) {
+  .preloader {
+    padding: var(--sp-5, 20px);
+  }
+
+  .preloader__inner {
+    gap: var(--sp-3, 12px);
+    max-width: 340px;
+  }
+
+  .preloader__halo {
+    width: 190px;
+    height: 190px;
+    margin-left: -95px;
+  }
+
+  .preloader__mark {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--r-lg, 16px);
+  }
+
+  .preloader__logo {
+    width: 26px;
+    height: 26px;
+  }
+
+  .preloader__tagline {
+    font-size: var(--text-md, 14px);
+  }
+
+  .preloader__wave {
+    height: 24px;
+  }
+
+  .preloader__track {
+    width: min(240px, 100%);
+  }
+}

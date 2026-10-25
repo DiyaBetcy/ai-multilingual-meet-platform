@@ -11,8 +11,8 @@ const Profile = () => {
         </div>
 
         <div className="profile-details">
-          <h2>Lakshmi B</h2>
-          <p className="email">lakshmi@email.com</p>
+          <h2>Your Name</h2>
+          <p className="email">you@example.com</p>
 
           <div className="profile-info">
             <div className="info-box">

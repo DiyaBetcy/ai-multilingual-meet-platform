@@ -1,96 +1,67 @@
+/* ============================================================
+   Workspace home (/start).
+   ------------------------------------------------------------
+   The visual language lives in src/styles/primitives.css —
+   this is the OBSIDIAN INTELLIGENCE design system (shell,
+   buttons, cards, form primitives). This file only carries
+   the page-specific aliases so the historical class names
+   keep resolving without fighting the shared primitives.
+
+   DOM (start.jsx):
+     .start-page
+       AppShell
+         .oi-content.start-main
+           .oi-pagehead > .start-buttons > .start-btn
+           .oi-action-grid
+           form.oi-join-form.start-meeting-bar
+             .oi-join-options.start-options
+             .start-action-btn
+   ============================================================ */
 
 .start-page {
-  height: 100vh;
-  background: #0e1419;
-  color: white;
-  display: flex;
-  flex-direction: column;
-  font-family: "Segoe UI", sans-serif;
+  min-height: 100vh;
+  background: var(--bg-app);
+  color: var(--text-1);
 }
-
-.start-top-bar {
-  background: #19E5D8;
-  padding: 12px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.start-logo {
-  height: 38px;
-}
-
-.start-menu span {
-  margin-left: 22px;
-  color: black;
-  cursor: pointer;
-  font-weight: 500;
-}
-
 
 .start-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  min-width: 0;
 }
-
 
 .start-buttons {
   display: flex;
-  gap: 60px;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
 }
 
 .start-btn {
-  background: #19E5D8;
-  border: none;
-  padding: 14px 28px;
-  border-radius: 14px;
-  font-size: 18px;
-  cursor: pointer;
+  min-width: 148px;
 }
-
 
 .start-meeting-bar {
-  background: #151c22;
-  margin-top: 30px;
-  padding: 20px;
-  width: 420px;
-  border-radius: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  width: 100%;
 }
-
-.start-meeting-bar input {
-  background: #0e1419;
-  border: 1px solid #333;
-  color: white;
-  padding: 8px;
-  border-radius: 6px;
-}
-
 
 .start-options {
   display: flex;
-  justify-content: space-between;
-  font-size: 14px;
+  align-items: center;
+  gap: var(--sp-5);
+  flex-wrap: wrap;
 }
-
 
 .start-action-btn {
-  align-self: flex-end;
-  background: #19E5D8;
-  border: none;
-  padding: 8px 20px;
-  border-radius: 20px;
-  cursor: pointer;
+  align-self: end;
 }
 
-
-.start-footer {
-  padding: 16px;
-  text-align: center;
-  font-size: 14px;
+@media (max-width: 720px) {
+  .start-btn {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .start-buttons {
+    width: 100%;
+  }
+  .start-action-btn {
+    width: 100%;
+  }
 }

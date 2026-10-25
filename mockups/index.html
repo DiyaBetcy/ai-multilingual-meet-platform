@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Obsidian Intelligence — redesign mockup</title>
+<link rel="stylesheet" href="obsidian.css" />
+</head>
+<body>
+
+<nav class="oi-mock-bar">
+  <b>OBSIDIAN INTELLIGENCE</b>
+  <a href="index.html">Overview</a>
+  <a href="dashboard.html">Dashboard</a>
+  <a href="auth.html">Auth</a>
+  <a href="meeting.html">Meeting room</a>
+  <span>Static mockup — no production source was modified</span>
+</nav>
+
+<div style="max-width:1180px;margin:0 auto;padding:var(--sp-10) var(--sp-6) var(--sp-16);display:flex;flex-direction:column;gap:var(--sp-12)">
+
+  <!-- ======================= HERO ======================= -->
+  <header style="display:flex;flex-direction:column;gap:var(--sp-4);max-width:70ch">
+    <span class="oi-eyebrow">Design system · proposal</span>
+    <h1 style="font-size:var(--text-3xl);font-weight:600;letter-spacing:-0.03em;line-height:1.12">
+      Obsidian Intelligence
+    </h1>
+    <p class="oi-pagehead-sub" style="font-size:var(--text-md);max-width:62ch">
+      A warm-forest, emerald and champagne identity for the AI-Powered Multilingual Meeting Platform.
+      These are static, isolated mockups of the three surfaces named in the brief — dashboard,
+      authentication and the live meeting room — built only from data the application already owns.
+      No file under <code>frontend/vite-project</code> was touched.
+    </p>
+    <div style="display:flex;gap:var(--sp-3);flex-wrap:wrap;margin-top:var(--sp-2)">
+      <a class="oi-btn oi-btn--primary" href="dashboard.html">Dashboard mockup</a>
+      <a class="oi-btn oi-btn--secondary" href="auth.html">Authentication mockup</a>
+      <a class="oi-btn oi-btn--secondary" href="meeting.html">Meeting room mockup</a>
+    </div>
+  </header>
+
+  <!-- ======================= PRINCIPLES ======================= -->
+  <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--sp-5)">
+    <div class="oi-card">
+      <span class="oi-eyebrow">Foundation</span>
+      <h3 class="oi-card-title" style="margin-top:var(--sp-2)">Obsidian ground, forest depth</h3>
+      <p class="oi-meta" style="margin-top:var(--sp-2)">
+        The app sits on <code>#101713</code>. Surfaces climb through <code>#18221C</code>,
+        <code>#202D25</code> and <code>#26372D</code> so hierarchy is carried by luminance,
+        not by stacked shadows and borders.
+      </p>
+    </div>
+    <div class="oi-card">
+      <span class="oi-eyebrow">Accent</span>
+      <h3 class="oi-card-title" style="margin-top:var(--sp-2)">Emerald acts, champagne annotates</h3>
+      <p class="oi-meta" style="margin-top:var(--sp-2)">
+        Emerald <code>#35D39A</code> is reserved for interactive and genuinely active states.
+        Champagne <code>#D8C6A1</code> appears only on premium metadata — timers, the AI badge,
+        selected meeting labels — never as a second CTA colour.
+      </p>
+    </div>
+    <div class="oi-card">
+      <span class="oi-eyebrow">Type</span>
+      <h3 class="oi-card-title" style="margin-top:var(--sp-2)">One scale, no shouting</h3>
+      <p class="oi-meta" style="margin-top:var(--sp-2)">
+        A 11 → 32 px scale on the already-installed system sans stack. Restrained weights,
+        no oversized headings, uppercase reserved for short eyebrows and status labels.
+      </p>
+    </div>
+  </section>
+
+  <!-- ======================= TOKENS ======================= -->
+  <section>
+    <div class="oi-meetings-head">
+      <h2 class="oi-section-title">Colour tokens</h2>
+      <span class="oi-meta">Both themes are token overrides only — no component rule changes</span>
+    </div>
+    <div class="oi-mock-grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+      <div class="oi-mock-card">
+        <div class="oi-mock-card-head">Dark theme (default)</div>
+        <div class="oi-mock-card-body">
+          <div class="oi-swatches">
+            <span class="oi-swatch"><i style="background:#101713"></i> Obsidian <code>#101713</code></span>
+            <span class="oi-swatch"><i style="background:#18221C"></i> Forest <code>#18221C</code></span>
+            <span class="oi-swatch"><i style="background:#202D25"></i> Elevated <code>#202D25</code></span>
+            <span class="oi-swatch"><i style="background:#26372D"></i> Deeper <code>#26372D</code></span>
+            <span class="oi-swatch"><i style="background:#35D39A"></i> Emerald <code>#35D39A</code></span>
+            <span class="oi-swatch"><i style="background:#167653"></i> Deep emerald <code>#167653</code></span>
+            <span class="oi-swatch"><i style="background:#D8C6A1"></i> Champagne <code>#D8C6A1</code></span>
+            <span class="oi-swatch"><i style="background:#F2EBDD"></i> Warm ivory <code>#F2EBDD</code></span>
+            <span class="oi-swatch"><i style="background:#A8B7AB"></i> Muted <code>#A8B7AB</code></span>
+          </div>
+        </div>
+      </div>
+      <div class="oi-mock-card">
+        <div class="oi-mock-card-head">Light theme (dashboard)</div>
+        <div class="oi-mock-card-body">
+          <div class="oi-swatches">
+            <span class="oi-swatch"><i style="background:#F6F5F0"></i> Warm bg <code>#F6F5F0</code></span>
+            <span class="oi-swatch"><i style="background:#FFFFFF"></i> Surface <code>#FFFFFF</code></span>
+            <span class="oi-swatch"><i style="background:#E9EEE7"></i> Soft sage <code>#E9EEE7</code></span>
+            <span class="oi-swatch"><i style="background:#1B2820"></i> Dark text <code>#1B2820</code></span>
+            <span class="oi-swatch"><i style="background:#647168"></i> Secondary <code>#647168</code></span>
+            <span class="oi-swatch"><i style="background:#DFE5DD"></i> Border <code>#DFE5DD</code></span>
+            <span class="oi-swatch"><i style="background:#167653"></i> Accent text <code>#167653</code></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= LIGHT DASHBOARD PREVIEW ======================= -->
+  <section>
+    <div class="oi-meetings-head">
+      <h2 class="oi-section-title">Coordinated light dashboard</h2>
+      <span class="oi-meta">Warm neutral surfaces — never blue-white</span>
+    </div>
+    <div class="oi-device" style="width:1123px;height:760px;max-width:100%">
+      <span class="oi-device-label">Light theme · 1440×975</span>
+      <iframe src="dashboard.html?theme=light" width="1440" height="975"
+              style="transform:scale(0.78)" title="Dashboard mockup — light theme"></iframe>
+    </div>
+  </section>
+
+  <!-- ======================= TYPE SCALE ======================= -->
+  <section>
+    <div class="oi-meetings-head">
+      <h2 class="oi-section-title">Type scale</h2>
+      <span class="oi-meta">System sans stack — no new font dependency</span>
+    </div>
+    <div class="oi-mock-card">
+      <div class="oi-mock-card-body" style="display:flex;flex-direction:column;gap:var(--sp-4)">
+        <div><span class="oi-eyebrow">Page title</span><div style="font-size:var(--text-2xl);font-weight:600;letter-spacing:-0.022em;margin-top:6px">Welcome back</div></div>
+        <div><span class="oi-eyebrow">Section heading</span><div style="font-size:var(--text-lg);font-weight:600;letter-spacing:-0.012em;margin-top:6px">My meetings</div></div>
+        <div><span class="oi-eyebrow">Card title</span><div style="font-size:var(--text-md);font-weight:600;margin-top:6px">AI Conference</div></div>
+        <div><span class="oi-eyebrow">Body</span><div style="font-size:var(--text-base);margin-top:6px">Start a new meeting or join an existing one with a meeting ID.</div></div>
+        <div><span class="oi-eyebrow">Secondary metadata</span><div style="font-size:var(--text-xs);color:var(--text-2);margin-top:6px">12 Feb 2026 • 10:00 AM</div></div>
+        <div><span class="oi-eyebrow">Form label</span><div style="font-size:var(--text-xs);font-weight:500;color:var(--text-2);margin-top:6px">Username or email</div></div>
+        <div><span class="oi-eyebrow">Button text</span><div style="margin-top:6px"><span class="oi-btn oi-btn--primary">Create meeting</span></div></div>
+        <div><span class="oi-eyebrow">Caption / meeting control</span><div style="font-size:var(--text-lg);font-weight:500;letter-spacing:-0.012em;margin-top:6px">Let us review the anchoring schedule.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= FILES ======================= -->
+  <section>
+    <div class="oi-meetings-head">
+      <h2 class="oi-section-title">Mockup files</h2>
+      <span class="oi-meta">Isolated at the repository root — outside the Vite app</span>
+    </div>
+    <div class="oi-mock-card">
+      <div class="oi-mock-card-body" style="display:flex;flex-direction:column;gap:var(--sp-3);font-family:var(--font-mono);font-size:var(--text-xs)">
+        <div>mockups/obsidian.css — token layer + component patterns</div>
+        <div>mockups/index.html — this overview</div>
+        <div>mockups/dashboard.html — workspace shell, actions, meeting grid, states</div>
+        <div>mockups/auth.html — log in + sign up with OTP</div>
+        <div>mockups/meeting.html — meeting room, responsive frames, panels, captions</div>
+        <div>mockups/room.html — chrome-less room component frame (used by meeting.html)</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>

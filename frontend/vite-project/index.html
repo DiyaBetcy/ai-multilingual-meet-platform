@@ -4,10 +4,95 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React</title>
+    <meta name="theme-color" content="#0a0e13" />
+    <meta
+      name="description"
+      content="AI-Powered Multilingual Meeting Platform — live speech, translated across every language."
+    />
+    <title>AI Multilingual Meet</title>
+    <!--
+      The preloader stylesheet is linked from the document head so the boot
+      screen is styled on the very first paint — before the app bundle has
+      been downloaded, parsed and executed.
+    -->
+    <link rel="stylesheet" href="/src/components/Preloader.css?direct" />
   </head>
   <body>
+    <!--
+      Static boot clock.
+
+      Recorded at the moment the boot screen is parsed and painted.
+      src/components/BootShell.jsx reads it to keep the preloader on
+      screen for at least 2500 ms, even when the bundle boots faster.
+    -->
+    <script>
+      window.__appBootAt =
+        window.performance && typeof performance.now === "function"
+          ? performance.now()
+          : Date.now();
+    </script>
+
+    <!--
+      Boot screen.
+
+      This is a static copy of src/components/Preloader.jsx: it paints while
+      the JavaScript bundle is still on the wire, so the user never meets an
+      empty page. React removes it before its first paint (see the layout
+      effect in src/components/BootShell.jsx) and hands over to the live
+      <Preloader />.
+
+      Keep the markup below in sync with src/components/Preloader.jsx.
+    -->
+    <div
+      id="app-boot"
+      class="preloader"
+      data-state="active"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <div class="preloader__inner">
+        <span class="preloader__halo" aria-hidden="true"></span>
+
+        <span class="preloader__mark" aria-hidden="true">
+          <img class="preloader__logo" src="/src/assets/logo.png" alt="" />
+        </span>
+
+        <div class="preloader__head">
+          <p class="preloader__brand">AI Multilingual Meet</p>
+          <p class="preloader__tagline">
+            Real-time translation in every language.
+          </p>
+        </div>
+
+        <div class="preloader__wave" aria-hidden="true">
+          <span class="preloader__wave-bar"></span>
+          <span class="preloader__wave-bar"></span>
+          <span class="preloader__wave-bar"></span>
+          <span class="preloader__wave-bar"></span>
+          <span class="preloader__wave-bar"></span>
+        </div>
+
+        <div class="preloader__progress">
+          <div class="preloader__track" aria-hidden="true">
+            <span class="preloader__runner"></span>
+          </div>
+          <p class="preloader__status">Preparing your workspace</p>
+        </div>
+      </div>
+    </div>
+
     <div id="root"></div>
+
+    <!-- Without JavaScript the boot screen would never leave on its own. -->
+    <noscript>
+      <style>
+        #app-boot {
+          display: none !important;
+        }
+      </style>
+    </noscript>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

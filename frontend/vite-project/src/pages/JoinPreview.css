@@ -1,421 +1,434 @@
-/* ROOT */
+/* ============================================================
+   JoinPreview — pre-meeting lobby (create / join)
+   ------------------------------------------------------------
+   Class contract: every class name below already existed in
+   this file and is kept verbatim. `.jp-field` and
+   `.jp-regenerate` were referenced by JoinPreview.jsx but had
+   no rule; they are added here.
+
+   The AI-anchor schedule modal rendered by this page shares
+   its chrome with src/components/ScheduleSetupModal.css. That
+   chrome is owned by src/styles/primitives.css, so the modal
+   rules that remain here are scoped under `.jp-container` and
+   only describe what is genuinely different for this page
+   (wider dialog, name + role pairing, scrollable schedule).
+
+   DOM (JoinPreview.jsx):
+     .jp-container
+       .jp-top-info > h2
+       .jp-main
+         .jp-details
+           input / textarea (no class)
+           .jp-regenerate > button (no class)
+           label.jp-toggle > input[type=checkbox]
+           .jp-field > select
+         .jp-video-section
+           .jp-video-box > video
+           .jp-controls > button > img
+       button.jp-action-btn
+       .modal-overlay > .schedule-modal > ...
+   ============================================================ */
+
+/* ---------------------------------------------------------
+   Page shell
+   --------------------------------------------------------- */
+
 .jp-container {
-  height: 100vh;
-  background: #0e1419;
-  color: white;
-  font-family: "Segoe UI", system-ui, sans-serif;
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg-app);
+  color: var(--text-1);
+  font-family: var(--font-sans);
 }
 
-/* TOP INFO */
+/* ---------------------------------------------------------
+   Header
+   --------------------------------------------------------- */
+
 .jp-top-info {
-  padding: 20px 30px;
+  padding: var(--sp-6) var(--sp-8) 0;
 }
 
 .jp-top-info h2 {
-  font-size: 22px;
-  margin-bottom: 4px;
+  margin: 0 0 var(--sp-1);
+  color: var(--text-1);
+  font-size: var(--text-2xl);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-tight);
 }
 
 .jp-top-info p {
-  font-size: 14px;
-  color: #9ca3af;
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-md);
 }
 
-/* MAIN LAYOUT */
+/* ---------------------------------------------------------
+   Main layout
+   --------------------------------------------------------- */
+
 .jp-main {
-  flex: 1;
   display: flex;
-  gap: 40px;
-  padding: 0 40px;
+  flex: 1;
+  gap: var(--sp-10);
+  padding: var(--sp-6) var(--sp-8);
 }
 
-/* LEFT PANEL */
+/* ---------------------------------------------------------
+   Details panel
+   --------------------------------------------------------- */
+
 .jp-details {
-  width: 320px;
-  background: #151c22;
-  padding: 20px;
-  border-radius: 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sp-3);
+  width: 320px;
+  flex: none;
+  padding: var(--sp-5);
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-2);
 }
 
 .jp-details input,
 .jp-details textarea,
 .jp-details select {
-  background: #0e1419;
-  border: 1px solid #333;
-  color: white;
-  padding: 10px;
-  border-radius: 6px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 var(--sp-4);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  background: var(--bg-inset);
+  color: var(--text-1);
+  font-size: var(--text-md);
+  transition: border-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
 }
 
 .jp-details textarea {
+  height: 84px;
+  padding: var(--sp-3) var(--sp-4);
   resize: none;
-  height: 70px;
 }
 
+.jp-details input:focus,
+.jp-details textarea:focus,
+.jp-details select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+.jp-details input::placeholder,
+.jp-details textarea::placeholder {
+  color: var(--text-3);
+  opacity: 1;
+}
+
+/* Wrapper around the "New Meeting ID" / "Set Default Password"
+   buttons — the buttons themselves carry no class. */
+.jp-regenerate {
+  display: flex;
+  margin-top: calc(var(--sp-2) * -1);
+}
+
+.jp-regenerate button {
+  padding: var(--sp-1) 0;
+  background: none;
+  color: var(--accent-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: color var(--dur-base) var(--ease-out);
+}
+
+.jp-regenerate button:hover {
+  color: var(--accent-hi);
+}
+
+[data-theme="light"] .jp-regenerate button:hover {
+  color: var(--accent-lo);
+}
+
+/* Wrapper around the join-mode language picker. */
+.jp-field {
+  display: flex;
+}
+
+.jp-field select {
+  width: 100%;
+}
+
+/* Inputs with inline actions (copy meeting ID/password, reveal password). */
+.jp-input-wrap {
+  position: relative;
+  display: flex;
+  width: 100%;
+}
+
+.jp-input-wrap > input {
+  padding-right: 46px;
+}
+
+.jp-input-wrap--password > input {
+  padding-right: 82px;
+}
+
+.jp-input-actions {
+  position: absolute;
+  top: 50%;
+  right: var(--sp-2);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  transform: translateY(-50%);
+}
+
+.jp-input-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: color var(--dur-base) var(--ease-out),
+    background-color var(--dur-base) var(--ease-out);
+}
+
+.jp-input-action:hover {
+  background: var(--bg-hover);
+  color: var(--text-1);
+}
+
+.jp-input-action:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.jp-input-action svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+/* Copy feedback uses the shared toast primitive. */
+.jp-toast-region {
+  position: fixed;
+  right: var(--sp-6);
+  bottom: var(--sp-6);
+  z-index: var(--z-toast);
+  width: min(360px, calc(100vw - var(--sp-6) - var(--sp-6)));
+  pointer-events: none;
+}
+
+.jp-toast-region .oi-toast {
+  width: 100%;
+  pointer-events: auto;
+}
+
+/* Checkbox rows. */
 .jp-toggle {
-  font-size: 14px;
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: var(--sp-3);
+  min-height: 44px;
+  padding: 0 var(--sp-4);
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-sm);
+  background: var(--bg-inset);
+  color: var(--text-1);
+  font-size: var(--text-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--dur-base) var(--ease-out),
+    background-color var(--dur-base) var(--ease-out);
 }
 
-/* VIDEO SECTION */
+.jp-toggle:hover {
+  border-color: var(--line-2);
+  background: var(--bg-hover);
+}
+
+.jp-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------
+   Video preview
+   --------------------------------------------------------- */
+
 .jp-video-section {
-  flex: 1;
   display: flex;
+  flex: 1;
   flex-direction: column;
-  align-items: center;
+  gap: var(--sp-4);
+  min-width: 0;
 }
 
 .jp-video-box {
-  width: 100%;
-  max-width: 820px;
-  aspect-ratio: 16 / 9;
-  background: #a3a3a3;
-  border-radius: 20px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  position: relative;
+  flex: 1;
+  min-height: 360px;
+  overflow: hidden;
+  border: 1px solid var(--line-1);
+  border-radius: var(--r-lg);
+  background: var(--grad-tile);
+  box-shadow: var(--shadow-3);
 }
 
-/* CONTROLS */
+.jp-video-box video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+/* Device toggles. */
 .jp-controls {
-  margin-top: 14px;
   display: flex;
-  gap: 22px;
+  justify-content: center;
+  gap: var(--sp-3);
 }
 
 .jp-controls button {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: white;
-  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-full);
+  background: var(--bg-elevated);
   cursor: pointer;
+  transition: background-color var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out),
+    transform var(--dur-base) var(--ease-out);
+}
+
+.jp-controls button:hover {
+  border-color: var(--accent-line);
+  background: var(--bg-hover);
+  transform: translateY(-1px);
 }
 
 .jp-controls img {
   width: 22px;
   height: 22px;
+  object-fit: contain;
 }
 
-/* ACTION BUTTON */
+.jp-media-error {
+  padding: var(--sp-3);
+  border: 1px solid var(--danger, #d9534f);
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--danger, #d9534f) 12%, transparent);
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  line-height: var(--lh-base);
+}
+
+/* ---------------------------------------------------------
+   Action
+   --------------------------------------------------------- */
+
 .jp-action-btn {
-  align-self: flex-end;
-  margin: 20px 30px;
-  background: #19e5d8;
-  border: none;
-  padding: 12px 32px;
-  border-radius: 22px;
-  font-weight: 600;
+  align-self: center;
+  min-width: 220px;
+  height: 44px;
+  margin: 0 var(--sp-8) var(--sp-8);
+  padding: 0 var(--sp-8);
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-snug);
   cursor: pointer;
+  box-shadow: 0 8px 24px var(--accent-glow);
+  transition: background var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
 }
 
-/* SCHEDULE MODAL STYLES */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
+.jp-action-btn:hover {
+  background: var(--accent-hi);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px var(--accent-glow);
 }
 
-.schedule-modal {
-  background: #1f1f1f;
-  border-radius: 16px;
-  width: 100%;
+.jp-action-btn:active {
+  transform: translateY(0);
+}
+
+/* ============================================================
+   Schedule modal (this page's local copy)
+   Scoped under .jp-container so it can never leak onto the
+   shared ScheduleSetupModal component.
+   ============================================================ */
+
+.jp-container .modal-overlay .schedule-modal {
   max-width: 700px;
-  max-height: 90vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #333;
-}
-
-.modal-header h2 {
-  margin: 0;
-  font-size: 20px;
-  color: white;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  color: #aaa;
-  font-size: 28px;
-  cursor: pointer;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.2s;
-}
-
-.close-btn:hover {
-  background: #333;
-  color: white;
-}
-
-.modal-content {
-  padding: 24px;
+.jp-container .schedule-modal .schedule-list {
+  max-height: 44vh;
   overflow-y: auto;
-  flex: 1;
+  padding-right: var(--sp-1);
 }
 
-.form-group {
-  margin-bottom: 20px;
+.jp-container .schedule-modal .field-row .name-input {
+  flex: 1 1 55%;
 }
 
-.form-group label {
-  display: block;
-  color: #aaa;
-  font-size: 14px;
-  margin-bottom: 8px;
+.jp-container .schedule-modal .field-row .role-input {
+  flex: 1 1 45%;
 }
 
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 12px 16px;
-  background: #2a2a2a;
-  border: 1px solid #444;
-  border-radius: 8px;
-  color: white;
-  font-size: 14px;
-  box-sizing: border-box;
+.jp-container .schedule-modal .duration-field {
+  flex: none;
 }
 
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #19e5d8;
+/* ---------------------------------------------------------
+   Responsive
+   --------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .jp-main {
+    flex-direction: column;
+    gap: var(--sp-6);
+  }
+
+  .jp-details {
+    width: 100%;
+  }
+
+  .jp-video-box {
+    min-height: 240px;
+  }
 }
 
-.schedule-section {
-  margin-bottom: 24px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.section-header h3 {
-  margin: 0;
-  font-size: 16px;
-  color: white;
-}
-
-.total-time {
-  background: #19e5d8;
-  color: #000;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.schedule-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.schedule-item-form {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  background: #2a2a2a;
-  padding: 16px;
-  border-radius: 12px;
-}
-
-.item-number {
-  width: 28px;
-  height: 28px;
-  background: #19e5d8;
-  color: #000;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.item-fields {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.field-row {
-  display: flex;
-  gap: 10px;
-}
-
-.name-input,
-.role-input,
-.topic-input {
-  flex: 1;
-  padding: 10px 12px;
-  background: #1f1f1f;
-  border: 1px solid #444;
-  border-radius: 6px;
-  color: white;
-  font-size: 13px;
-}
-
-.duration-field {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.duration-field span {
-  color: #aaa;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.duration-input {
-  width: 60px;
-  padding: 10px;
-  background: #1f1f1f;
-  border: 1px solid #444;
-  border-radius: 6px;
-  color: white;
-  font-size: 13px;
-  text-align: center;
-}
-
-.remove-btn {
-  background: #f44336;
-  color: white;
-  border: none;
-  padding: 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  flex-shrink: 0;
-  transition: background 0.2s;
-}
-
-.remove-btn:hover:not(:disabled) {
-  background: #d32f2f;
-}
-
-.remove-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.add-btn {
-  width: 100%;
-  padding: 12px;
-  background: #333;
-  color: white;
-  border: 2px dashed #555;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.add-btn:hover {
-  background: #444;
-  border-color: #666;
-}
-
-.info-box {
-  background: rgba(25, 229, 216, 0.1);
-  border-left: 4px solid #19e5d8;
-  padding: 16px;
-  border-radius: 8px;
-}
-
-.info-box h4 {
-  margin: 0 0 12px 0;
-  color: #19e5d8;
-  font-size: 14px;
-}
-
-.info-box ul {
-  margin: 0;
-  padding-left: 20px;
-  color: #aaa;
-  font-size: 13px;
-  line-height: 1.8;
-}
-
-.info-box li {
-  margin-bottom: 4px;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 20px 24px;
-  border-top: 1px solid #333;
-}
-
-.btn-secondary {
-  padding: 12px 24px;
-  background: transparent;
-  color: #aaa;
-  border: 1px solid #555;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.btn-secondary:hover {
-  background: #333;
-  color: white;
-}
-
-.btn-primary {
-  padding: 12px 32px;
-  background: #19e5d8;
-  color: #000;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-.btn-primary:hover {
-  background: #17d0c4;
+@media (max-width: 600px) {
+  .jp-toast-region {
+    right: var(--sp-4);
+    left: var(--sp-4);
+    bottom: var(--sp-4);
+    width: auto;
+  }
 }
